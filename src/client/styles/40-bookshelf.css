@@ -1,0 +1,91 @@
+/* Just Fun Bookshelf · P1 · isolated from video/audio/image card rendering */
+body.jfBooksMode #photoToolbar,body.jfBooksMode #studioEntrance,body.jfBooksMode #assetFolders,
+body.jfBooksMode #folderTiles.assetFolderTiles,body.jfBooksMode #folderContext,body.jfBooksMode #grid,
+body.jfBooksMode #unifiedBatchBar,body.jfBooksMode #unifiedContext,
+body.jfBooksMode .studioStatus,body.jfBooksMode #creatorPanel{display:none!important}
+body.jfBooksMode #jfBooksWorkspace{display:block!important}
+.jfBooksWorkspace{width:min(1460px,100%);margin:0 auto;padding:clamp(24px,4vw,58px) clamp(20px,4vw,58px) 110px;color:#e5f1f8;min-height:55dvh;box-sizing:border-box}
+.jfBooksWorkspace[hidden],.jfBookDetail[hidden]{display:none!important}
+.jfBooksHead{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 32px}
+.jfBooksEyebrow{color:#8ab8bf;font-size:10px;letter-spacing:.22em;font-weight:600;text-transform:uppercase}
+.jfBooksHead h2{font-size:clamp(32px,4vw,52px);font-weight:450;letter-spacing:-.06em;margin:8px 0 9px;line-height:1.1;color:#f2f8fc}
+.jfBooksHeadMark{font-weight:300;font-size:.38em;letter-spacing:.05em;color:#728899;vertical-align:middle}
+.jfBooksHead p{font-size:12px;color:#778fa1;margin:0;letter-spacing:.025em}
+.jfBooksHeadTools{display:flex;align-items:center;gap:10px;max-width:100%}
+.jfBooksSearch{height:42px;min-width:200px;width:clamp(200px,22vw,330px);max-width:100%;border:1px solid #adc7db27;border-radius:13px;background:#a7cfff09;display:flex;align-items:center;gap:9px;padding:0 13px;box-sizing:border-box;backdrop-filter:blur(18px)}
+.jfBooksSearch:focus-within{border-color:#9de4dd77;background:#a7cfff11}
+.jfBooksSearch svg{width:18px;height:18px;flex:none;color:#7d9cab}
+.jfBooksSearch input{border:0!important;outline:0!important;background:transparent!important;color:#ecf7fc!important;width:100%;font:inherit;font-size:13px;min-width:0}
+.jfBooksSearch input::placeholder{color:#718595}
+.jfBooksIconBtn{height:42px;width:42px;display:grid;place-items:center;flex:none;border:1px solid #adc7db27;border-radius:13px;background:#a7cfff09;color:#c7dce7;cursor:pointer;transition:background .16s,border .16s}
+.jfBooksIconBtn:hover{background:#bce5e51f;border-color:#93d3d379}
+.jfBooksIconBtn svg{width:19px;height:19px}
+.jfBooksFolders{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:12px;scrollbar-width:thin;scrollbar-color:#4b6670 transparent}
+.jfBooksFolder{border-radius:10px;padding:8px 13px;white-space:nowrap;border:1px solid #aed5e214;color:#8c9faa;font-size:12px;background:#aabac40a;cursor:pointer;flex:none}
+.jfBooksFolder:hover{color:#d3eceb;background:#accacf16}
+.jfBooksFolder.selected{border-color:#8be4d84c;color:#b5f6e8;background:#80d6ca18}
+.jfBooksCount{font-size:11px;color:#8499a6;letter-spacing:.05em;margin:0 0 19px}
+.jfBooksGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:clamp(17px,2.5vw,34px) clamp(16px,2vw,32px)}
+.jfBookTile{min-width:0;display:flex;flex-direction:column;gap:7px;text-align:left;color:inherit;background:transparent;border:0;padding:0;cursor:pointer}
+.jfBookCover{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:12px;width:100%;aspect-ratio:.74;border-radius:6px 11px 11px 6px;padding:18px 14px 14px 18px;box-sizing:border-box;overflow:hidden;color:#eefafa;background:linear-gradient(130deg,hsla(var(--jf-book-hue),23%,43%,.87),hsla(var(--jf-book-hue),30%,14%,.9) 63%,#091018);box-shadow:inset 3px 0 #ffffff27,inset 7px 0 #090b1280,inset 0 1px #ffffff42,0 9px 25px #0006;border:1px solid #ffffff20;transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s}
+.jfBookCover:after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,#ffffff20 0%,transparent 30%,transparent 77%,#ffffff08 100%);pointer-events:none}
+.jfBookTile:hover .jfBookCover,.jfBookTile:focus-visible .jfBookCover{transform:translateY(-5px);box-shadow:inset 3px 0 #ffffff28,inset 7px 0 #090b1280,0 19px 35px #0009}
+.jfBookCoverLine{width:36px;height:2px;background:#b0e8dcaa;border-radius:3px}
+.jfBookCoverText{font-size:clamp(12px,1.4vw,18px);font-weight:550;line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:.035em;position:relative}
+.jfBookCoverFormat{align-self:flex-start;color:#d6e7e9a8;letter-spacing:.17em;font-size:9px;font-weight:650}
+.jfBookTileTitle{color:#d5e1e8;font-size:13px;line-height:1.4;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.jfBookTileInfo{color:#6f8794;font-size:11px}
+.jfBooksMore{display:block;border:1px solid #abcbd43a;background:#ffffff0d;color:#afcbd4;border-radius:11px;margin:32px auto;padding:10px 24px;cursor:pointer}
+.jfBooksMore[hidden]{display:none!important}
+.jfBooksEmpty{display:flex;flex-direction:column;align-items:center;gap:14px;padding:70px 10px;color:#839bac;text-align:center}
+.jfBooksEmpty[hidden]{display:none!important}
+.jfBooksEmpty svg{width:64px;height:64px;color:#719a9b;opacity:.6;margin-bottom:4px}.jfBooksEmpty strong{color:#d3e4eb;font-size:17px;font-weight:500}.jfBooksEmpty span{font-size:12px}
+.jfBookDetail{position:fixed;inset:0;z-index:950;display:grid;place-items:center;background:#020509cd;backdrop-filter:blur(20px);padding:20px}
+.jfBookDetailCard{position:relative;width:min(590px,100%);box-sizing:border-box;padding:35px;display:grid;grid-template-columns:150px 1fr;gap:30px;background:linear-gradient(142deg,#203340f2,#0b141cf8);border:1px solid #b8e5ed3b;border-radius:21px;box-shadow:0 28px 95px #000b;color:#e3eff4}
+.jfBookDetailClose{position:absolute;right:12px;top:12px;height:34px;width:34px;font-size:25px;line-height:1}
+.jfBookDetailArt{background:linear-gradient(125deg,hsla(var(--jf-book-hue),24%,42%,.94),#0d1925);box-shadow:inset 7px 0 #0006,0 12px 32px #0006;border-radius:4px 10px 10px 4px;aspect-ratio:.72;padding:22px;display:flex;align-items:center;justify-content:center;text-align:center;overflow-wrap:anywhere;font-size:20px;line-height:1.45}
+.jfBookDetailMeta{align-self:center;min-width:0}.jfBookDetailMeta h3{font-weight:500;line-height:1.45;font-size:21px;overflow-wrap:anywhere;margin:12px 0 18px}.jfBookDetailMeta p{font-size:12px;color:#90a9b4;overflow-wrap:anywhere;line-height:1.7}.jfBookComing{display:block;margin-top:25px;color:#82c9c2;font-size:11px;line-height:1.5}
+@media(max-width:750px){.jfBooksWorkspace{padding:27px 18px 110px}.jfBooksHead{flex-direction:column;align-items:stretch;gap:23px}.jfBooksSearch{width:100%;flex:1}.jfBooksGrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:21px 15px}.jfBookCover{padding:14px 10px 12px 14px}.jfBookDetailCard{grid-template-columns:110px 1fr;gap:20px;padding:30px 18px}.jfBookDetailArt{padding:10px;font-size:15px}}
+@media(prefers-reduced-motion:reduce){.jfBookCover{transition:none}}
+/* Explicitly outrank legacy media-layout display!important selectors. */
+body.jfBooksMode #grid.grid:not(.videoTextGrid),body.jfBooksMode #grid.grid.videoTextGrid,
+body.jfBooksMode #grid.pictureWall,body.jfBooksMode #grid.audioFileGrid{display:none!important}
+
+/* v6.52: previously read books quietly retain a continuation cue. */
+.jfBookReadingLabel{position:relative;display:block;color:#d9f5ed;letter-spacing:.06em;font:500 10px/1.45 system-ui;background:#03121c63;border:1px solid #dcffff25;border-radius:6px;padding:5px 7px;margin-top:auto;align-self:stretch}
+.jfBookReadingTrack{position:absolute;bottom:0;left:0;right:0;height:3px;background:#0007;overflow:hidden}
+.jfBookReadingTrack>span{display:block;height:100%;background:#96e6d7;box-shadow:0 0 9px #8dfff269}
+
+/* v6.53 · One header, one visual language. Books do not create a second masthead. */
+body.jfBooksMode .studioControls{display:flex!important;min-width:0!important}
+body.jfBooksMode .studioSearchWrap{display:flex!important;flex:1 1 340px!important;max-width:min(640px,55vw)!important}
+body.jfBooksMode #search{display:none!important}
+.studioSearchWrap #jfBooksSearch{display:none;width:100%;min-width:0;height:100%;border:0!important;outline:0!important;background:transparent!important;color:#e8f4f6;font:inherit;font-size:13px;padding:0;box-shadow:none!important}
+body.jfBooksMode .studioSearchWrap #jfBooksSearch{display:block!important}
+body.jfBooksMode .studioActions>*:not(#jfBooksRefresh){display:none!important}
+#jfBooksRefresh{display:none!important;flex:none;height:39px;width:39px;padding:8px;background:transparent!important;border:0!important;border-radius:11px!important}
+body.jfBooksMode:not(.jfNotesMode) #jfBooksRefresh{display:grid!important}
+body.jfBooksMode #jfBooksRefresh svg{width:20px;height:20px}
+body.jfBooksMode .jfBooksWorkspace{width:min(1440px,100%);padding:24px clamp(24px,4vw,58px) 100px}
+.jfBooksCompactHead{display:flex;align-items:center;min-height:25px;margin:0 0 16px;color:#7d97a5;font-size:12px;letter-spacing:.02em}
+body.jfBooksMode .jfBooksCompactHead #jfDeskNotesOpen[hidden]{display:none!important}
+body.jfNotesMode #jfBooksWorkspace{display:none!important}
+body.jfBooksMode .jfBookTileTitle{font-size:12px;margin-top:4px;letter-spacing:0}
+body.jfBooksMode .jfBookTileInfo{font-size:10px}
+body.jfBooksMode .jfBookTile{gap:5px}
+body.jfBooksMode .jfBookCoverText{font-size:clamp(11px,1.35vw,16px);letter-spacing:.01em;font-weight:500}
+body.jfBooksMode .jfBookCover{border-radius:5px 9px 9px 5px}
+@media(max-width:760px){body.jfBooksMode .studioSearchWrap{max-width:none!important;min-width:115px!important}body.jfBooksMode .jfBooksWorkspace{padding:18px 18px 100px}}
+
+.jfBookCoverImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;background:#e9e7e2;z-index:1}
+.jfBookCover:has(.jfBookCoverImage) .jfBookCoverText,.jfBookCover:has(.jfBookCoverImage) .jfBookCoverLine,.jfBookCover:has(.jfBookCoverImage) .jfBookCoverFormat{visibility:hidden}
+.jfBookCover:has(.jfBookCoverImage) .jfBookReadingLabel,.jfBookCover:has(.jfBookCoverImage) .jfBookReadingTrack{z-index:2}
+.jfBooksCount:empty{display:none}
+
+body.jfBooksMode .jfBookTileInfo{display:none}
+.jfBooksFolders[hidden]{display:none!important}
+
+/* v6.54: quiet two-line titles, no repetitive caption under the actual cover. */
+body.jfBooksMode .jfBookCoverText{-webkit-line-clamp:2;line-clamp:2;font-size:clamp(12px,1.1vw,16px);font-weight:500;line-height:1.45;overflow-wrap:anywhere}
+body.jfBooksMode .jfBookTileTitle{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal;line-height:1.45;max-height:2.9em;overflow:hidden;text-overflow:ellipsis;word-break:break-word;margin-top:3px}
+body.jfBooksMode .jfBookTileInfo{display:none!important}

@@ -1,0 +1,798 @@
+/* v6.50: Reading as an immersive surface, not a second application. */
+.jfDeskPrimary{border:1px solid #80d7c986;color:#0d2329;border-radius:11px;padding:11px 15px;background:linear-gradient(135deg,#a5eadf,#7dbdb8);font:inherit;font-weight:650;font-size:12px;cursor:pointer;letter-spacing:.01em;max-width:100%}.jfDeskPrimary:hover{filter:brightness(1.08)}
+.jfReader[hidden],.jfDeskNotes[hidden],.jfReadError[hidden],#jfReadPdf[hidden],#jfDeskEditor[hidden],#jfDeskExcerpt[hidden]{display:none!important}
+.jfReader{position:fixed;inset:0;z-index:1100;display:flex;flex-direction:column;background:#0b1219;color:#e2e7e9;overscroll-behavior:contain;isolation:isolate}
+.jfReaderHeader{height:65px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 clamp(12px,3.3vw,46px);border-bottom:1px solid #b1cad517;background:#0c1820;box-sizing:border-box}
+.jfReadIcon{width:38px;height:38px;flex:none;display:grid;place-items:center;background:transparent;border:1px solid transparent;border-radius:11px;color:#acbfca;cursor:pointer;font:500 16px/1 system-ui}.jfReadIcon:hover{border-color:#95d5cf48;color:#e3ffff;background:#8fd7cc14}
+.jfReaderIdentity{min-width:0;display:flex;flex-direction:column;gap:3px;flex:1}.jfReaderIdentity span{font-size:9px;letter-spacing:.2em;color:#7495a4}.jfReaderIdentity strong{font-size:14px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jfReaderTools{display:flex;gap:2px;align-items:center}
+.jfReadCenter{min-height:0;flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#4d6874 transparent;scroll-behavior:smooth}
+.jfReadText{font-family:'Noto Serif SC','Songti SC','SimSun',serif;line-height:2.06;font-size:18px;font-weight:400;letter-spacing:.025em;white-space:pre-wrap;overflow-wrap:anywhere;max-width:780px;padding:clamp(36px,6vw,84px) clamp(24px,5vw,70px) 130px;margin:auto;color:inherit;outline:0;box-sizing:content-box;user-select:text}
+.jfReadText::selection,.jfReadText *::selection{background:#7cb4a47c}
+.jfReader.paper{background:#ece6d9;color:#27322e}.jfReader.paper .jfReaderHeader,.jfReader.paper .jfReadFooter{background:#e2ddd0;color:#293a34;border-color:#85927e33}.jfReader.paper .jfReadIcon,.jfReader.paper .jfReadFooter button,.jfReader.paper .jfReadFooter select{color:#36473d}.jfReader.paper .jfReaderIdentity span{color:#687d72}
+.jfReader #jfReadPdf{width:100%;height:100%;border:0;background:#444}
+.jfReadError{max-width:620px;margin:12vh auto;color:#ddc7bd;padding:35px;line-height:1.8}
+.jfReadFooter{height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:10px;background:#0d1821;border-top:1px solid #b1cad517;color:#7895a4;box-sizing:border-box;padding:0 15px}
+.jfReadFooter button{border:0;background:transparent;color:#a3b7c2;padding:12px 16px;cursor:pointer;border-radius:9px}.jfReadFooter button:hover:not(:disabled){background:#a9e5e515}.jfReadFooter button:disabled{opacity:.25;cursor:default}.jfReadFooter select{font:inherit;font-size:12px;width:min(240px,37vw);background:transparent;color:#9eb5bf;border:0;outline:0;padding:8px 2px;cursor:pointer;text-overflow:ellipsis}.jfReadFooter select option{background:#17232d;color:#e5f1f6}.jfReadFooter span{font-size:11px;min-width:54px;text-align:right}
+.jfDeskNotes{position:fixed;right:0;top:0;bottom:0;width:min(440px,100vw);z-index:1300;background:linear-gradient(150deg,#1d323cfa,#0c151efa);backdrop-filter:blur(32px);border-left:1px solid #b4e4dc37;box-shadow:-23px 0 85px #000a;color:#e3eff3;display:flex;flex-direction:column;box-sizing:border-box;padding:22px;gap:14px}
+.jfDeskNotesHead{display:flex;align-items:center;justify-content:space-between;flex:none}.jfDeskNotesHead h3{font-size:25px;font-weight:450;letter-spacing:-.06em;margin:5px 0 0}.jfDeskNoteActions{display:flex;gap:8px;align-items:center;flex:none}.jfDeskNoteActions input{background:#b4d5e30e;border:1px solid #a3cbd421;color:#e8f7fb;border-radius:10px;font:inherit;font-size:12px;height:38px;flex:1;min-width:0;padding:0 10px;outline:0}
+.jfDeskNoteList{max-height:32%;overflow-y:auto;display:flex;flex-direction:column;gap:6px;flex-shrink:0;scrollbar-width:thin}.jfDeskNoteItem{background:#aac1d40d;border:1px solid transparent;padding:11px 12px;border-radius:11px;text-align:left;color:#c9d8e1;display:flex;flex-direction:column;gap:5px;cursor:pointer;overflow:hidden}.jfDeskNoteItem:hover,.jfDeskNoteItem.active{border-color:#8fe0d64a;background:#88d9cc16}.jfDeskNoteItem strong{font-size:13px;font-weight:550;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.jfDeskNoteItem small{font-size:10px;color:#809ea9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jfDeskEditor{min-height:0;flex:1;display:flex;flex-direction:column;gap:10px}.jfDeskEditor input{border:0;background:transparent;border-bottom:1px solid #add2dd36;color:#f4fbfc;font:500 18px/1.4 system-ui;padding:10px 0;outline:0;flex:none;width:100%}.jfDeskEditor textarea{flex:1;width:100%;min-height:85px;box-sizing:border-box;resize:none;border:0;outline:0;background:transparent;color:#d5e6ee;font:14px/1.9 system-ui;letter-spacing:.01em;padding:8px 0;scrollbar-width:thin}.jfDeskExcerpt{font:12px/1.7 system-ui;color:#afd4ce;border-left:2px solid #81cfc1;padding:9px 13px;background:#abdcc912;max-height:110px;overflow-y:auto;flex:none;white-space:pre-wrap}.jfDeskEditorBottom{display:flex;align-items:center;gap:8px;flex:none;border-top:1px solid #acc9d324;padding-top:9px}.jfDeskEditorBottom button{border:0;background:transparent;color:#9ec9c3;cursor:pointer;font-size:11px;padding:7px 0}.jfDeskEditorBottom #jfDeskDeleteNote{color:#c69998;margin-left:auto}.jfDeskEditorBottom span{font-size:10px;color:#8fa3aa}.jfDeskNotesEmpty{font-size:12px;text-align:center;color:#8b9fac;padding:24px 2px}
+@media(max-width:620px){.jfReaderHeader{height:58px;gap:5px;padding:0 5px}.jfReaderIdentity span{display:none}.jfReaderIdentity strong{font-size:12px}.jfReadIcon{width:34px;height:34px;font-size:13px}.jfReaderTools{gap:0}.jfReadText{font-size:16px;padding:30px 22px 120px;line-height:1.92}.jfDeskNotes{padding:18px}.jfReadFooter{height:52px;gap:5px}.jfReadFooter button{padding:10px}.jfReadFooter select{max-width:40vw}}
+@media(prefers-reduced-motion:reduce){.jfReadCenter{scroll-behavior:auto}}
+
+.jfReadFooter[hidden]{display:none!important}
+
+.jfDeskStatus{font-size:11px;color:#e5a9a4;background:#8d464523;border:1px solid #c9808044;border-radius:9px;padding:9px;line-height:1.7;margin:0}.jfDeskStatus[hidden]{display:none!important}
+
+/* Global Just Fun header skin must not create a second opaque bar inside notes. */
+.jfDeskNotes .jfDeskNotesHead{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;height:auto!important;border-radius:0!important;position:static!important;backdrop-filter:none!important}
+
+/* v6.52: reading progress as a quiet instrument, without adding permanent controls. */
+.jfReadProgressRail{position:absolute;top:0;left:0;right:0;height:2px;background:transparent;z-index:2;pointer-events:none}
+.jfReadProgressRail>div{height:100%;width:0;background:linear-gradient(90deg,#527f82,#a3e9d5);box-shadow:0 0 12px #7be2ce60;transition:width .25s ease}
+.jfReader.paper .jfReadProgressRail>div{background:linear-gradient(90deg,#8d9280,#657f71);box-shadow:none}
+.jfReadText{max-width:740px;line-height:2.02;letter-spacing:.018em;text-wrap:pretty}
+.jfReadCenter{scroll-padding:55px}
+.jfReadFooter{box-shadow:0 -12px 32px #0000000c}
+.jfDeskNoteItem{transition:background .15s,border-color .15s}
+.jfDeskNotes input:focus-visible,.jfDeskNotes textarea:focus-visible{border-color:#88daca88;outline:none}
+.jfReader:focus-within .jfReadIcon:focus-visible,.jfReadFooter button:focus-visible{outline:2px solid #8bd9ca;outline-offset:2px}
+@media(max-width:620px){.jfReadText{padding-top:35px;line-height:1.9;letter-spacing:.015em}}
+@media(prefers-reduced-motion:reduce){.jfReadProgressRail>div,.jfDeskNoteItem{transition:none}}
+
+/* v6.53: uniform icon and honest PDF capability presentation. */
+.jfReadBack svg{width:20px;height:20px;display:block}
+.jfReadBack{border:1px solid #a7cad022!important;background:#a5ced00b!important;border-radius:12px;flex:none}
+.jfPdfMode #jfReadSmaller,.jfPdfMode #jfReadLarger,.jfPdfMode #jfReadTheme,.jfPdfMode #jfReadExcerpt{display:none!important}
+/* Dedicated note entry remains an independent writing surface, not a popup over a book. */
+body.jfNotesMode #jfDeskNotes{top:auto!important;right:auto!important;left:auto!important;bottom:auto!important;height:calc(100dvh - 115px);max-height:none;margin:18px auto 0 max(72px,calc((100vw - 1340px)/2));border:1px solid #ffffff13;border-radius:18px;display:grid!important;grid-template-columns:minmax(220px,290px) minmax(0,1fr);grid-template-rows:48px auto minmax(0,1fr);column-gap:26px;row-gap:10px;z-index:1!important}
+body.jfNotesMode .jfDeskNotesHead{grid-column:1/-1;grid-row:1}
+body.jfNotesMode .jfDeskNotesHead .jfBooksEyebrow{display:none}
+body.jfNotesMode .jfDeskNotesHead h3{font-size:20px;letter-spacing:-.04em}
+body.jfNotesMode #jfDeskNotesClose{display:none}
+body.jfNotesMode .jfDeskNoteActions{grid-column:1;grid-row:2}
+body.jfNotesMode #jfDeskSearchNotes{display:none}
+body.jfNotesMode .jfDeskNoteList{grid-column:1;grid-row:3;max-height:100%;height:100%;min-height:0;overflow-y:auto;border-right:1px solid #ffffff13;padding-right:12px}
+body.jfNotesMode .jfDeskEditor{grid-column:2;grid-row:2/4;min-height:0;display:flex;flex-direction:column;gap:16px;padding:8px 8px 6px}
+body.jfNotesMode .jfDeskEditor textarea{font-size:15px;line-height:2}
+body.jfNotesMode #jfDeskNotesEmpty{grid-column:2;grid-row:2/4;align-self:center;color:#8299a5}
+body.jfNotesMode #jfDeskStatus{grid-column:2;grid-row:2}
+@media(max-width:780px){body.jfNotesMode #jfDeskNotes{margin:10px 12px!important;height:calc(100dvh - 110px);column-gap:12px;grid-template-columns:minmax(115px,34%) minmax(0,1fr)}}
+
+/* v6.54: notes are an immersive writing surface, not an opaque card on a page. */
+body.jfNotesMode #jfDeskNotes{background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;height:calc(100dvh - 100px);grid-template-columns:minmax(185px,270px) minmax(0,1fr);gap:12px 40px}
+body.jfNotesMode .jfDeskNotesHead h3{font-size:14px!important;font-weight:500;letter-spacing:.015em;color:#b8cbd2}
+body.jfNotesMode .jfDeskNoteList{border-right:1px solid #d5e8e817;padding-right:18px}
+body.jfNotesMode .jfDeskNoteItem{background:transparent;border:0!important;border-radius:9px;padding:13px 14px;transition:background .14s}
+body.jfNotesMode .jfDeskNoteItem:hover{background:#89c8cb0c}
+body.jfNotesMode .jfDeskNoteItem.active{background:#95d4d313;color:#eaf9f9}
+body.jfNotesMode .jfDeskNoteActions .jfDeskPrimary{background:#98d9d522;border:1px solid #9bdbd243;color:#cae9e5;box-shadow:none}
+body.jfNotesMode .jfDeskEditor{padding:18px clamp(10px,4vw,80px);gap:16px}
+body.jfNotesMode .jfDeskEditor input{font-weight:450;font-size:23px;border-color:#bedbd21a;padding-bottom:16px}
+body.jfNotesMode .jfDeskEditor textarea{font-size:16px;line-height:2.1;max-width:900px}
+.jfDeskExcerpt{border:0!important;background:transparent!important;padding:0!important;max-height:38%;display:flex;flex-direction:column;gap:10px}
+.jfDeskExcerpt[hidden]{display:none!important}
+.jfDeskQuote{font:13px/1.8 system-ui;color:#bfddd9;padding:12px 15px;background:#bce6d609;border-left:2px solid #88cabc70;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:2px 9px 9px 2px;max-height:180px;overflow:auto}
+.jfDeskQuote a,.jfDeskQuote button{display:block;border:0;background:transparent;color:#90d3c8;font:11px/1.5 system-ui;margin-top:7px;padding:4px 0;cursor:pointer}
+#jfDeskJump{display:none!important}
+#feedMagnify,.miniMagnify,.magnifyBtn{display:none!important}
+@media(max-width:780px){body.jfNotesMode #jfDeskNotes{grid-template-columns:34% 1fr;column-gap:12px;padding:16px 8px!important}body.jfNotesMode .jfDeskEditor{padding:8px!important}}
+
+/* v6.55: reading desk dimensions follow the same calm proportions as the media workspace. */
+body.jfNotesMode #jfDeskNotes{
+  
+  
+  
+  
+  
+  
+  
+}
+body.jfNotesMode .jfDeskEditor{
+  padding:0 clamp(0px,1vw,16px)!important;
+  max-width:760px;
+  width:100%;box-sizing:border-box;
+  align-self:stretch;
+}
+body.jfNotesMode .jfDeskEditor textarea{max-width:100%;line-height:1.9;font-size:15px}
+body.jfNotesMode .jfDeskNoteList{padding-right:12px!important}
+@media(max-width:900px){body.jfNotesMode #jfDeskNotes{width:calc(100vw - 95px)!important;grid-template-columns:clamp(150px,28%,210px) minmax(0,1fr)!important;column-gap:18px!important;padding:16px 10px!important}}
+@media(max-width:580px){body.jfNotesMode #jfDeskNotes{width:calc(100vw - 20px)!important;margin:0 10px!important;grid-template-columns:minmax(105px,32%) minmax(0,1fr)!important;column-gap:10px!important;padding:12px 4px!important}body.jfNotesMode .jfDeskEditor{padding:0!important}}
+
+/* v6.56: pages belong to Just Fun, not Chrome's PDF plugin. */
+.jfReader .jfPdfPages{width:100%;min-height:100%;display:flex;flex-direction:column;align-items:center;padding:32px 20px 100px;box-sizing:border-box;gap:16px;background:#151a1d;position:relative}
+.jfReader .jfPdfPages[hidden],.jfReader #jfPdfPageImage[hidden],.jfReader #jfPdfPageStatus[hidden]{display:none!important}
+.jfReader #jfPdfPageImage{display:block;max-width:none;height:auto;background:#fff;box-shadow:0 14px 42px #0008;border-radius:2px;user-select:none}
+.jfPdfPageStatus{color:#8b9ca4;font-size:12px;margin:20vh auto}
+.jfReader #jfPdfPageActions{position:fixed;right:26px;bottom:81px;z-index:12;display:flex;gap:10px;align-items:center;padding:7px 10px;border:1px solid #ffffff15;border-radius:13px;background:#0a1419d9;backdrop-filter:blur(15px);box-shadow:0 10px 36px #0008}
+.jfReader #jfPdfPageActions button{border:0;background:transparent;color:#bed4d6;font-size:15px;padding:4px 9px;cursor:pointer;border-radius:7px}
+.jfReader #jfPdfPageActions button:hover{background:#ffffff16;color:#fff}
+.jfPdfPages #jfPdfZoomLabel{font-size:11px;min-width:36px;text-align:center;color:#a5bdc2;font-variant-numeric:tabular-nums}
+.jfPdfMode .jfReadFooter{display:flex!important}
+@media(max-width:620px){.jfReader .jfPdfPages{padding:16px 10px 90px}.jfReader #jfPdfPageActions{right:12px;bottom:68px}}
+
+/* v6.57 · PDF frame stays visible during pagination; only a quiet status appears. */
+.jfReader .jfPdfPageStatusOverlay{position:fixed;z-index:13;top:76px;left:50%;transform:translateX(-50%);width:max-content;max-width:85vw;margin:0;padding:7px 13px;border-radius:20px;background:#0b1a20e6;color:#b2d8d1;font:11px/1.5 system-ui;box-shadow:0 6px 25px #0006;pointer-events:none}
+.jfReader .jfPdfPages{scrollbar-gutter:stable}
+
+/* v6.58 · Density correction based on actual Windows screenshots.
+   Notes use the available writing space, with a deliberately narrow index.
+   These rules intentionally supersede historical v6.53–v6.55 layout trials. */
+.jfReader .jfReaderHeader{
+  padding-inline:clamp(10px,1.15vw,20px);
+  gap:10px;
+}
+.jfReader .jfReadBack{width:36px;height:36px}
+body.jfNotesMode #jfDeskNotes{
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  box-sizing:border-box;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead{align-self:center}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteList{
+  
+  min-width:0;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor{
+  
+  
+  
+  
+  min-width:0;
+  
+}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle{
+  width:100%;
+  margin:0;border:0!important;
+  border-radius:0!important;background:none!important;box-shadow:none!important;
+  outline:none!important;
+}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle:focus,
+body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle:focus-visible{
+  border:0!important;border-bottom:1px solid #badcd31a!important;
+  outline:none!important;box-shadow:none!important;
+}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteBody{
+  width:100%!important;max-width:none!important;
+  margin:0;
+  border:0!important;outline:0!important;box-shadow:none!important;
+  line-height:1.95;
+}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteBody:focus,
+body.jfNotesMode #jfDeskNotes #jfDeskNoteBody:focus-visible{
+  border:0!important;outline:0!important;box-shadow:none!important;
+}
+@media(max-width:760px){
+  body.jfNotesMode #jfDeskNotes{
+    
+    
+    
+    
+  }
+}
+/* PDF compatibility fallback: do not show the stale Just Fun chapter footer
+   underneath Chromium's own page counter and toolbar. */
+.jfReader.jfPdfMode .jfReadFooter[hidden]{display:none!important}
+
+/* v6.59 · Dense, edge-conscious writing desk.
+   Fixed widths are intentional: sidebar is an index, not a second document.
+   Preserve the in-reader note drawer (rules only apply to standalone Notes mode). */
+body.jfNotesMode #jfDeskNotes{
+  
+  
+  
+  
+  
+  
+  column-gap:8px!important;
+  
+  min-width:0;
+  box-sizing:border-box;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteList{
+  padding-right:5px!important;
+  border-right-color:#bddbd40d!important;
+  gap:2px!important;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteItem{
+  padding:8px 7px!important;
+  min-width:0;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteActions .jfDeskPrimary{
+  
+  min-height:30px;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor{
+  padding:0!important;
+  margin:0!important;
+  gap:5px!important;
+  width:100%!important;
+  max-width:none!important;
+}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle{
+  padding:4px 0 7px!important;
+  font-size:22px;
+}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteBody{
+  padding:3px 0 0!important;
+  line-height:1.83!important;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskEditorBottom{
+  padding:2px 0 0!important;
+  min-height:24px;
+}
+@media(max-width:760px){
+  body.jfNotesMode #jfDeskNotes{
+    
+    margin:0 3px 0 50px!important;
+    
+    grid-template-columns:clamp(90px,22vw,112px) minmax(0,1fr)!important;
+    
+  }
+  body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle{font-size:19px}
+}
+
+/* v6.60: PDF.js canvas + selectable text layer share one precise viewport.
+   No browser-native PDF iframe in the normal reading path. */
+.jfReader .jfPdfJsSheet{position:relative;max-width:100%;background:#fff;box-shadow:0 14px 42px #0009;line-height:1;overflow:hidden}
+.jfReader .jfPdfJsSheet[hidden]{display:none!important}
+.jfPdfJsSheet canvas{display:block;width:100%;height:100%;pointer-events:none}
+.jfPdfJsSheet .jfPdfTextLayer{position:absolute;inset:0;overflow:hidden;text-align:initial;line-height:1;user-select:text;touch-action:pan-x pan-y}
+.jfPdfTextLayer span,.jfPdfTextLayer br{position:absolute;white-space:pre;color:transparent;cursor:text;transform-origin:0 0;user-select:text}
+.jfPdfTextLayer ::selection{background:#5bc8c986;color:transparent}
+
+.jfPdfJsSheet ::highlight(jf-pdf-citation){background:#7fd8bf81;color:transparent}
+
+/* PDF.js 6.4 real text layer: match Mozilla's font scaling and rotations.
+   Without these variables the overlay selection bounds diverge from Canvas. */
+.jfReader .jfPdfJsSheet .jfPdfTextLayer{
+  color-scheme:only light;opacity:1;letter-spacing:normal;word-spacing:normal;
+  -webkit-text-size-adjust:none;text-size-adjust:none;forced-color-adjust:none;
+  transform-origin:0 0;z-index:1;caret-color:#202020;
+  --min-font-size:1;--min-font-size-inv:calc(1 / var(--min-font-size));
+  --text-scale-factor:calc(var(--total-scale-factor) * var(--min-font-size));
+}
+.jfReader .jfPdfJsSheet .jfPdfTextLayer>.markedContent{display:contents}
+.jfReader .jfPdfJsSheet .jfPdfTextLayer > :not(.markedContent),
+.jfReader .jfPdfJsSheet .jfPdfTextLayer .markedContent span:not(.markedContent){
+  z-index:1;--font-height:0;
+  font-size:calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x:1;--rotate:0deg;
+  transform:rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+/* v6.60: PDF.js exposes a real selectable text layer; show the excerpt action. */
+.jfReader.jfPdfMode #jfReadExcerpt{display:inline-flex!important}
+
+/* v6.61 · immersive reading and compact Notes: never let the document page scroll behind the workspace */
+html:has(body.jfNotesMode),body.jfNotesMode{overflow:hidden!important;max-width:100%!important;height:100dvh!important}
+body.jfNotesMode #jfDeskNotes{
+ max-width:none!important;
+ margin:0 4px 0 52px!important;padding:10px 8px 4px!important;
+ 
+ 
+ overflow:hidden!important;min-height:0!important;
+}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead h3{}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead{}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor,body.jfNotesMode #jfDeskNotes .jfDeskNoteList{min-height:0!important;max-height:100%!important;overflow-x:hidden!important}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor textarea{min-height:0!important}
+@media(max-width:760px){body.jfNotesMode #jfDeskNotes{margin-left:47px!important;width:calc(100vw - 50px)!important;padding:6px 4px!important}}
+/* PDF.js virtual 10-page scroll window. Only visible pages have costly Canvas layers. */
+.jfPdfMode .jfReadCenter{scroll-behavior:auto!important;overflow-x:hidden}
+.jfReader .jfPdfPages:has(.jfPdfVirtualPage){gap:0;padding:18px 12px 96px;min-height:100%;background:#151a1d}
+.jfReader .jfPdfJsSheet.jfPdfScrollStack{display:flex;flex-direction:column;align-items:center;gap:18px;max-width:100%;background:transparent;overflow:visible;box-shadow:none;line-height:normal}
+.jfPdfVirtualPage{position:relative;max-width:100%;flex:none;background:#fff;box-shadow:0 8px 28px #0006;overflow:hidden;contain:layout paint;box-sizing:border-box}
+.jfPdfVirtualPage canvas{display:block;max-width:100%;pointer-events:none}
+.jfPdfVirtualPage .jfPdfTextLayer{position:absolute;inset:0;overflow:hidden;text-align:initial;line-height:1;user-select:text;touch-action:pan-y}
+.jfPdfVirtualPage .jfPdfTextLayer>span,.jfPdfVirtualPage .jfPdfTextLayer .markedContent span{color:transparent;position:absolute;white-space:pre;transform-origin:0 0}
+.jfPdfVirtualPage .jfPdfLoading{color:#627179;font-size:12px;position:absolute;top:48%;width:100%;text-align:center}
+.jfPdfVirtualPage.jfPdfPageNight{background:#111}
+.jfPdfVirtualPage.jfPdfPageNight canvas{filter:invert(1)}
+.jfPdfMode #jfPdfNight,.jfPdfMode #jfPdfCapture{display:grid!important}
+#jfPdfNight[hidden],#jfPdfCapture[hidden]{display:none!important}
+.jfPdfMode #jfReadChapters{display:none!important}
+.jfPdfGoControl{display:flex;gap:7px;align-items:center;font-size:12px;color:#8daeb9}
+.jfPdfGoControl[hidden]{display:none!important}
+.jfPdfGoControl label{font-size:0}
+.jfPdfGoControl input{width:60px;min-width:0;text-align:center;font:inherit;font-size:13px;font-variant-numeric:tabular-nums;border:1px solid #98bdc42b;border-radius:8px;padding:7px 4px;color:#e3f5f5;background:#accbcc0c;outline:none}
+.jfPdfGoControl input:focus{border-color:#82cabc99}
+.jfPdfGoControl input::-webkit-inner-spin-button,.jfPdfGoControl input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.jfPdfGoControl span{font-size:11px;min-width:0!important}
+.jfPdfMode #jfReadProgress{display:none!important}
+.jfPdfCaptureLayer{position:absolute;inset:0;z-index:6;cursor:crosshair;touch-action:none;background:#65b8bd0b}
+.jfPdfCaptureSelection{position:absolute;display:none;pointer-events:none;border:1px solid #8ce9db;box-shadow:0 0 0 9999px #0007;background:#82dfd920}
+.jfPdfCapturePanel{position:fixed;z-index:1301;left:50%;top:50%;transform:translate(-50%,-50%);width:min(310px,90vw);background:#152531f7;border:1px solid #b4e5d13b;box-shadow:0 25px 90px #000b;border-radius:13px;padding:16px;display:flex;flex-direction:column;gap:12px;color:#e8f5f3}
+.jfPdfCapturePanel[hidden]{display:none!important}
+.jfPdfCapturePanel label{font-size:12px;color:#a3c9ca}
+.jfPdfCapturePanel input{background:#ffffff09;border:1px solid #a8cacc37;color:#f3faf9;border-radius:8px;padding:9px;outline:none}
+.jfPdfCapturePanel>div{display:flex;justify-content:flex-end;gap:9px}
+.jfPdfCapturePanel button{background:#ffffff14;border:1px solid #ffffff17;border-radius:8px;padding:8px 12px;color:#d8eae9;cursor:pointer}
+.jfPdfCapturePanel button:last-child{background:#7dcfbb29;color:#baf1e0}
+@media(max-width:620px){.jfPdfMode .jfReaderHeader{gap:4px}.jfPdfMode .jfReaderIdentity strong{font-size:11px}.jfPdfMode .jfReadFooter{gap:4px}.jfPdfMode .jfReadFooter button{padding:10px 8px}}
+/* Align independent note title with section heading, rather than reserving two empty grid rows. */
+body.jfNotesMode #jfDeskNotes .jfDeskEditor{padding-top:0!important}
+body.jfNotesMode #jfDeskNotes{height:calc(100dvh - 91px)!important;max-height:calc(100dvh - 91px)!important}
+
+/* v6.62 · genuine display-only edge convolution and unified precision chevrons. */
+.jfReadFooter button#jfReadPrev,.jfReadFooter button#jfReadNext{display:grid;place-items:center;width:38px;height:38px;padding:0;border-radius:11px;color:#adc7cc;transition:background .16s,color .16s}
+.jfReadFooter button#jfReadPrev svg,.jfReadFooter button#jfReadNext svg{width:18px;height:18px;display:block}
+.jfReadFooter button#jfReadPrev:hover:not(:disabled),.jfReadFooter button#jfReadNext:hover:not(:disabled){background:#8ad6c51b;color:#eafcf8}
+.jfPdfMode #jfPdfSharpen{display:grid!important;font-size:13px;font-weight:550;letter-spacing:-.04em}
+#jfPdfSharpen[hidden]{display:none!important}
+#jfPdfSharpen[aria-pressed="true"]{color:#a7e5d7;background:#91dcca14}
+.jfPdfVirtualPage.jfPdfSharpSoft canvas{filter:url(#jfPdfSharpenSoft)}
+.jfPdfVirtualPage.jfPdfSharpStrong canvas{filter:url(#jfPdfSharpenStrong)}
+.jfPdfVirtualPage.jfPdfPageNight.jfPdfSharpSoft canvas{filter:url(#jfPdfSharpenSoft) invert(1)}
+.jfPdfVirtualPage.jfPdfPageNight.jfPdfSharpStrong canvas{filter:url(#jfPdfSharpenStrong) invert(1)}
+.jfDeskQuoteImage{display:block;max-width:min(100%,560px);max-height:370px;width:auto;height:auto;object-fit:contain;border-radius:7px;box-shadow:0 5px 18px #0003;cursor:zoom-in;background:#ffffff08}
+.jfDeskQuote.jfDeskImageQuote{background:transparent;border-left:0;padding:6px 0;max-height:none;overflow:visible}
+.jfDeskQuoteCaption{display:block;max-width:560px;white-space:pre-wrap;color:#b6cec9;font-size:12px;line-height:1.7;margin-top:7px}
+.jfPdfCapturePanel button:disabled{opacity:.45;cursor:wait}
+
+.jfPdfMode .jfReadCenter{overflow-anchor:none}
+
+/* v6.63 · compact navigator, native pinch rather than floating zoom bar */
+.jfReader #jfPdfPageActions{display:none!important}
+.jfPdfMode #jfPdfGoControl{gap:5px!important;margin:0 1px}
+.jfPdfMode .jfReadFooter{gap:1px!important;justify-content:center!important}
+.jfPdfMode .jfReadFooter #jfReadPrev,.jfPdfMode .jfReadFooter #jfReadNext{width:30px;height:32px;padding:0!important;border-radius:8px;margin:0 2px}
+.jfPdfMode .jfReadFooter #jfReadPrev svg,.jfPdfMode .jfReadFooter #jfReadNext svg{width:16px;height:16px}
+.jfPdfMode .jfPdfGoControl input{width:47px;padding:5px 3px;font-size:13px;border-radius:7px}
+.jfPdfMode .jfPdfGoControl span{min-width:0!important;font-size:12px}
+.jfPdfJsSheet ::highlight(jf-pdf-marks){background:rgba(103,174,231,.44);color:transparent}
+.jfPdfSavedArea{position:absolute;pointer-events:none;background:rgba(116,185,239,.15);border:1px solid #a4d8ee7d;box-sizing:border-box;z-index:2}
+.jfReader #jfPdfMark:not([hidden]){display:inline-grid!important}
+#jfPdfMark[hidden]{display:none!important}
+/* PDF quote destination is a separate, modest and keyboard-dismissable surface. */
+.jfPdfQuoteChooser{position:fixed;inset:0;z-index:2007;background:#02080bb8;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:18px;color:#e8f5f3}
+.jfPdfQuoteChooser[hidden]{display:none!important}
+.jfPdfQuoteChooserCard{width:min(410px,96vw);max-height:min(580px,90vh);display:flex;flex-direction:column;gap:13px;border:1px solid #9bcac333;border-radius:18px;padding:22px;background:#15212bec;box-shadow:0 28px 90px #000b}
+.jfPdfQuoteChooserCard h3{font-size:20px;font-weight:500;letter-spacing:-.04em;margin:0}
+.jfPdfQuoteChooserCard p{font-size:12px;line-height:1.6;color:#9bb4be;margin:0}
+.jfPdfQuoteOptions{min-height:30px;max-height:250px;overflow:auto;display:flex;flex-direction:column;gap:3px}
+.jfPdfQuoteOptions button{background:transparent;border:1px solid transparent;color:#d5e8ea;text-align:left;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jfPdfQuoteOptions button[aria-pressed="true"]{border-color:#8edac355;background:#8fdec518;color:#b8f2df}
+.jfPdfQuoteChooserCard input{font:inherit;font-size:13px;background:#9ac4bb11;color:#e8f7f4;border:1px solid #9dc4c338;border-radius:9px;padding:10px}
+.jfPdfQuoteChooserCard input[hidden]{display:none!important}
+.jfPdfQuoteButtons{display:flex;gap:8px;justify-content:flex-end}
+.jfPdfQuoteButtons button{border:1px solid #9cc5c42e;background:#a9d4c416;color:#e2f3ee;padding:9px 14px;border-radius:9px;cursor:pointer}
+.jfPdfQuoteButtons #jfPdfQuoteCommit{background:#8acfbf33;color:#b8f5e2}
+.jfPdfQuoteButtons button:disabled{opacity:.5}
+.jfDeskQuote{display:flex;flex-direction:column;gap:10px;max-height:none!important;overflow:visible!important;padding:12px 15px!important;background:#86cbb916!important;border-left:2px solid #8bdcc9!important;border-radius:2px 10px 10px 2px;white-space:pre-wrap}
+.jfDeskQuoteSource{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;border-top:1px solid #a0d6cb25;padding-top:9px;margin-top:4px;font:11px/1.6 system-ui;color:#8aabb6;white-space:normal}
+.jfDeskQuoteSource span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;line-height:1.6}
+.jfDeskQuoteSource button{border:0;display:inline-flex;align-items:center;justify-content:center;flex:none;align-self:center;background:transparent;color:#92decf;cursor:pointer;font:inherit;line-height:1.2;padding:0;min-height:20px}
+.jfDeskQuoteSource button:hover{color:#e4fff7}
+
+/* v6.64 · precise PDF navigator alignment and single sharpen profile. */
+.jfReader.jfPdfMode .jfReadFooter{display:flex;align-items:center!important;justify-content:center!important;gap:0!important}
+.jfReader.jfPdfMode .jfReadFooter #jfReadPrev,
+.jfReader.jfPdfMode .jfReadFooter #jfReadNext{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 26px;width:26px;height:34px;padding:0!important;margin:0!important;
+  line-height:0!important;align-self:center!important;vertical-align:middle!important;
+}
+.jfReader.jfPdfMode .jfReadFooter #jfReadPrev svg,
+.jfReader.jfPdfMode .jfReadFooter #jfReadNext svg{
+  display:block;width:15px;height:15px;flex:0 0 15px;vertical-align:middle;
+}
+.jfReader.jfPdfMode #jfPdfGoControl{display:flex;align-items:center!important;gap:4px!important;margin:0!important;padding:0!important;height:34px;flex:0 0 auto}
+.jfReader.jfPdfMode #jfPdfGoControl[hidden]{display:none!important}
+.jfReader.jfPdfMode #jfPdfGoControl input{margin:0!important;height:32px;box-sizing:border-box}
+.jfPdfVirtualPage.jfPdfSharpStrong canvas{filter:url(#jfPdfSharpenStrong)}
+.jfPdfVirtualPage.jfPdfPageNight.jfPdfSharpStrong canvas{filter:url(#jfPdfSharpenStrong) invert(1)}
+.jfPdfMode #jfPdfJsSheet{backface-visibility:hidden}
+
+/* v6.65 · compact in-reader annotation index, zero new global toolbars. */
+.jfReader .jfPdfMarksList{position:absolute;right:18px;top:18px;left:auto;bottom:auto;z-index:45;width:min(540px,calc(100vw - 44px));height:min(72vh,760px);min-width:min(360px,calc(100vw - 44px));min-height:240px;max-width:calc(100vw - 24px);max-height:calc(100% - 18px);background:#121f2bf7;border:1px solid #84b8ae38;border-radius:14px;box-shadow:0 16px 46px #0009;display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(18px);color:#dbeeea;touch-action:none;user-select:none}
+.jfReader .jfPdfMarksList[hidden],#jfPdfMarksListToggle[hidden]{display:none!important}
+.jfPdfMarksListHead{padding:12px 13px 9px 17px;font:600 13px/1.4 system-ui;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #b6d1cf1a;cursor:grab;user-select:none}
+.jfPdfMarksListHead button{border:0;background:transparent;color:#b5c8cd;font:21px system-ui;cursor:pointer;position:relative;z-index:1}
+.jfPdfMarksListItems{overflow:auto;padding:8px 8px 22px;scrollbar-width:thin;min-height:42px;flex:1}
+.jfPdfMarkItem{width:100%;border:0;background:transparent;color:#b2cbd0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:9px}
+.jfPdfMarkItem:hover,.jfPdfMarkItem:focus-visible{background:#9fcfc619;outline:none}
+.jfPdfMarkPage{font:600 12px/1.3 system-ui;color:#d8f5ef}
+.jfPdfMarkText{font:11px/1.5 system-ui;color:#8fa9b7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}
+.jfPdfMarksEmpty{padding:12px;color:#8daab4;font:12px system-ui}
+#jfPdfMarksListToggle[aria-expanded="true"]{color:#a8e6d7;background:#8fcdbc22}
+
+.jfPdfPageBookmark{position:absolute;z-index:4;top:0;right:18px;width:17px;height:27px;background:#78c9cfda;clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);pointer-events:none;filter:drop-shadow(0 1px 3px #0005)}
+
+/* v6.67: contextual PDF mark editing, inherited dark crystal language. */
+.jfPdfJsSheet ::highlight(jf-pdf-marks-blue){background:rgba(103,174,231,.38)}
+.jfPdfJsSheet ::highlight(jf-pdf-marks-mint){background:rgba(105,217,180,.42)}
+.jfPdfJsSheet ::highlight(jf-pdf-marks-amber){background:rgba(235,193,119,.43)}
+.jfPdfJsSheet ::highlight(jf-pdf-marks-rose){background:rgba(233,155,181,.39)}
+.jfPdfJsSheet ::highlight(jf-pdf-marks-violet){background:rgba(181,160,237,.39)}
+.jfPdfSavedArea{background:color-mix(in srgb,var(--jf-mark,#7fbbea) 19%,transparent);border:1px solid color-mix(in srgb,var(--jf-mark,#7fbbea) 73%,transparent)}
+.jfPdfMarkMenu{position:fixed;z-index:2010;width:212px;border:1px solid #b0cfc644;border-radius:13px;background:#14232cf5;color:#d5e9e7;padding:10px;box-shadow:0 14px 42px #000b;backdrop-filter:blur(20px)}
+.jfPdfMarkMenu[hidden]{display:none!important}
+.jfPdfMarkSwatches{display:flex;align-items:center;justify-content:space-around;gap:4px;padding:2px 0 10px;border-bottom:1px solid #a3c5c51d}
+.jfPdfMarkSwatches button{width:24px;height:24px;border-radius:50%;border:2px solid transparent;outline:0;background:var(--jf-mark);cursor:pointer;opacity:.88}
+.jfPdfMarkSwatches button[aria-pressed="true"]{border-color:#e7f9f2;box-shadow:0 0 0 2px #243c42}
+.jfPdfMarkSwatches button:hover{opacity:1;transform:scale(1.09)}
+.jfPdfMarkActions{display:flex;flex-direction:column;gap:2px;padding-top:7px}
+.jfPdfMarkActions button{border:0;background:transparent;color:inherit;text-align:left;border-radius:7px;padding:9px 10px;font:12px system-ui;cursor:pointer}
+.jfPdfMarkActions button:hover,.jfPdfMarkActions button:focus-visible{background:#95cdbb25;outline:0}
+.jfPdfMarkActions [data-action="delete"]{color:#dcaba5}
+
+/* v6.68 raster PDF screenshot: editable, line-aware start/end handles. */
+.jfPdfCaptureSelection{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;box-shadow:none!important;background:transparent!important;display:block!important;pointer-events:none!important}
+.jfPdfCaptureStripe{position:absolute;background:rgba(115,210,197,.21);border:1px solid rgba(131,236,223,.7);box-sizing:border-box;pointer-events:none}
+.jfPdfCaptureHandle{position:absolute;display:none;z-index:3;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:6px;background:#a8eee0;border:2px solid #113e43;box-shadow:0 3px 14px #000a;cursor:grab;touch-action:none;padding:0}
+.jfPdfCaptureHandle::before{content:'';position:absolute;left:8px;top:3px;height:10px;border-left:2px solid #164249}
+.jfPdfCaptureHandle[data-handle="end"]{border-radius:6px}
+.jfPdfCaptureLayer:has(.jfPdfCaptureStripe ~ .jfPdfCaptureStripe) .jfPdfCaptureHandle,.jfPdfCaptureLayer:has(.jfPdfCaptureActions:not([hidden])) .jfPdfCaptureHandle{display:block}
+.jfPdfCaptureLayer:has(.jfPdfCaptureActions[hidden]) .jfPdfCaptureHandle{display:none}
+.jfPdfCaptureActions{position:absolute;z-index:3;display:flex;gap:5px;padding:5px;background:#142730f2;border:1px solid #a4d6cb44;border-radius:9px;box-shadow:0 12px 35px #0009;white-space:nowrap}
+.jfPdfCaptureActions[hidden]{display:none!important}
+.jfPdfCaptureActions button{background:transparent;color:#c7e5df;border:0;border-radius:6px;padding:6px 9px;font:11px system-ui;cursor:pointer}
+.jfPdfCaptureActions .jfPdfCaptureMark{background:#7fbbea26;color:#cfe7ff}
+.jfPdfCaptureActions .jfPdfCaptureAccept{background:#74ccb735;color:#b7f7e2}
+.jfPdfCaptureActions button:hover{background:#b3e8dc30}
+
+/* v6.75 · unified notebook: writing and source extracts are one continuous page. */
+.jfDeskNoteCanvas{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;display:flex;flex-direction:column;gap:10px;padding:4px 0 18px;max-width:100%}
+.jfDeskNoteCanvas #jfDeskNoteBody,.jfDeskNoteCanvas .jfDeskInlineNoteText{display:block;flex:none;resize:vertical;min-height:74px;height:110px;max-height:none;width:100%;box-sizing:border-box;border:0!important;outline:0;background:transparent;color:#d5e6ee;font:14px/1.9 system-ui;padding:8px 0;overflow:auto}
+.jfDeskNoteCanvas .jfDeskInlineNoteText{height:76px;min-height:52px;resize:vertical;flex:none;font:inherit;font-size:14px}
+.jfDeskNoteCanvas .jfDeskInlineNoteText::placeholder{color:#708c94}
+.jfDeskNoteCanvas .jfDeskExcerpt{display:flex!important;flex-direction:column;flex:none;gap:9px!important;max-height:none!important;overflow:visible!important;background:none!important;border:0!important;padding:0!important;margin:0!important}
+.jfDeskNoteCanvas .jfDeskExcerpt[hidden]{display:none!important}
+.jfDeskNoteCanvas .jfDeskFlowQuote{flex:none;max-width:100%;margin:3px 0;padding:12px 15px!important;border-radius:9px;border-left:2px solid #83d9c68a!important;background:#8ccaba10!important}
+.jfDeskNoteCanvas .jfDeskQuoteImage{max-width:100%;object-fit:contain}
+body.jfNotesMode .jfDeskEditor .jfDeskNoteCanvas textarea{flex:none!important;min-height:74px!important;height:110px;max-width:100%!important}
+body.jfNotesMode .jfDeskEditor .jfDeskNoteCanvas .jfDeskInlineNoteText{min-height:54px!important;height:80px}
+.jfReader .jfPdfMarksList.jfDragging .jfPdfMarksListHead{cursor:grabbing}
+.jfPdfMarksListResize{position:absolute;left:6px;bottom:6px;width:22px;height:22px;border:0;background:transparent;cursor:nesw-resize;border-radius:8px;opacity:.82}
+.jfPdfMarksListResize::before{content:"";position:absolute;left:4px;bottom:4px;width:12px;height:12px;background:linear-gradient(45deg,transparent 0 34%,#9fd7cb 34% 42%,transparent 42% 58%,#9fd7cb 58% 66%,transparent 66%);filter:drop-shadow(0 0 3px #0007)}
+.jfPdfMarksListResize:hover{background:#98cfc51a;opacity:1}
+.jfPdfMarksListResize:focus-visible{outline:1px solid #9fd7cb88;background:#98cfc51a}
+
+/* Spread at lower-than-50% zoom. Fixed 44vw column floors preserve legibility. */
+.jfReader .jfPdfJsSheet.jfPdfScrollStack.jfPdfTwoPage{display:grid;grid-template-columns:repeat(2,max-content);align-items:start;justify-content:center;gap:18px 18px;width:max-content;max-width:none;overflow:visible;box-shadow:none;background:transparent}
+.jfPdfMode .jfReadCenter:has(.jfPdfTwoPage){overflow-x:auto;scrollbar-width:thin}
+.jfPdfTwoPage>.jfPdfVirtualPage{max-width:none;min-width:44vw}
+/* Content-first mark index; page and type are intentionally quiet metadata. */
+/* The floating list inherits its width and height from the adjustable panel. */
+.jfPdfMarkItem{gap:9px;padding:12px 12px 14px;border-bottom:1px solid #c5e4dc0c}
+.jfPdfMarkText{color:#e1efed;font:13px/1.65 system-ui;white-space:normal;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;max-height:6.7em}
+.jfPdfMarkPage{font:10px/1.35 system-ui;color:#7b9ba6;font-weight:400;letter-spacing:.02em}
+.jfPdfMarkPreview{display:block;max-width:none;width:100%;height:auto;max-height:none;border:1px solid #99c7bd20;border-radius:10px;background:#f8faf9;object-fit:contain;align-self:stretch;box-sizing:border-box}
+
+/* v6.79 · one precise masthead and an unobstructed writing surface. */
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead{grid-column:1!important;grid-row:1!important;z-index:0!important;pointer-events:none!important;min-width:0}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead>*{pointer-events:auto}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor{grid-column:2!important;grid-row:1/4!important;position:relative;z-index:1!important;overflow:visible!important;display:flex;flex-direction:column;min-height:0!important}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle{position:relative;z-index:3!important;pointer-events:auto!important;cursor:text!important;min-height:42px!important;flex:none;border-bottom:1px solid #9cbfbc2a!important;transition:border-color .16s,color .16s}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteTitle:focus{border-bottom-color:#8dd7c6ad!important;color:#f1fbfb}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead h3{color:#a9c6c7;}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead .jfBooksEyebrow{display:none!important}
+.jfNoteCommandBar{display:flex;align-items:center;gap:5px;flex:none;min-height:37px;max-width:100%;color:#9cbdc1;border-bottom:1px solid #a9cfcb1a;padding:0 0 7px;white-space:nowrap}
+.jfNoteModeSwitch{display:flex;padding:3px;border-radius:9px;background:#91cbc50e;border:1px solid #9fd6ce19;flex:none}
+.jfNoteCommandBar button{border:0;background:transparent;color:#8ea9b3;font:500 11px/1.2 system-ui;border-radius:7px;min-height:26px;padding:5px 9px;cursor:pointer;transition:color .14s,background .14s}
+.jfNoteCommandBar button:hover,.jfNoteCommandBar button:focus-visible{background:#9bcfc220;color:#d8f1ea;outline:none}
+.jfNoteModeSwitch button[aria-pressed=true],#jfNotePreview[aria-pressed=true]{color:#cef3e9;background:#94d8c422}
+.jfNoteFormatTools{display:flex;align-items:center;gap:1px;padding-left:5px;border-left:1px solid #9ec3be1c;flex:none}
+.jfNoteFormatTools[hidden]{display:none!important}
+.jfNoteFormatTools button{min-width:28px;padding:5px 6px;font-size:12px}
+.jfNoteBarFill{flex:1;min-width:2px}
+.jfNoteFormatHelp{font:10px/1.2 system-ui;color:#6e919b;min-height:12px;letter-spacing:.01em;flex:none}
+.jfNoteRendered{width:100%;max-width:100%;box-sizing:border-box;color:#d7e8ec;font:14px/1.85 system-ui;overflow-wrap:anywhere;min-height:70px;padding:7px 0;outline:0}
+.jfNoteRichField{flex:none;white-space:normal;caret-color:#a4e9d9;cursor:text}
+.jfNoteRichField:focus-visible{outline:0}
+.jfNoteRendered h1,.jfNoteRendered h2,.jfNoteRendered h3{font-weight:600;color:#edf9f7;margin:15px 0 8px;line-height:1.45}
+.jfNoteRendered h1{font-size:23px}.jfNoteRendered h2{font-size:19px}.jfNoteRendered h3{font-size:16px}
+.jfNoteRendered p{margin:0 0 12px}.jfNoteRendered ul,.jfNoteRendered ol{padding-left:24px;margin:8px 0 14px}
+.jfNoteRendered blockquote{margin:10px 0 17px;padding:7px 14px;border-left:2px solid #7fd4c6;background:#87c2b112;border-radius:0 6px 6px 0;color:#bbd5d7}
+.jfNoteRendered a{color:#a0d6d4;text-underline-offset:3px}
+.jfNoteRendered code{font:12px/1.6 ui-monospace,monospace;background:#82b5b418;padding:2px 4px;border-radius:4px}
+.jfNoteRendered pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#90bab019;padding:10px 12px;border-radius:8px}
+.jfNoteRendered[hidden],#jfDeskNoteCanvas textarea[hidden]{display:none!important}
+.jfNotePreviewField{cursor:default;user-select:text}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor .jfDeskNoteCanvas{min-height:0!important;overflow-y:auto!important}
+@media(max-width:900px){.jfNoteCommandBar{flex-wrap:wrap;white-space:normal}.jfNoteBarFill{flex-basis:6px}.jfNoteFormatHelp{display:none}}
+
+/* v6.80: the lead textarea, all embedded quotes, and continuation text are siblings. */
+.jfDeskNoteCanvas .jfDeskExcerpt > #jfDeskNoteBody{flex:none;min-height:74px;max-width:100%;}
+
+/* v6.82 · One native editor, embedded excerpts, gallery masthead geometry. */
+body.jfNotesMode #jfDeskNotes{margin-left:0!important;width:calc(100vw - 18px)!important;margin-right:18px!important;padding-left:30px!important;padding-top:19px!important;}
+/* v6.84: reuse the actual Gallery masthead typography, not its overridden base values. */
+body.jfNotesMode #jfDeskNotes{grid-template-rows:28px 36px minmax(0,1fr)!important;row-gap:17px!important;}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead{align-self:start!important;align-items:center!important;min-height:0!important;height:28px!important;padding:0!important;}
+body.jfNotesMode #jfDeskNotes .jfDeskNotesHead h3{font-size:20px!important;font-weight:510!important;line-height:1.25!important;letter-spacing:-.045em!important;color:#dfe7f3!important;margin:0!important;}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteActions{align-self:center!important;min-height:36px!important;}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteActions .jfDeskPrimary{font-size:12px!important;font-weight:550!important;letter-spacing:0!important;line-height:1.25!important;min-height:34px!important;padding:7px 11px!important;border-radius:11px!important;}
+
+body.jfNotesMode #jfDeskNotes .jfDeskNoteActions,body.jfNotesMode #jfDeskNotes .jfDeskNoteList{padding-left:0!important;}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor .jfDeskNoteCanvas{overflow:auto!important;}
+body.jfNotesMode #jfDeskNotes #jfDeskNoteBody{display:none!important;}
+body.jfNotesMode #jfDeskNotes .jfDeskNoteCanvas .jfDeskExcerpt{min-height:75%;display:block!important;max-height:none!important;overflow:visible!important;padding:8px 0 60px!important;outline:none;white-space:normal;cursor:text;font:15px/1.9 system-ui;caret-color:#a4e9d9;color:#d7e6ec;}
+body.jfNotesMode #jfDeskNotes .jfDeskExcerpt[contenteditable="false"]{cursor:default;}
+.jfDeskExcerpt .jfNoteTextChunk{display:block;min-height:1.9em;white-space:pre-wrap;overflow-wrap:anywhere;outline:none;margin:0 0 .25em;padding:0;}
+.jfDeskExcerpt .jfNoteTextChunk:empty:before{content:' ';white-space:pre;}
+.jfDeskExcerpt .jfDeskFlowQuote{display:block;margin:8px 0 14px!important;outline:0;user-select:none;cursor:default;}
+.jfDeskExcerpt .jfDeskQuoteDeleteArmed{box-shadow:0 0 0 1px #9be0d1,0 0 0 6px #9be0d11c!important;border-color:#9be0d1!important;background:#95cab21e!important;}
+.jfDeskExcerpt .jfDeskQuoteDeleteArmed::after{content:'再次退格删除';position:absolute;right:12px;top:10px;color:#b8f3e8;font:11px/1.5 system-ui;}
+.jfDeskExcerpt.jfNotePreviewing .jfNoteTextChunk{white-space:normal;}
+@media(max-width:780px){body.jfNotesMode #jfDeskNotes{margin-left:0!important;width:100vw!important;margin-right:0!important;padding-left:13px!important;padding-right:13px!important;}}
+
+/* v6.85: adjustable notes split and persistent image sizing. */
+body.jfNotesMode #jfDeskNotes{grid-template-columns:minmax(130px,var(--jf-note-list-width,250px)) minmax(0,1fr)!important;position:relative!important}
+.jfDeskNotesDivider{display:none}
+body.jfNotesMode .jfDeskNotesDivider{display:block;position:absolute;z-index:8;top:81px;bottom:18px;width:16px;transform:translateX(-50%);cursor:col-resize;touch-action:none;user-select:none;border-radius:8px;outline:none}
+.jfDeskNotesDivider::after{content:'';position:absolute;left:7px;top:0;bottom:0;width:1px;background:#8faeb02c;transition:background .15s,width .15s}
+.jfDeskNotesDivider:hover::after,.jfDeskNotesDivider:focus-visible::after,.jfDeskNotesDivider.jfDragging::after{background:#8fd7c4;width:2px}
+.jfNoteImageBulk{display:flex;align-items:center;gap:4px;flex:none;font:11px/1.3 system-ui;color:#90b1b3;white-space:nowrap}
+.jfNoteImageBulk select{background:#14252c;color:#c3e5da;border:1px solid #86c9b72f;border-radius:7px;padding:4px 6px;min-height:26px;cursor:pointer;max-width:82px}
+.jfDeskExcerpt .jfDeskImageQuote{width:var(--jf-quote-width,100%);box-sizing:border-box;transition:box-shadow .12s}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=center]{}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=right]{}
+.jfDeskExcerpt .jfDeskImageQuote .jfDeskQuoteImage{object-fit:contain;cursor:default;box-sizing:border-box}
+.jfDeskImageControls{display:flex;align-items:center;gap:5px;margin:5px 0 6px;flex-wrap:wrap;opacity:.65;transition:opacity .15s;font:10px system-ui}
+.jfDeskImageQuote:hover .jfDeskImageControls,.jfDeskImageQuote:focus-within .jfDeskImageControls{opacity:1}
+.jfDeskImageControls input[type=range]{width:86px;accent-color:#83d7c1;cursor:ew-resize}
+.jfDeskImageControls .jfNoteImagePercent{min-width:31px;text-align:right;font-variant-numeric:tabular-nums;color:#a9d6ca}
+.jfDeskImageControls button{min-width:25px;min-height:24px;cursor:pointer;border-radius:6px;}
+.jfDeskImageControls button[aria-pressed=true]{background:#8dd8c429!important;color:#d2f4ea!important}
+@media(max-width:760px){body.jfNotesMode #jfDeskNotes{column-gap:14px!important}.jfNoteImageBulk{font-size:0}.jfNoteImageBulk select{font-size:11px}}
+
+
+/* v6.86 · bulk image slider, centered handles, full-width image quote controls, more editor breathing room. */
+.jfNoteImageBulk{display:flex;align-items:center;gap:10px;min-width:min(320px,36vw);max-width:min(420px,40vw);flex:0 1 360px;font:11px/1.3 system-ui;color:#90b1b3;white-space:nowrap}
+.jfNoteImageBulk .jfNoteImageBulkLabel{flex:none}
+.jfNoteImageBulk .jfNoteBulkImageRange{flex:1 1 auto;min-width:130px}
+.jfNoteImageBulk .jfNoteImageBulkPercent{min-width:40px;text-align:right;font-variant-numeric:tabular-nums;color:#cce8df}
+.jfDeskImageControls input[type=range],.jfNoteImageBulk input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:22px;padding:0;margin:0;cursor:ew-resize}
+.jfDeskImageControls input[type=range]::-webkit-slider-runnable-track,.jfNoteImageBulk input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:999px;background:#ffffff26;box-shadow:inset 0 0 0 1px #ffffff1f}
+.jfDeskImageControls input[type=range]::-webkit-slider-thumb,.jfNoteImageBulk input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;border:0;background:#97e0d1;box-shadow:0 0 0 1px #bff0e63d,0 3px 10px #0007;margin-top:-3px}
+.jfDeskImageControls input[type=range]::-moz-range-track,.jfNoteImageBulk input[type=range]::-moz-range-track{height:12px;border-radius:999px;background:#ffffff26;box-shadow:inset 0 0 0 1px #ffffff1f}
+.jfDeskImageControls input[type=range]::-moz-range-thumb,.jfNoteImageBulk input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;border:0;background:#97e0d1;box-shadow:0 0 0 1px #bff0e63d,0 3px 10px #0007}
+.jfDeskImageControls input[type=range]::-moz-range-progress,.jfNoteImageBulk input[type=range]::-moz-range-progress{height:12px;border-radius:999px;background:#97e0d1}
+.jfDeskExcerpt .jfDeskImageQuote{box-sizing:border-box;display:flex;flex-direction:column;gap:8px;margin-left:0!important;margin-right:0!important}
+.jfDeskExcerpt .jfDeskImageQuote .jfDeskQuoteImageFrame{width:var(--jf-quote-width,100%);max-width:100%;box-sizing:border-box;margin-left:0;margin-right:auto}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=center] .jfDeskQuoteImageFrame{margin-left:auto;margin-right:auto}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=right] .jfDeskQuoteImageFrame{margin-left:auto;margin-right:0}
+.jfDeskExcerpt .jfDeskImageQuote .jfDeskQuoteImage{display:block;width:100%!important;max-width:100%!important;height:auto!important;max-height:none!important;object-fit:contain;cursor:default;box-sizing:border-box}
+.jfDeskImageControls{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:2px;scrollbar-width:thin;opacity:.78;transition:opacity .15s;font:11px/1.2 system-ui}
+.jfDeskImageControls .jfNoteImageRange{flex:0 0 190px;width:190px}
+.jfDeskImageControls .jfNoteImagePercent{min-width:42px;text-align:right;font-variant-numeric:tabular-nums;color:#a9d6ca;flex:none}
+.jfDeskImageControls button{flex:none;border:0!important;background:transparent!important;color:#9db9bb!important;font:11px system-ui!important;min-width:25px;min-height:24px;cursor:pointer;border-radius:6px;}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor{}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor .jfDeskNoteCanvas{}
+@media(max-width:760px){.jfNoteImageBulk{min-width:0;max-width:none;flex:1 1 180px;gap:8px}.jfNoteImageBulk .jfNoteImageBulkLabel{display:none}.jfNoteImageBulk .jfNoteImageBulkPercent{min-width:36px}.jfDeskImageControls .jfNoteImageRange{flex-basis:150px;width:150px}body.jfNotesMode #jfDeskNotes .jfDeskEditor{}}
+
+
+/* v6.87 · image slider alignment, shrinking quote cards, toolbar breathing fix */
+.jfNoteCommandBar{min-height:44px!important;padding:2px 0 10px!important;column-gap:10px!important;row-gap:8px!important}
+.jfNoteImageBulk{align-self:center!important;display:flex;min-height:24px}
+.jfNoteImageBulk .jfNoteBulkImageRange{align-self:center}
+.jfNoteImageBulk .jfNoteImageBulkPercent,#jfNotePreview,#jfNoteExportMd,#jfNoteExportHtml{align-self:center}
+.jfDeskImageControls{gap:12px!important;padding-top:2px!important;padding-bottom:2px!important}
+.jfDeskImageControls .jfNoteImageRange,.jfNoteImageBulk .jfNoteBulkImageRange{height:24px!important}
+.jfDeskImageControls .jfNoteImageRange{flex:0 0 272px!important;}
+.jfDeskImageControls .jfNoteImagePercent{align-self:center}
+.jfDeskImageControls button{align-self:center;padding:0 6px!important;}
+.jfDeskExcerpt .jfDeskImageQuote{max-width:100%!important;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=left]{margin-left:0!important;margin-right:auto!important}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=center]{margin-left:auto!important;margin-right:auto!important}
+.jfDeskExcerpt .jfDeskImageQuote[data-image-align=right]{margin-left:auto!important;margin-right:0!important}
+.jfDeskExcerpt .jfDeskImageQuote .jfDeskQuoteImageFrame{margin:0!important}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor{padding-left:clamp(22px,2.4vw,34px)!important}
+body.jfNotesMode #jfDeskNotes .jfDeskEditor .jfDeskNoteCanvas{padding-left:8px!important}
+@media(max-width:760px){.jfDeskImageControls .jfNoteImageRange{flex-basis:170px!important;width:170px!important}.jfNoteCommandBar{padding-bottom:8px!important;column-gap:8px!important}.jfNoteImageBulk{flex:1 1 220px!important}.jfNoteImageBulk .jfNoteBulkImageRange{min-width:120px!important}body.jfNotesMode #jfDeskNotes .jfDeskEditor{padding-left:12px!important}}
+
+.jfDeskExcerpt .jfDeskImageQuote{width:var(--jf-quote-card-width,100%)!important}
+
+
+/* v6.88 · strict vertical alignment and quote-card minimum width */
+.jfNoteImageBulk{
+  display:grid!important;
+  grid-template-columns:auto minmax(240px,1fr) auto!important;
+  align-items:center!important;
+  column-gap:14px!important;
+  row-gap:0!important;
+  min-height:32px!important;
+}
+.jfNoteImageBulk .jfNoteImageBulkLabel,
+.jfNoteImageBulk .jfNoteBulkImageRange,
+.jfNoteImageBulk .jfNoteImageBulkPercent{align-self:center!important}
+.jfNoteImageBulk .jfNoteBulkImageRange{display:block!important;height:24px!important;margin:0!important;min-width:240px!important}
+.jfNoteCommandBar{display:flex!important;align-items:center!important;overflow:visible!important}
+#jfNotePreview,#jfNoteExportMd,#jfNoteExportHtml{display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;min-height:30px!important;line-height:1!important}
+.jfDeskImageControls{
+  display:grid!important;
+  grid-template-columns:minmax(260px,1fr) auto repeat(3,auto)!important;
+  align-items:center!important;
+  column-gap:18px!important;
+  row-gap:0!important;
+  overflow:visible!important;
+  width:100%!important;
+}
+.jfDeskImageControls .jfNoteImageRange{display:block!important;width:100%!important;min-width:260px!important;height:24px!important;margin:0!important;align-self:center!important}
+.jfDeskImageControls .jfNoteImagePercent{display:block!important;align-self:center!important;line-height:24px!important;min-width:54px!important;margin:0!important}
+.jfDeskImageControls button{display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;line-height:1!important;min-height:30px!important;margin:0!important}
+.jfDeskExcerpt .jfDeskImageQuote{}
+@media(max-width:900px){
+  .jfNoteImageBulk{grid-template-columns:auto minmax(160px,1fr) auto!important;column-gap:10px!important}
+  .jfNoteImageBulk .jfNoteBulkImageRange{min-width:160px!important}
+  .jfDeskImageControls{grid-template-columns:minmax(170px,1fr) auto repeat(3,auto)!important;column-gap:12px!important}
+  .jfDeskImageControls .jfNoteImageRange{min-width:170px!important}
+}
+
+/* v6.89: Fix the actual range track/thumb optical center, not just its bounding box.
+   The inherited `body.jfNotesMode .jfDeskEditor input { padding-bottom:16px }`
+   moved the native track upward inside a nominally centered 24px range. */
+body.jfNotesMode #jfDeskNotes .jfDeskEditor input[type="range"].jfNoteImageRange,
+body.jfNotesMode #jfDeskNotes .jfDeskEditor input[type="range"].jfNoteBulkImageRange {
+  box-sizing:border-box!important;
+  padding:0!important;
+  border:0!important;
+  margin:0!important;
+  height:24px!important;
+  min-height:24px!important;
+  line-height:normal!important;
+  vertical-align:middle!important;
+}
+
+
+/* v6.90 - image width independent from card minimum; stable range while dragging. */
+.jfDeskExcerpt .jfDeskImageQuote .jfDeskQuoteImageFrame{
+  width:min(100%,var(--jf-image-render-width,100%))!important;
+  max-width:100%!important;
+}
+.jfDeskImageControls.jfImageControlsDragging{
+  background:#15232ded!important;
+  border-radius:9px!important;
+  box-shadow:0 6px 18px #0003!important;
+}
+.jfImageControlsPlaceholder{flex:none;width:100%;pointer-events:none}
+
+.jfDeskImageControls.jfImageControlsDragging{width:var(--jf-controls-lock-width)!important;max-width:none!important}
+
+
+/* v6.91 · Small image-anchored hover toolbar. No normal-flow layout shifts. */
+.jfDeskExcerpt .jfDeskImageQuote{min-width:min(100%,360px)!important}
+.jfDeskExcerpt .jfDeskQuoteImageFrame{position:relative!important;overflow:visible!important}
+.jfDeskQuoteImageFrame>.jfDeskImageControls{
+  position:absolute;left:8px;top:8px;z-index:12;
+  box-sizing:border-box!important;
+  width:318px!important;height:40px!important;
+  min-width:318px!important;min-height:40px!important;
+  max-width:none!important;max-height:40px!important;
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  flex-wrap:nowrap!important;gap:6px!important;
+  padding:5px 8px!important;margin:0!important;
+  border:1px solid #91caba38!important;border-radius:11px!important;
+  color:#c9e5de!important;background:#14242beb!important;
+  box-shadow:0 6px 20px #0008!important;backdrop-filter:blur(14px);
+  opacity:0!important;visibility:hidden;pointer-events:none;
+  transition:opacity .14s ease,visibility .14s ease;
+  overflow:visible!important;
+}
+.jfDeskQuoteImageFrame:hover>.jfDeskImageControls,
+.jfDeskQuoteImageFrame:focus-within>.jfDeskImageControls,
+.jfDeskQuoteImageFrame>.jfDeskImageControls.jfImageControlsDragging{
+  opacity:1!important;visibility:visible;pointer-events:auto;
+}
+.jfDeskQuoteImageFrame>.jfDeskImageControls .jfNoteImageRange{
+  display:block!important;box-sizing:border-box!important;
+  flex:0 0 142px!important;width:142px!important;
+  min-width:142px!important;max-width:142px!important;
+  height:24px!important;padding:0!important;margin:0!important;
+}
+.jfDeskQuoteImageFrame>.jfDeskImageControls .jfNoteImagePercent{
+  display:block!important;flex:0 0 35px!important;
+  min-width:35px!important;width:35px!important;
+  font:12px/24px system-ui!important;text-align:center!important;
+}
+.jfDeskQuoteImageFrame>.jfDeskImageControls button{
+  display:inline-flex!important;flex:0 0 26px!important;
+  align-items:center!important;justify-content:center!important;
+  min-width:26px!important;width:26px!important;height:28px!important;
+  padding:0!important;line-height:1!important;
+}
+.jfDeskQuoteImageFrame>.jfDeskImageControls.jfImageControlsDragging{
+  position:fixed;max-width:none!important;
+  width:318px!important;height:40px!important;
+  box-shadow:0 8px 26px #000a!important;
+}
+@media(max-width:390px){.jfDeskQuoteImageFrame>.jfDeskImageControls{left:2px;max-width:calc(100vw - 20px)!important}}
+
+/* v6.96 · Notebook picture darkness is visual-only; data URL/HTML export remains original. */
+#jfDeskNotes.jfNoteImagesNight .jfDeskImageQuote .jfDeskQuoteImage{filter:invert(1)!important}
+#jfDeskNotes #jfNoteImagesNight{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;min-height:30px}
+#jfDeskNotes #jfNoteImagesNight[aria-pressed=true]{color:#9de3d1!important;background:#8bd2bd1f!important;border-radius:9px}
+
+/* v6.97 · reader typography and deliberate side margins, isolated from PDF */
+.jfReader .jfReadText{box-sizing:border-box!important;width:100%!important;max-width:none!important;padding-left:var(--jf-read-side,22px)!important;padding-right:var(--jf-read-side,22px)!important}
+.jfReadPrefSelect{appearance:none;background:#9bd8cb13;color:#c7dfda;border:1px solid #8bd7c237;border-radius:9px;padding:7px 9px;font:12px system-ui;min-width:55px;cursor:pointer}
+.jfReadPrefSelect option{background:#16232e;color:#e3efec}
+.jfReadSideControl{display:flex;align-items:center;gap:7px;min-width:0;padding:4px 8px;border:1px solid #8bd7c227;border-radius:10px;color:#a4cac0;font:11px system-ui}
+.jfReadSideControl input{width:clamp(68px,9vw,150px);min-width:0;accent-color:#95dccc;cursor:ew-resize}
+.jfReadSideControl output{font-variant-numeric:tabular-nums;width:34px;text-align:right}
+.jfReader.jfPdfMode .jfReadPrefSelect,.jfReader.jfPdfMode .jfReadSideControl{display:none!important}
+.jfBookDeleteAction{border:1px solid #d28a8770;background:#883d3922;color:#e9aaa5;border-radius:10px;margin-top:12px;padding:9px 15px;cursor:pointer}
+.jfBookDeleteAction:hover{background:#b6514833}
+.jfBookDeleteAction:disabled{opacity:.5;cursor:wait}
+@media(max-width:720px){.jfReadSideControl span,.jfReadSideControl output{display:none}.jfReadSideControl{padding:3px 5px}.jfReadSideControl input{width:72px}.jfReadPrefSelect{padding:7px 3px;min-width:50px}}
+
+.jfBookTileWrap{position:relative;min-width:0}
+.jfBookTileWrap>.jfBookTile{width:100%;height:100%}
+.jfBookTileRemove{position:absolute;top:8px;right:8px;width:29px;height:29px;border:1px solid #c08b8b66;background:#15232ce8;border-radius:10px;color:#d9b5ae;font:23px/1 system-ui;cursor:pointer;opacity:0;transition:opacity .15s ease,background .15s ease;z-index:2}
+.jfBookTileWrap:hover .jfBookTileRemove,.jfBookTileWrap:focus-within .jfBookTileRemove{opacity:1}
+.jfBookTileRemove:hover{background:#743936d9;color:#fff}
+@media(hover:none){.jfBookTileRemove{opacity:.85}}
+
+/* v6.97 compact reader typography popover keeps title and book controls uncluttered. */
+.jfReader .jfReaderTools{position:relative}
+.jfReader .jfReadTypographyPanel{position:absolute;top:calc(100% + 12px);right:0;z-index:80;display:flex;align-items:center;gap:12px;padding:14px;background:#11232dea;border:1px solid #91dbcb43;box-shadow:0 16px 42px #0009;border-radius:14px;backdrop-filter:blur(18px);white-space:nowrap;max-width:calc(100vw - 20px)}
+.jfReader .jfReadTypographyPanel[hidden]{display:none!important}
+.jfReader .jfReadTypographyPanel>span{font-size:12px;color:#aacfc5}
+.jfReader .jfReadTypographyPanel .jfReadSideControl span,.jfReader .jfReadTypographyPanel .jfReadSideControl output{display:inline}
+.jfReader .jfReadTypographyPanel .jfReadSideControl input{width:clamp(100px,14vw,210px)}
+.jfReader.jfPdfMode #jfReadTypographyToggle,.jfReader.jfPdfMode #jfReadTypographyPanel{display:none!important}
+.jfReader.paper .jfReadTypographyPanel{background:#ecede5f5;color:#273c36;box-shadow:0 12px 32px #0003}
+@media(max-width:620px){.jfReader .jfReadTypographyPanel{right:-50px;gap:8px;padding:12px}.jfReader .jfReadTypographyPanel>span{display:none}.jfReader .jfReadTypographyPanel .jfReadSideControl input{width:120px}}
+/* Keep the compact typography popover inside narrow readers. */
+@media(max-width:620px){.jfReader .jfReadTypographyPanel{right:0}}
+.jfReader.paper .jfReadTypographyPanel>span,.jfReader.paper .jfReadTypographyPanel .jfReadSideControl{color:#36574e}
+.jfReader.paper .jfReadTypographyPanel .jfReadPrefSelect{color:#36574e;background:#d6e0d8;border-color:#6e9b8e44}
+
+/* v7.00: natural TXT paragraphs, not one tall slot per physical source line. */
+.jfReader .jfReadText.jfTxtProse{white-space:pre-line;line-height:1.72;letter-spacing:.012em;padding-top:clamp(24px,3vw,42px)!important;padding-bottom:75px;text-wrap:wrap;word-break:normal;overflow-wrap:break-word}
+.jfReader .jfReadMaskBtn{font-size:14px;letter-spacing:0;border:1px solid transparent}
+.jfReader .jfReadMaskBtn[aria-pressed="true"]{color:#9ce3d1;background:#96dbc324;border-color:#a3e4d344}
+@media(max-width:620px){.jfReader .jfReadText.jfTxtProse{line-height:1.68;padding-top:22px!important}}
+
+
+/* v7.01 · one logical multi-page mark and one editable note quote */
+.jfPdfMarkUnit{position:relative;display:flex;align-items:stretch;gap:2px;margin-bottom:8px;border-radius:11px;overflow:hidden;background:#ffffff04;border:1px solid #badcd90c}
+.jfPdfMarkUnit .jfPdfMarkItem{flex:1;min-width:0;margin:0;border:0;padding-right:9px}
+.jfPdfMarkUnitMenu{flex:0 0 29px;align-self:flex-start;margin:10px 5px 0 0;padding:5px 2px;border:0;border-radius:7px;background:#92c5bc16;color:#a7d4d0;cursor:pointer;font:20px/1 system-ui}
+.jfPdfMarkUnitMenu:hover,.jfPdfMarkUnitMenu:focus-visible{background:#91d4c23b;outline:1px solid #bce9dc5c}
+.jfPdfMarkUnitPreviews{display:flex;flex-direction:column;width:100%;gap:5px}
+.jfPdfMarkUnitPart{position:relative;width:100%;min-width:0;overflow:hidden;border-radius:8px;background:#f7f8f6}
+.jfPdfMarkUnitPart .jfPdfMarkPreview{display:block;width:100%;height:auto;max-width:100%;border-radius:7px;min-height:28px}
+.jfPdfMarkPartLabel{position:absolute;left:8px;top:7px;border-radius:5px;padding:3px 6px;background:#10222bde;color:#dbf4ed;font:10px/1.2 system-ui}
+.jfPdfMarkActions button[hidden]{display:none!important}
+.jfDeskQuotePage{position:relative;width:100%;margin:0 0 3px;overflow:hidden;border-radius:7px}
+.jfDeskQuotePage .jfDeskQuoteImage{display:block;width:100%!important;height:auto}
+.jfDeskQuotePageLabel{display:inline-flex;position:absolute;z-index:1;left:8px;top:8px;background:#17242bdc;border-radius:5px;padding:4px 8px;color:#e1f7f0;font:10px/1.2 system-ui;pointer-events:none}
+
+
+/* v7.02 · merged screenshots share one native-pixel scale, not one width. */
+.jfDeskExcerpt .jfDeskQuoteImageGroup .jfDeskQuotePage{
+  box-sizing:border-box;
+  width:var(--jf-group-page-width,100%)!important;
+  max-width:100%!important;
+  margin:0 0 8px!important;
+  overflow:visible!important;
+  border-radius:7px;
+}
+.jfDeskExcerpt .jfDeskQuoteImageGroup .jfDeskQuotePage .jfDeskQuoteImage{
+  display:block;
+  width:100%!important;
+  height:auto!important;
+  max-width:100%!important;
+}
+.jfDeskExcerpt .jfDeskQuoteImageGroup .jfDeskQuotePageLabel{
+  position:static!important;
+  display:inline-flex;
+  margin:0 0 6px!important;
+  padding:3px 7px!important;
+  font:11px/1.25 system-ui;
+  background:#91d5c416;
+  color:#a5cfc7;
+  border:1px solid #91d5c425;
+  border-radius:6px;
+}

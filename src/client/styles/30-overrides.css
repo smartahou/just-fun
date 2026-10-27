@@ -1,0 +1,834 @@
+/* Full-bleed image theater. All controls are floating and optional. */
+#assetView.photoDetail{background:#000!important;display:none!important;padding:0!important;gap:0!important;overflow:hidden!important}
+#assetView.photoDetail.open{display:block!important}
+#assetView .photoDetailStage{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;padding:0!important;overflow:hidden!important;background:#000!important}
+#assetView .photoImageSurface{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;touch-action:none!important;cursor:default!important;overflow:hidden!important}
+#assetView .photoImageSurface img{max-width:100%!important;max-height:100%!important;min-width:0!important;width:auto!important;height:auto!important;object-fit:contain!important;user-select:none!important;transform-origin:center center!important;transition:none!important;will-change:transform!important}
+#assetView .photoSideArrow{position:absolute!important;top:50%!important;z-index:2!important;transform:translateY(-50%)!important;width:37px!important;height:54px!important;border-radius:12px!important;font-size:28px!important;background:#14213340!important;color:#eef5ffb0!important;opacity:0;transition:opacity .2s ease!important}
+#assetView:hover .photoSideArrow{opacity:.72!important}
+#assetView #assetPrev{left:109px!important}#assetView #assetNext{right:15px!important}
+#assetView.photoRailHidden #assetPrev{left:15px!important}
+#assetView .photoFloatClose,#assetView .photoFloatRailToggle,#assetView .photoFloatMore{position:absolute!important;z-index:10!important;border:1px solid #e2f3ff44!important;background:linear-gradient(145deg,#23344d89,#090d18a4)!important;backdrop-filter:blur(21px)!important;box-shadow:0 4px 20px #0008,inset 0 1px #ffffff33!important;color:#f5f9ff!important;border-radius:50%!important;display:grid!important;place-items:center!important;width:38px!important;height:38px!important;padding:0!important;font-size:24px!important;cursor:pointer!important}
+#assetView .photoFloatClose{right:20px!important;top:18px!important}
+#assetView .photoFloatRailToggle{left:27px!important;top:20px!important}
+#assetView .photoFloatRailToggle svg{width:18px;height:18px}
+#assetView .photoFloatMore{right:20px!important;bottom:22px!important;font-size:20px!important}
+#assetView .photoDetailRail{position:absolute!important;top:70px!important;bottom:18px!important;left:17px!important;width:83px!important;z-index:8!important;display:flex!important;min-height:0!important;align-items:stretch!important;border:1px solid #c9e4ff31!important;border-radius:18px!important;background:linear-gradient(145deg,#22334b74,#090e19a8)!important;backdrop-filter:blur(28px) saturate(1.15)!important;box-shadow:inset 0 1px #ffffff38,0 14px 35px #0009!important;overflow:hidden!important;transition:transform .24s ease,opacity .24s ease!important}
+#assetView.photoRailHidden .photoDetailRail{transform:translateX(-130%)!important;opacity:0!important;pointer-events:none!important}
+#assetView .photoFilmstrip{display:flex!important;flex:1!important;min-height:0!important;max-width:100%!important;flex-direction:column!important;align-items:center!important;gap:9px!important;padding:11px 7px!important;overflow-x:hidden!important;overflow-y:auto!important;scrollbar-width:thin!important;scrollbar-color:#a7bedc44 transparent!important}
+#assetView .photoFilmstrip button{display:block!important;flex:0 0 64px!important;width:62px!important;height:84px!important;min-height:84px!important;opacity:.65!important;border:1px solid #ffffff1b!important;border-radius:10px!important;background:#1421337d!important;padding:0!important;transition:opacity .2s,border-color .2s!important}
+#assetView .photoFilmstrip button.isCurrent{opacity:1!important;border-color:#e5f3ff!important;box-shadow:0 0 0 2px #9dc9ff44!important}
+#assetView .photoFilmstrip button:hover{opacity:1!important}
+#assetView .photoFilmstrip img{width:100%!important;height:100%!important;object-fit:cover!important}
+#assetView .photoMorePanel[hidden]{display:none!important}
+#assetView .photoMorePanel{position:absolute!important;right:20px!important;bottom:68px!important;z-index:15!important;border:1px solid #adcdec55!important;background:#16283acf!important;backdrop-filter:blur(24px)!important;border-radius:12px!important;padding:7px!important;box-shadow:0 18px 45px #000a!important}
+#assetView .photoMorePanel button{background:transparent!important;border:0!important;border-radius:8px!important;color:#ffcad4!important;padding:10px 18px!important;cursor:pointer!important;font-size:12px!important}
+#assetView .photoMorePanel button:hover{background:#ffffff13!important}
+#assetView #photoZoomButton,#assetView #photoDownload{display:none!important}
+#assetView .photoLoading{bottom:35px!important;left:50%!important}
+/* Thumbnail-first clip cards. No wasted full-height single-item modal. */
+.clipShelf{width:min(1180px,calc(100vw - 36px))!important;height:auto!important;max-height:calc(100dvh - 40px)!important;min-height:0!important;background:linear-gradient(145deg,#16283be5,#080f1bd9)!important;backdrop-filter:blur(35px) saturate(1.2)!important}
+.clipShelfHead{padding:15px 23px!important}.clipShelfHead h2{font-weight:540!important;letter-spacing:.02em!important}
+.clipShelfList{display:grid!important;flex:0 1 auto!important;max-height:calc(100dvh - 140px)!important;overflow-y:auto!important;grid-auto-rows:max-content!important;gap:16px!important;align-content:start!important;padding:22px!important}
+.clipShelfRow{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:0!important;position:relative!important;padding:0!important;margin:0!important;border-radius:15px!important;overflow:hidden!important;background:#17243578!important;border:1px solid #a8ceff32!important;backdrop-filter:blur(16px)!important;box-shadow:0 9px 25px #0005!important;cursor:pointer!important;transition:transform .16s,border-color .16s!important}
+.clipShelfRow:hover{transform:translateY(-3px)!important;border-color:#e1edff79!important}
+.clipShelfPoster{width:100%!important;height:auto!important;border:0!important;border-radius:0!important;background:#080c14!important}
+.clipShelfPoster img{width:100%!important;height:100%!important;object-fit:cover!important}
+.clipShelfRow>div:nth-child(2){min-width:0!important;padding:12px 12px 8px!important}
+.clipShelfRowTitle{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:12px!important;font-weight:550!important}
+.clipShelfRowInfo{overflow:hidden!important;text-overflow:ellipsis!important;font-size:10px!important;margin-top:5px!important;color:#a3b4c9!important}
+.clipShelfRowActions{align-items:center!important;grid-column:auto!important}
+.clipShelfRowActions button{font-size:11px!important;border-radius:8px!important;background:#a8cfff1c!important;border-color:#a8cfff3a!important}
+.clipShelfRowActions button.warn{color:#ffa8b9!important;background:transparent!important;border-color:transparent!important}
+@media(max-width:660px){.clipShelfList{gap:9px!important;padding:12px!important}.clipShelfRowActions{}#assetView .photoDetailRail{left:6px!important;width:65px!important}#assetView .photoFilmstrip button{width:49px!important;height:66px!important;min-height:66px!important;flex-basis:66px!important}#assetView #assetPrev{left:77px!important}}
+
+
+
+/* Just Fun v6.5 — playback-first desktop polish */
+#feedGhostLoop.active{color:#bfffd2!important;border-color:#a5ffd3aa!important;background:#27804a66!important;box-shadow:0 0 16px #4cff943c!important}
+.studioHeader .studioBrandText strong{font-family:"Segoe Script","Segoe Print","Bradley Hand","Lucida Handwriting","GFS Olga",cursive!important;font-style:italic!important;font-weight:500!important;font-size:23px!important;letter-spacing:-.045em!important;white-space:nowrap!important;text-shadow:0 1px 12px #87b6ee24!important}
+.studioHeader .studioBrand{margin:0 0 0 -13px!important;padding-left:0!important;justify-content:flex-start!important;min-width:0!important}
+#creatorPanel.collapsed{display:none!important}
+.audioDock{left:1vw!important;right:1vw!important;width:98vw!important;max-width:none!important;bottom:8px!important;padding:12px 18px 13px!important}
+.audioDock .audioTrack{max-width:none!important;width:100%!important}
+.audioDock .audioTools{display:flex!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:wrap!important;margin:5px 0 0!important;gap:7px!important}
+.audioDock .audioABTools{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:6px!important}
+.audioDock .audioRightTools{display:flex!important;flex-wrap:wrap!important;align-items:center!important;margin-left:auto!important}
+.audioDock .audioAdvancedToggle{display:none!important}
+.audioFileMeta{display:flex;flex-wrap:wrap;align-items:center;gap:0;font-variant-numeric:tabular-nums;}
+.audioFileSize{color:#8192a8;font-size:11px}
+.miniPlayer{background:linear-gradient(155deg,#20334db8,#091323cb)!important;border:1px solid #bddaff55!important;backdrop-filter:blur(22px) saturate(1.2);box-shadow:0 18px 46px #0009,inset 0 1px #ffffff26!important;overflow:visible!important}
+.miniHead{position:relative;min-height:31px;cursor:move;background:linear-gradient(110deg,#20354bbb,#101a2bd4)!important;border-bottom:1px solid #c8e5ff2b!important;padding:5px 7px!important;gap:6px!important}
+.miniLabel{font-family:inherit;font-weight:500;font-size:11px;color:#dfeaf7;padding-left:3px}
+.miniHead .miniClose{margin-left:0;order:4}
+.miniToolsToggle{order:3;flex:0 0 27px;width:27px;height:27px;border:1px solid #d7e9ff35;border-radius:8px;background:#ffffff10;color:#edf5ff;font-size:17px;cursor:pointer;display:grid;place-items:center}
+.miniAdvanced{display:none;position:absolute;right:4px;top:calc(100% + 7px);z-index:2000;width:194px;max-height:270px;overflow-y:auto;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:9px;border:1px solid #d5e6ff44;border-radius:12px;background:linear-gradient(140deg,#213450e5,#0c1526ea);backdrop-filter:blur(25px);box-shadow:0 16px 40px #000c}
+.miniPlayer.miniToolsOpen .miniAdvanced{display:grid}
+.miniAdvanced button{min-width:0!important;width:100%!important;height:37px!important;display:grid;place-items:center;border:1px solid #d1e5ff20!important;background:#a9c7ff13!important;border-radius:8px!important;font-size:11px!important;padding:0!important;color:#dbeaff!important}
+.miniAdvanced button.active,.miniAdvanced button.set{background:#8cbaff42!important;border-color:#c3dcff88!important}
+.miniMediaWrap{overflow:hidden!important;border-radius:0 0 11px 11px}
+
+
+
+/* Just Fun 6.7 · 轻量滤镜浮层：只叠加实时观感，不篡改源文件或进度。 */
+.jfFilterPanel[hidden]{display:none!important}
+.jfFilterPanel{position:fixed;top:76px;right:18px;width:min(320px,calc(100vw - 28px));z-index:250;box-sizing:border-box;padding:16px;border:1px solid rgba(217,237,255,.31);border-radius:19px;background:linear-gradient(145deg,rgba(27,42,61,.82),rgba(7,13,24,.87));box-shadow:0 18px 64px rgba(0,0,0,.72),inset 0 1px rgba(255,255,255,.15);-webkit-backdrop-filter:blur(32px) saturate(1.5);backdrop-filter:blur(32px) saturate(1.5);color:#edf4ff;pointer-events:auto}
+.jfFilterTop{display:flex;align-items:center;justify-content:space-between;gap:15px;font-size:14px;font-weight:650;letter-spacing:.03em;margin-bottom:13px}
+.jfFilterClose{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;border:1px solid rgba(231,243,255,.17);background:rgba(230,240,255,.07);color:#ebf4ff;cursor:pointer;font-size:19px;line-height:1}
+.jfFilterPresets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.jfFilterPresets button{height:52px;min-width:0;display:grid;place-items:center;border:1px solid rgba(225,240,255,.15);border-radius:12px;background:rgba(100,145,188,.09);font-size:12px;font-weight:500;color:#c7d6e7;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.jfFilterPresets button[aria-pressed="true"]{background:rgba(129,184,234,.2);border-color:#a0cbf3;color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.18)}
+.jfFilterPresets button:hover{background:rgba(151,192,227,.2);color:#fff}
+.jfFilterStrength{margin:16px 0 6px}.jfFilterStrength label{display:flex;justify-content:space-between;color:#c8d6e7;font-size:12px;line-height:1.3}.jfFilterStrength output{font-variant-numeric:tabular-nums;color:#e7f3ff}
+.jfFilterStrength input:disabled{opacity:.35;cursor:default}.jfFilterStrength input{display:block;width:100%;height:22px;accent-color:#9ac4f0;cursor:pointer;margin:6px 0 0}
+.jfFilterPanel small{display:block;color:#8facc6;font-size:10px;margin-top:4px}
+#assetView .photoFloatFilter{position:absolute;right:20px;top:68px;z-index:12;display:grid;place-items:center;width:38px;height:38px;min-width:38px;padding:0;border-radius:50%;border:1px solid #e2f3ff44;background:linear-gradient(145deg,#23344d89,#090d18a4);-webkit-backdrop-filter:blur(21px);backdrop-filter:blur(21px);color:#f2f8ff;cursor:pointer;box-shadow:0 4px 20px #0008,inset 0 1px #ffffff33}
+#assetView .photoFloatFilter svg{height:19px;width:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+#assetView .jfFilterPanel{top:118px;z-index:30}
+@media(max-height:490px){.jfFilterPanel{top:12px;right:10px;max-height:calc(100dvh - 24px);overflow-y:auto}.jfFilterPresets button{height:37px}#assetView .jfFilterPanel{top:12px;right:67px}}
+
+
+/* Just Fun Filter v2: a compact icon-only crystal palette, no external icon font. */
+.jfFilterPanel{width:min(278px,calc(100vw - 26px))!important;padding:13px!important;border-radius:17px!important;background:linear-gradient(145deg,rgba(19,35,49,.69),rgba(5,11,22,.76))!important;backdrop-filter:blur(30px) saturate(1.35)!important;-webkit-backdrop-filter:blur(30px) saturate(1.35)!important}
+.jfFilterPresets{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px!important}
+.jfFilterPresets button{height:57px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;min-width:0!important;border-radius:13px!important;transition:background .16s,border-color .16s,transform .16s!important}
+.jfFilterPresets button:hover{transform:translateY(-2px)}
+.jfFilterPresets button[aria-pressed="true"]{border-color:rgba(186,226,255,.96)!important;background:linear-gradient(140deg,rgba(98,172,239,.31),rgba(52,104,153,.22))!important;box-shadow:inset 0 1px rgba(255,255,255,.29),0 0 16px rgba(82,170,255,.2)!important}
+.jfFilterPresets button[data-jf-preset="matrix"][aria-pressed="true"]{color:#9dffbb!important;border-color:#62e69d!important;background:rgba(19,124,69,.25)!important;box-shadow:0 0 21px #28f98122!important}
+.jfFilterPresets button svg{width:25px!important;height:25px!important;display:block!important;pointer-events:none!important;flex-shrink:0!important}
+.jfFilterMatrixCanvas{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;pointer-events:none!important;z-index:2!important;background:#000!important;opacity:1!important;transform:none!important;filter:none!important;mix-blend-mode:normal!important;}
+.jfFilterPanel[data-jf-active-preset="matrix"] .jfFilterStrength{display:none!important}
+.photoImageSurface .jfFilterMatrixCanvas{z-index:5!important}
+@media(max-height:490px){.jfFilterPresets button{height:43px!important}.jfFilterPresets button svg{width:20px!important;height:20px!important}}
+/* Just Fun v7.0 — targeted interaction and UI correction, no new dependencies. */
+body>.studioHeader{padding-left:11px!important;padding-right:24px!important}
+@media(max-width:700px){body>.studioHeader{padding-left:9px!important;padding-right:10px!important}}
+.studioHeader .studioBrand{margin-left:0!important}
+.studioHeader .studioActions{margin-left:auto!important;justify-content:flex-end!important}
+.studioHeader .studioWorkspace{min-width:0;flex:1}
+/* The A/B library and clip tools live in a contextual dock only while A/B repeats. */
+#feedABQuickActions[hidden]{display:none!important}
+#feedABQuickActions{position:fixed;z-index:89;right:18px;bottom:clamp(96px,12dvh,160px);display:flex;gap:8px;padding:7px;border-radius:16px;border:1px solid rgba(215,236,255,.28);background:rgba(15,29,46,.58);backdrop-filter:blur(22px) saturate(1.25);-webkit-backdrop-filter:blur(22px) saturate(1.25);box-shadow:0 16px 46px #0008,inset 0 1px #ffffff21;pointer-events:auto}
+#feedABQuickActions .feedTool{display:grid!important;place-items:center!important;box-sizing:border-box!important;width:41px!important;height:41px!important;min-height:41px!important;min-width:41px!important;padding:0!important;border-radius:11px!important;border:1px solid #a7d1fa2f!important;background:#bfdcff0c!important;color:#e0efff!important;cursor:pointer}
+#feedABQuickActions .feedTool:hover:not(:disabled){background:#a3d0fb2e!important;border-color:#9fc8f67c!important}
+#feedABQuickActions .feedToolGlyph,#feedABQuickActions .feedToolGlyph svg{width:21px;height:21px;display:block}
+#feedABQuickActions .feedToolLabel{display:none!important}
+.feedOverlay.chromeHidden #feedABQuickActions,.feedOverlay.chromeIdle #feedABQuickActions{opacity:0;pointer-events:none;transition:opacity .22s}
+.feedOverlay.chromeHidden:has(.feedABQuickActions:not([hidden])) #feedABQuickActions:hover,.feedOverlay:not(.chromeIdle) #feedABQuickActions{opacity:1;pointer-events:auto}
+@media(max-width:650px){#feedABQuickActions{right:9px;bottom:106px}}
+/* Frame studio: the image fills the dialog, tools float in the outer edge, not in rigid header/footer bars. */
+.shotStudio{position:relative!important;width:min(1520px,100%)!important;height:min(96dvh,1040px)!important;display:block!important;background:#000!important;isolation:isolate}
+.shotStage{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:0!important;min-height:0!important;background:#000!important}
+.shotTop{position:absolute!important;top:0;left:0;right:0;z-index:4!important;display:flex!important;align-items:flex-start!important;padding:14px!important;border:0!important;background:linear-gradient(180deg,#0009,transparent)!important;pointer-events:none!important}
+.shotHeading{max-width:min(38%,260px);padding:5px 4px;pointer-events:none}
+.shotHeading strong{font-size:12px!important;font-weight:500!important;color:#d9e9fa!important}
+.shotHeading small{max-width:100%!important;font-size:10px!important;opacity:.65}
+.shotActions{margin-left:auto;pointer-events:auto!important;gap:7px!important}
+.shotActions button{background:#0d1b2ca3!important;border:1px solid #e0edff3a!important;border-radius:10px!important;backdrop-filter:blur(14px)!important;padding:8px 12px!important;font-size:12px!important}
+.shotActions .shotSave{background:#bdddf2dc!important;color:#101c2a!important}
+.shotFoot{position:absolute!important;z-index:4!important;left:50%;bottom:10px;transform:translateX(-50%);box-sizing:border-box;width:min(710px,calc(100% - 28px));display:flex!important;flex-direction:column!important;gap:9px!important;border:1px solid #aacbf532!important;background:#0a1825a8!important;backdrop-filter:blur(19px)!important;-webkit-backdrop-filter:blur(19px)!important;border-radius:15px;padding:9px 12px 10px!important;pointer-events:auto}
+.shotInfo{display:flex!important;flex-direction:row!important;justify-content:center;align-items:center!important;gap:10px!important;min-height:16px!important;flex-wrap:wrap}
+.shotIndex{font-size:12px!important}.shotTime{font-size:10px!important}
+.shotFeedback:empty{display:none!important}
+.shotScrubber{width:100%;display:flex;align-items:center;gap:11px}
+.shotScrubber .shotSeek{appearance:none;-webkit-appearance:none;flex:1;min-width:0;width:100%;height:5px;border:0;outline:0;border-radius:999px;cursor:pointer;background:linear-gradient(90deg,#a9d6ff 0%,#a9d6ff var(--shot-position,0%),#9dbad44a var(--shot-position,0%),#9dbad44a 100%)}
+.shotScrubber .shotSeek::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:13px;height:13px;border-radius:50%;border:2px solid #eaf6ff;background:#98caff;box-shadow:0 0 0 4px #9fcfff25}
+.shotScrubber .shotSeek::-moz-range-thumb{width:11px;height:11px;border:2px solid #eaf6ff;border-radius:50%;background:#98caff}
+.shotScrubber .shotSeek:focus-visible{outline:2px solid #9bc8ff;outline-offset:4px}
+.shotScrubber button{flex:0 0 32px;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;padding:0!important;border-radius:50%!important;background:#ffffff16!important;font-size:24px!important;font-weight:400!important;display:grid;place-items:center;line-height:1!important}
+.shotScrubber button:disabled{opacity:.28!important}
+@media(max-width:700px){.shotTop{padding:7px!important}.shotHeading{max-width:28%;padding:2px 0}.shotHeading small{display:none}.shotActions{gap:4px!important}.shotActions button{padding:7px 8px!important;font-size:10px!important}.shotFoot{bottom:5px!important;padding:7px 8px!important;gap:5px!important}}
+/* Keep frame transport off the footage when vertical media is viewed on a wide monitor. */
+@media(min-aspect-ratio:4/3) and (min-width:950px){
+ .shotStudio.shotPortrait .shotFoot{left:13px!important;transform:none!important;width:var(--shot-side-width,330px)!important;max-width:calc(100% - 32px)!important}
+ .shotStudio.shotPortrait .shotInfo{gap:3px!important}
+ .shotStudio.shotPortrait .shotTime{font-size:9px!important}
+}
+/* v6.25 — landscape frame studio: allow precision scrubbing over most of the viewport.
+   Portrait controls stay in the unused side gutter on wide displays. */
+.shotStudio:not(.shotPortrait){width:min(96vw,3200px)!important}
+.shotStudio:not(.shotPortrait) .shotFoot{width:min(94vw,calc(100% - 24px))!important;max-width:none!important}
+@media(max-width:700px){.shotStudio:not(.shotPortrait) .shotFoot{width:calc(100% - 10px)!important}}
+/* Compact audio cards: calm alignment, smaller glyph, clear time metadata, no awkward line breaks. */
+.audioFileGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))!important;gap:11px!important}
+.audioFileTile{box-sizing:border-box;min-height:112px!important;align-items:flex-start!important;gap:10px!important;padding:13px 14px 12px!important;border-radius:16px!important;border:1px solid #b6d5f537!important;background:linear-gradient(150deg,rgba(59,85,118,.21),rgba(8,21,37,.4))!important;box-shadow:inset 0 1px #ffffff0b,0 9px 24px #0002!important;transition:background .15s,border-color .15s,transform .15s!important}
+.audioFileTile:hover{background:linear-gradient(150deg,rgba(74,111,154,.30),rgba(18,37,59,.50))!important;border-color:#9cc9f07d!important;transform:translateY(-1px)}
+.audioFileTile.isActive{background:linear-gradient(150deg,#3c659056,#172f4b99)!important;border-color:#9ac8f1ac!important}
+.audioFileArt{flex:0 0 35px!important;width:35px!important;height:35px!important;border-radius:11px!important;background:#a3c9ee13!important;color:#add5fa!important}
+.audioFileArt svg{width:20px!important;height:20px!important}
+.audioFileText{min-width:0!important;flex:1 1 auto!important;padding:0!important;padding-right:23px!important}
+.audioFileName{font-size:12.5px!important;line-height:1.45!important;font-weight:540!important;letter-spacing:.003em!important;min-height:0!important;max-height:calc(1.45em * 3)!important;overflow-wrap:anywhere;color:#e4effc!important}
+.audioFileMeta{font-size:11px!important;margin-top:10px!important;gap:6px!important;color:#b3d6f5!important}
+.audioFileSize{color:#93a9be!important;font-size:10.5px!important}
+.audioFileTile .unifiedMore{position:absolute;right:11px;top:11px;width:31px!important;height:31px!important;border-radius:10px!important;border:1px solid transparent!important;background:transparent!important;color:#a9bdd3!important;display:grid;place-items:center;opacity:.77}
+.audioFileTile:hover .unifiedMore,.audioFileTile .unifiedMore:focus-visible{border-color:#b4d6f537!important;background:#ffffff14!important;color:#f0f7ff!important;opacity:1}
+.audioFileActions{display:none!important}
+@media(max-width:700px){.audioFileGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,175px),1fr))!important;gap:8px!important}.audioFileTile{padding:10px!important;gap:7px!important}.audioFileArt{flex-basis:30px!important;width:30px!important;height:30px!important}.audioFileText{padding-right:14px!important}}
+
+
+/* Just Fun v6.12 — Background music: one persistent audio lane, two presentation sizes. */
+.audioDock:not([hidden]){z-index:260010!important;box-sizing:border-box!important;
+  background:linear-gradient(126deg,rgba(120,166,211,.18),rgba(30,54,82,.25) 36%,rgba(5,13,26,.52) 100%)!important;
+  border:1px solid rgba(219,240,255,.42)!important;
+  box-shadow:0 15px 54px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.30),inset 1px 0 rgba(193,221,253,.12)!important;
+  backdrop-filter:blur(35px) saturate(1.45)!important;-webkit-backdrop-filter:blur(35px) saturate(1.45)!important;}
+.audioDock .audioTrackHeader{display:flex!important;align-items:center!important;gap:10px!important}
+.audioDock .audioTrackInfo{flex:1;min-width:0}
+.audioDockHeaderActions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.audioDock .audioDockMinimize,.audioDock .audioDockClose{display:grid!important;place-items:center!important;width:29px!important;height:29px!important;padding:0!important;border-radius:9px!important;
+  color:#dae9f8!important;background:rgba(178,210,249,.12)!important;border:1px solid rgba(200,228,255,.22)!important;cursor:pointer}
+.audioDock .audioDockMinimize svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.8;fill:none}
+.audioDock .audioDockMinimize:hover,.audioDock .audioDockClose:hover{background:rgba(170,212,255,.24)!important}
+.audioDock .audioIconBtn:not(.audioPlay){background:rgba(145,189,236,.09)!important;border-color:rgba(211,232,255,.19)!important;backdrop-filter:blur(18px)!important}
+.audioDock .audioIconBtn.on:not(.audioPlay){background:rgba(108,161,223,.27)!important;border-color:rgba(188,217,255,.48)!important}
+.audioDock .bgmMini{display:none}
+/* Compact music indicator deliberately occupies only a 45px square until hovered/focused. */
+.audioDock.isMinimized:not([hidden]){left:var(--bgm-mini-left,14px)!important;right:auto!important;bottom:var(--bgm-mini-bottom,84px)!important;width:46px!important;height:46px!important;max-width:none!important;
+  padding:0!important;border-radius:24px!important;overflow:visible!important;
+  background:linear-gradient(145deg,rgba(105,161,210,.23),rgba(16,30,51,.34))!important;
+  transition:opacity .24s ease,background .2s ease!important;}
+.audioDock.isMinimized:not([hidden]):hover,.audioDock.isMinimized:not([hidden]):focus-within{width:84px!important}
+.audioDock.isMinimized .audioTrack{position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important;min-width:0!important;overflow:hidden!important;
+  padding:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
+.audioDock.isMinimized .bgmMini{display:flex;align-items:center;justify-content:center;width:100%;height:100%;gap:0;padding:0 4px;box-sizing:border-box}
+.audioDock.isMinimized .bgmMini button{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;padding:0;
+  border:0;border-radius:50%;color:#dfecff;background:transparent;cursor:pointer}
+.audioDock.isMinimized .bgmMini svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none}
+.audioDock.isMinimized .bgmMiniPlay{opacity:0;visibility:hidden;pointer-events:none;transform:scale(.78);transition:opacity .16s,transform .16s}
+.audioDock.isMinimized:hover .bgmMiniPlay,.audioDock.isMinimized:focus-within .bgmMiniPlay{opacity:1;visibility:visible;pointer-events:auto;transform:scale(1)}
+.audioDock.isMinimized .bgmMini button:hover{background:rgba(180,216,255,.20)}
+.bgmMiniPlay[data-playing="false"] .bgmIconPause,.bgmMiniPlay[data-playing="true"] .bgmIconPlay{display:none}
+.audioDock.isMinimized .bgmMiniPlay .bgmIconPlay{fill:currentColor;stroke:none}
+body:has(.feedOverlay.open) .audioDock.isMinimized:not([hidden]){bottom:var(--bgm-mini-bottom,82px)!important;opacity:.53}
+body:has(.feedOverlay.open) .audioDock.isMinimized:hover,body:has(.feedOverlay.open) .audioDock.isMinimized:focus-within{opacity:1}
+body:has(.assetView.open) .audioDock.isMinimized:not([hidden]){bottom:var(--bgm-mini-bottom,24px)!important;opacity:.48}
+body:has(.assetView.open) .audioDock.isMinimized:hover{opacity:1}
+body.audioDockVisible:has(#audioDock.isMinimized:not([hidden])){padding-bottom:0!important}
+body:not(.audioDockVisible):has(#audioDock:not([hidden])){padding-bottom:0!important}
+@media(max-width:700px){.audioDock.isMinimized:not([hidden]){left:var(--bgm-mini-left,10px)!important;bottom:var(--bgm-mini-bottom,74px)!important}}
+.audioDock.isMinimized .bgmMiniOpen{touch-action:none;cursor:grab}
+.audioDock.isMinimized.isDragging .bgmMiniOpen{cursor:grabbing}
+.audioDock.isMinimized.isDragging{transition:none!important;opacity:1!important}
+
+/* Just Fun v6.14 — replace text wordmark with uploaded symbol logo */
+.studioHeader .studioBrandLogoOnly{display:flex!important;flex:0 0 auto!important;border:0!important;}
+.studioHeader .studioBrandLogo{display:block!important;filter:drop-shadow(0 2px 12px rgba(255,255,255,.08)) drop-shadow(0 8px 22px rgba(0,0,0,.24));opacity:.97}
+.studioHeader .studioBrandText,.studioHeader .studioMark{display:none!important}
+@media(max-width:700px){.studioHeader .studioBrandLogo{}}
+
+
+/* v6.15 - 34px brand symbol, no decorative glow, suitable for dark header. */
+.studioHeader .studioBrandLogoOnly{margin:0!important;padding:0!important;width:40px!important;min-width:40px!important;height:40px!important;justify-content:center!important;align-items:center!important}
+.studioHeader .studioBrandLogo{width:34px!important;height:34px!important;max-height:34px!important;object-fit:contain!important;opacity:1!important;filter:none!important}
+@media(max-width:700px){.studioHeader .studioBrandLogoOnly{width:36px!important;min-width:36px!important;height:36px!important}.studioHeader .studioBrandLogo{width:30px!important;height:30px!important;max-height:30px!important}}
+
+/* v6.16 - list-first, distraction-free desktop chrome */
+body{padding-left:0!important}
+/* Earlier dock layout offset the whole header to compensate for the old 86px rail. */
+body > .studioHeader{margin-left:0!important;width:100%!important;box-sizing:border-box!important}
+body > .studioHeader{position:sticky!important;top:0!important;z-index:105!important;transition:transform .23s cubic-bezier(.2,.7,.25,1)!important;will-change:transform}
+body > .studioHeader.studioHeaderCollapsed{transform:translateY(-101%)!important;pointer-events:none!important}
+body:has(.feedOverlay.open) > .studioHeader,body:has(.assetView.open) > .studioHeader{pointer-events:none}
+#studioRailToggle{position:fixed;z-index:106;left:var(--rail-toggle-left,18px);bottom:18px;width:48px;height:48px;padding:11px;border:1px solid #d6ecff54;border-radius:16px;background:linear-gradient(150deg,#82ace52e,#09172f8a);box-shadow:0 8px 28px #0008,inset 0 1px #ffffff30;backdrop-filter:blur(25px) saturate(150%);color:#d7e9fb;cursor:pointer;transition:opacity .2s,background .2s}
+#studioRailToggle svg{display:block;width:24px;height:24px;margin:auto}
+#studioRailToggle:hover,#studioRailToggle[aria-expanded=true]{background:linear-gradient(145deg,#9ac9fa55,#1a3754b8);border-color:#cfeaffb8}
+body>.mediaTabs#studioMediaRail{left:var(--rail-left,18px)!important;bottom:78px!important;top:auto!important;transform:translateX(-125%) scale(.96)!important;transform-origin:bottom left!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:transform .22s cubic-bezier(.2,.75,.25,1),opacity .22s,visibility .22s!important;z-index:106!important}
+body>.mediaTabs#studioMediaRail.railOpen{transform:translateX(0) scale(1)!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+body:has(.feedOverlay.open) #studioRailToggle,body:has(.assetView.open) #studioRailToggle,body:has(.feedOverlay.open) #studioMediaRail,body:has(.assetView.open) #studioMediaRail{opacity:0!important;pointer-events:none!important}
+#grid.audioFileGrid{columns:250px;column-gap:11px;}
+#grid.audioFileGrid .audioFileTile{break-inside:avoid;page-break-inside:avoid;width:100%;margin:0 0 11px;gap:9px!important;align-items:flex-start!important}
+#grid.audioFileGrid .audioFileText{padding-right:22px!important}
+#grid.audioFileGrid .audioFileName{display:-webkit-box!important;-webkit-box-orient:vertical!important;overflow:hidden!important;min-height:0!important}
+#grid.audioFileGrid .audioFileMeta{}
+#grid.audioFileGrid .audioStars{display:flex!important;align-items:center;gap:0!important;margin-top:7px;min-height:18px;touch-action:none;white-space:nowrap}
+#grid.audioFileGrid .audioStars .ratingStar{width:19px!important;height:22px!important;min-width:19px!important;line-height:22px!important;font-size:18px!important;flex:0 0 19px!important}
+#grid.audioFileGrid .audioStars .ratingValue{margin-left:7px!important;font-size:10px!important;color:#a0b5ca}
+#grid.audioFileGrid .audioFileTile .unifiedMore{right:7px!important;top:8px!important}
+#grid.videoTextGrid{}
+#grid.videoTextGrid .videoTextTile{align-items:flex-start!important;gap:11px!important;position:relative;background:linear-gradient(150deg,#4764892e,#0b182cbd)!important;border:1px solid #bddbff32!important;border-radius:14px!important}
+#grid.videoTextGrid .videoTextOpen.coverWrap{position:static!important;display:grid!important;place-items:center!important;flex:0 0 38px!important;width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;aspect-ratio:auto!important;border:0!important;border-radius:11px!important;background:#8fbef91a!important;color:#abcff4!important;padding:0!important;cursor:pointer;overflow:hidden!important}
+#grid.videoTextGrid .videoTextOpen svg{display:block;width:21px;height:21px;stroke:currentColor;fill:none}
+#grid.videoTextGrid .videoTextContent{flex:1;min-width:0;padding-right:26px}
+#grid.videoTextGrid .titleText{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:3!important;line-clamp:3!important;min-height:0!important;max-height:4.5em!important;white-space:normal!important;overflow:hidden!important;overflow-wrap:anywhere;font-size:13px!important;line-height:1.5!important;font-weight:520!important;padding:0!important;margin:0!important}
+body.studioHideVideoNames[data-studio-mode=video] #grid.videoTextGrid .titleText{display:-webkit-box!important}
+#grid.videoTextGrid .videoTextMeta{margin-top:6px;font-size:10px;color:#9cafc4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#grid.videoTextGrid .videoTextFoot .stars{display:flex!important;align-items:center;margin-top:9px!important;gap:0!important;touch-action:none}
+#grid.videoTextGrid .videoTextFoot .ratingStar{width:19px!important;height:23px!important;font-size:18px!important;flex:0 0 19px!important;line-height:23px!important}
+#grid.videoTextGrid .videoTextFoot .ratingValue{font-size:10px!important;margin-left:8px!important}
+#grid.videoTextGrid .videoTextTile>.unifiedMore{position:absolute!important;right:10px!important;top:11px!important;width:30px!important;height:30px!important}
+#grid.videoTextGrid .videoTextTile>.videoTextMulti{position:absolute!important;right:10px!important;bottom:9px!important;opacity:0;pointer-events:none;width:28px!important;height:28px!important;padding:5px!important}
+#grid.videoTextGrid .videoTextTile:hover>.videoTextMulti,#grid.videoTextGrid .videoTextTile>.videoTextMulti:focus-visible{opacity:1;pointer-events:auto}
+#grid.videoTextGrid .videoTextMeta .creatorText{font-size:10px!important;font-weight:450!important;color:#9cafc4!important;display:inline!important;min-height:0!important;padding:0!important;white-space:nowrap!important}
+#grid.videoTextGrid .videoTextMeta .creatorLinkBtn{font-size:11px!important;display:inline-flex!important;vertical-align:middle!important}
+.studioActions #videoViewToggle{display:inline-flex;align-items:center;justify-content:center;width:38px!important;min-width:38px!important;padding:8px!important;flex:0 0 38px}
+.studioActions #videoViewToggle svg{width:18px!important;height:18px!important;display:block}
+.studioActions #videoViewToggle[hidden]{display:none!important}
+/* Only the outer rename group has a subtle border; the input never shows a nested focus ring. */
+.unifiedRenameRow #unifiedRenameInput,.unifiedRenameRow #unifiedRenameInput:focus,.unifiedRenameRow #unifiedRenameInput:focus-visible{border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;appearance:none!important;-webkit-appearance:none!important}
+.unifiedRenameRow:focus-within{border-color:#b2cff574!important;box-shadow:0 0 0 1px #b2cff518!important}
+@media(max-width:700px){body{padding-left:0!important}#studioRailToggle{left:var(--rail-toggle-left,11px);bottom:12px;width:45px;height:45px}body>.mediaTabs#studioMediaRail{left:var(--rail-left,11px)!important;bottom:69px!important}#grid.audioFileGrid{columns:175px;column-gap:8px}#grid.videoTextGrid{}}
+@media(prefers-reduced-motion:reduce){body>.studioHeader,body>.mediaTabs#studioMediaRail,#studioRailToggle{transition:none!important}}
+
+/* Just Fun 6.17 — text-first cinema library; common card language */
+body:has(.feedOverlay.open)>.studioHeader,body:has(.assetView.open)>.studioHeader{
+  visibility:hidden!important;opacity:0!important;transform:translateY(-105%)!important;pointer-events:none!important;
+}
+#grid.videoTextGrid,#grid.audioFileGrid{display:block!important;columns:285px;column-gap:13px!important;align-content:initial!important;padding:17px 21px 90px!important;}
+#grid.videoTextGrid .videoTextTile,#grid.audioFileGrid .audioFileTile{
+  display:block!important;box-sizing:border-box!important;width:100%!important;margin:0 0 13px!important;break-inside:avoid!important;
+  min-width:0!important;min-height:0!important;height:auto!important;padding:15px 16px 13px!important;position:relative!important;
+  border-radius:15px!important;border:1px solid rgba(175,200,231,.23)!important;
+  background:linear-gradient(160deg,rgba(34,50,73,.50),rgba(10,20,35,.75))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.07),0 7px 21px rgba(0,0,0,.16)!important;transform:none!important;
+  color:#e4eefa!important;
+}
+#grid.videoTextGrid .videoTextTile:hover,#grid.audioFileGrid .audioFileTile:hover{
+  border-color:rgba(169,211,252,.55)!important;background:linear-gradient(160deg,rgba(45,67,92,.59),rgba(14,27,45,.85))!important;
+}
+#grid.videoTextGrid .videoTextContent,#grid.audioFileGrid .audioFileText{padding:0!important;width:100%!important;min-width:0!important;display:block!important;flex:initial!important;}
+#grid.videoTextGrid .videoTextHeading{display:flex;gap:9px;align-items:flex-start;min-width:0;}
+#grid.videoTextGrid .titleText,#grid.audioFileGrid .audioFileName{
+  display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:3!important;line-clamp:3!important;
+  flex:1;min-width:0!important;max-width:none!important;max-height:calc(1.48em * 3)!important;min-height:0!important;
+  margin:0!important;padding:0!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  overflow-wrap:anywhere!important;word-break:break-word!important;font-size:13.4px!important;line-height:1.48!important;
+  font-weight:540!important;letter-spacing:.01em!important;color:#e5effd!important;
+}
+#grid.videoTextGrid .videoTextHeading .unifiedMore,#grid.audioFileGrid .audioFileTile>.unifiedMore{
+  position:static!important;flex:0 0 28px!important;width:28px!important;height:28px!important;min-width:28px!important;
+  border:1px solid rgba(193,218,247,.19)!important;background:rgba(130,163,210,.06)!important;
+  border-radius:9px!important;color:#aec0d7!important;opacity:.72!important;padding:0!important;
+}
+#grid.audioFileGrid .audioFileTile>.unifiedMore{position:absolute!important;right:13px!important;top:13px!important;}
+#grid.audioFileGrid .audioFileName{padding-right:37px!important;}
+#grid.videoTextGrid .videoTextAuthor{display:flex;min-width:0;align-items:center;gap:5px;color:#9eb2ca;}
+#grid.videoTextGrid .creatorText{display:block!important;min-width:0!important;max-width:100%;font-size:11px!important;line-height:1.45!important;
+  color:#9fb4cf!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;overflow-wrap:normal!important;
+  margin:0!important;padding:0!important;background:transparent!important;font-weight:450!important;}
+#grid.videoTextGrid .videoTextMeta,#grid.audioFileGrid .audioFileMeta{margin-top:8px!important;color:#8fa4ba!important;font-size:11px!important;
+  line-height:1.5!important;min-height:0!important;white-space:normal!important;overflow-wrap:anywhere!important;overflow:visible!important;}
+#grid.videoTextGrid .videoTextMeta:empty{display:none!important;}
+#grid.videoTextGrid .metaSep{padding:0 5px;color:#5c718b;}
+#grid.videoTextGrid .videoTextFoot{display:flex;align-items:center;justify-content:space-between;gap:9px;min-width:0;}
+#grid.videoTextGrid .videoTextFoot .stars,#grid.audioFileGrid .audioStars{display:flex!important;flex-wrap:nowrap!important;white-space:nowrap!important;margin:0!important;min-height:22px;align-items:center!important;}
+#grid.videoTextGrid .ratingStar,#grid.audioFileGrid .ratingStar{width:21px!important;min-width:21px!important;flex:0 0 21px!important;height:24px!important;line-height:24px!important;font-size:19px!important;padding:0!important;}
+#grid.videoTextGrid .ratingValue,#grid.audioFileGrid .ratingValue{margin-left:9px!important;font-size:10px!important;color:#8e9fb7!important;}
+#grid.videoTextGrid .videoTextMulti{position:static!important;display:grid!important;place-items:center!important;flex:0 0 28px!important;width:28px!important;height:28px!important;min-width:28px!important;
+  opacity:.67!important;pointer-events:auto!important;padding:5px!important;margin:0!important;border:1px solid #bbd8f526!important;border-radius:9px!important;background:#9cbfe012!important;}
+#grid.videoTextGrid .videoTextMulti svg{width:17px;height:17px;stroke-width:1.7!important;fill:none!important;}
+#grid.videoTextGrid .videoTextMulti:hover{opacity:1!important;background:#a3d5ff28!important;}
+#grid.audioFileGrid .audioStars{}
+#grid.audioFileGrid .audioFileArt{display:none!important;}
+#grid.audioFileGrid .audioFileMeta{display:flex!important;align-items:center;gap:0!important;flex-wrap:wrap!important;}
+#grid.audioFileGrid .audioFileSize{margin-left:2px;color:#8095b0!important;}
+.miniPlayer .miniAdvanced{left:calc(100% + 9px)!important;right:auto!important;top:0!important;max-width:calc(100vw - 20px)!important;}
+.miniPlayer .miniAdvanced svg{width:19px!important;height:19px!important;stroke-width:1.8!important;fill:none!important;}
+.miniPlayer .miniAdvanced .miniABBtn{font-size:12px!important;font-weight:600!important;}
+.miniPlayer .miniAdvanced button{}
+.miniPlayer .miniAdvanced button:hover{background:rgba(128,175,225,.27)!important;}
+@media(max-width:760px){#grid.videoTextGrid,#grid.audioFileGrid{columns:215px;padding:12px 12px 90px!important;column-gap:9px!important;}
+ #grid.videoTextGrid .videoTextTile,#grid.audioFileGrid .audioFileTile{padding:12px!important;margin-bottom:9px!important;}
+ .miniPlayer .miniAdvanced{left:0!important;top:calc(100% + 6px)!important;}
+}
+
+
+/* v6.18 — full-bleed video posters; keep every original action on the image. */
+#grid:not(.videoTextGrid).grid {display:block!important;columns:245px!important;column-gap:12px!important;padding:16px 20px 90px!important;}
+#grid:not(.videoTextGrid) .jfCoverTile{display:block!important;break-inside:avoid!important;page-break-inside:avoid!important;margin:0 0 12px!important;max-width:none!important;width:100%!important;height:auto!important;min-width:0!important;padding:0!important;border:1px solid rgba(192,216,244,.29)!important;border-radius:17px!important;overflow:hidden!important;background:#080e17!important;box-shadow:0 11px 25px #0005!important;transform:none!important;}
+#grid:not(.videoTextGrid) .jfCoverTile:hover{border-color:rgba(215,232,252,.67)!important;box-shadow:0 16px 37px #0008!important;}
+#grid .jfCoverTile .coverWrap{display:block!important;position:relative!important;width:100%!important;height:auto!important;aspect-ratio:var(--jf-video-ratio,9/16)!important;min-height:0!important;max-height:none!important;overflow:hidden!important;border-radius:0!important;margin:0!important;background:#070b12!important;}
+#grid .jfCoverTile .coverWrap>.cover{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important;filter:none!important;}
+#grid .jfCoverTile .coverWrap>.badges{position:absolute!important;top:9px!important;left:10px!important;right:auto!important;bottom:auto!important;display:flex!important;gap:5px!important;z-index:3!important;pointer-events:none!important;}
+#grid .jfCoverTile .badges .badge{font-size:10px!important;line-height:1.3!important;padding:4px 6px!important;border-radius:6px!important;background:rgba(7,14,24,.7)!important;color:#eaf3ff!important;backdrop-filter:blur(12px)!important;}
+#grid .jfCoverTile .jfCoverInfo{position:absolute!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;z-index:2!important;padding:54px 11px 10px!important;box-sizing:border-box!important;border:0!important;border-radius:0!important;background:linear-gradient(to bottom,transparent 0%,rgba(3,8,17,.56) 38%,rgba(3,8,17,.9) 100%)!important;box-shadow:none!important;min-height:0!important;max-height:78%!important;pointer-events:none;}
+/* v6.25 — on landscape covers, prioritize the image. Keep the title, rating and
+   action row; reveal creator tools as a separate, small on-hover overlay. */
+#grid .jfCoverTile[data-orientation="landscape"] .jfCoverInfo{padding:8px 9px 5px!important;max-height:44%!important;overflow:clip!important;background:linear-gradient(0deg,rgba(3,8,17,.88),rgba(3,8,17,.53) 74%,transparent)!important}
+#grid .jfCoverTile[data-orientation="landscape"] .jfCoverInfo>.titleText{font-size:10px!important;line-height:1.2!important;-webkit-line-clamp:1!important;line-clamp:1!important;max-height:1.2em!important;margin-bottom:3px!important}
+#grid .jfCoverTile[data-orientation="landscape"] .jfCoverInfo>.creatorRow{position:absolute!important;bottom:calc(100% + 4px)!important;left:9px!important;right:9px!important;display:none!important;width:max-content!important;max-width:calc(100% - 18px)!important;padding:3px 7px!important;border:1px solid rgba(190,220,249,.25)!important;border-radius:8px!important;background:rgba(7,16,29,.83)!important;backdrop-filter:blur(10px)!important;pointer-events:auto!important}
+#grid .jfCoverTile[data-orientation="landscape"]:is(:hover,:focus-within) .jfCoverInfo{overflow:visible!important}
+#grid .jfCoverTile[data-orientation="landscape"]:is(:hover,:focus-within) .jfCoverInfo>.creatorRow{display:flex!important}
+#grid .jfCoverTile[data-orientation="landscape"] .jfCoverInfo .creatorText{font-size:10px!important}
+#grid .jfCoverTile .jfCoverInfo :is(.creatorRow,.titleText,.actions){pointer-events:auto;}
+#grid .jfCoverTile .creatorRow{display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important;margin:0 0 6px!important;padding:0!important;}
+#grid .jfCoverTile .creatorText{display:block!important;flex:0 1 auto!important;max-width:100%!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:12px!important;line-height:1.4!important;color:#edf4ff!important;font-weight:570!important;padding:0!important;margin:0!important;text-shadow:0 1px 5px #000d!important;}
+#grid .jfCoverTile .titleText{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;line-clamp:2!important;overflow:hidden!important;max-height:2.8em!important;min-height:0!important;line-height:1.4!important;color:#d3e0f2!important;font-size:11px!important;font-weight:450!important;margin:0 0 6px!important;padding:0!important;text-shadow:0 1px 6px #000d!important;}
+body.studioHideVideoNames[data-studio-mode="video"] #grid .jfCoverTile .titleText{display:none!important;}
+#grid .jfCoverTile .creatorEditBtn,#grid .jfCoverTile .creatorLinkBtn{width:21px!important;height:21px!important;min-width:21px!important;padding:2px!important;display:grid!important;place-items:center!important;color:#cee0f4!important;opacity:0!important;}
+#grid .jfCoverTile :is(:hover,:focus-within)>.creatorEditBtn{opacity:1!important;}
+#grid .jfCoverTile:hover .creatorEditBtn,#grid .jfCoverTile:hover .creatorLinkBtn,#grid .jfCoverTile:focus-within .creatorEditBtn,#grid .jfCoverTile:focus-within .creatorLinkBtn{opacity:.9!important;}
+#grid .jfCoverTile .creatorEditBtn svg,#grid .jfCoverTile .creatorLinkBtn svg{width:15px!important;height:15px!important;display:block!important;}
+#grid .jfCoverTile .actions{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:3px!important;width:100%!important;padding:0!important;margin:0!important;border:0!important;min-width:0!important;}
+#grid .jfCoverTile .stars{display:flex!important;align-items:center!important;gap:0!important;min-width:0!important;transform:none!important;opacity:1!important;margin:0!important;padding:0!important;}
+#grid .jfCoverTile .ratingStar{width:18px!important;min-width:18px!important;height:21px!important;flex:0 0 18px!important;padding:0!important;font-size:18px!important;line-height:21px!important;}
+#grid .jfCoverTile .ratingValue{font-size:10px!important;margin-left:5px!important;color:#d5dcea!important;}
+#grid .jfCoverTile .iconActions{display:flex!important;align-items:center!important;gap:3px!important;flex:0 0 auto!important;padding:0!important;margin:0!important;}
+#grid .jfCoverTile .iconActions :is(.unifiedMore,.multiBtn){display:grid!important;place-items:center!important;width:27px!important;min-width:27px!important;height:27px!important;padding:4px!important;opacity:0!important;background:rgba(18,34,53,.74)!important;border:1px solid #d5eaff45!important;border-radius:8px!important;color:#ecf4ff!important;}
+#grid .jfCoverTile:hover .iconActions :is(.unifiedMore,.multiBtn),#grid .jfCoverTile:focus-within .iconActions :is(.unifiedMore,.multiBtn){opacity:1!important;}
+#grid .jfCoverTile .multiBtn svg{width:17px!important;height:17px!important;display:block!important;fill:none!important;stroke:currentColor!important;stroke-width:1.75!important;}
+#grid .jfCoverTile .deleteBtn{display:none!important;}
+#grid .jfCoverTile .mediaTileCheck{z-index:6!important;}
+/* Audio explicitly flows across each row in sort order; column layout does not. */
+#grid.audioFileGrid{padding:17px 21px 90px!important;}
+#grid.audioFileGrid .audioFileTile{}
+/* Shared tool vocabulary: matching glyphs and the same visual states on both players. */
+.miniPlayer .miniAdvanced{width:226px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important;padding:10px!important;border-radius:15px!important;background:linear-gradient(145deg,rgba(36,52,75,.93),rgba(12,22,37,.94))!important;}
+.miniPlayer .miniAdvanced button{height:44px!important;border-radius:10px!important;display:grid!important;place-items:center!important;font-size:17px!important;font-weight:600!important;color:#dbeaff!important;background:rgba(108,146,196,.13)!important;border:1px solid rgba(195,219,247,.24)!important;}
+.miniPlayer .miniAdvanced button svg{width:22px!important;height:22px!important;stroke-width:1.75!important;stroke-linejoin:round!important;stroke-linecap:round!important;}
+.miniPlayer .miniAdvanced button:where(.active,.set){background:rgba(143,188,248,.32)!important;border-color:#b8d8ff8c!important;}
+.feedHeader .feedHeaderActions .feedToolGlyph svg{stroke-linejoin:round!important;stroke-linecap:round!important;stroke-width:1.75!important;}
+@media(max-width:700px){#grid.audioFileGrid{padding:12px 12px 90px!important;}#grid:not(.videoTextGrid).grid{columns:175px!important;column-gap:9px!important;padding:12px 12px 90px!important;}.miniPlayer .miniAdvanced{left:0!important;right:auto!important;top:calc(100% + 7px)!important;}}
+
+
+/* v6.19 — reading-order first. No CSS columns in sorted media grids. */
+#grid.audioFileGrid{
+ display:grid!important;columns:auto!important;
+ grid-template-columns:repeat(auto-fill,minmax(min(100%,255px),1fr))!important;
+ grid-auto-flow:row!important;align-items:stretch!important;align-content:start!important;
+ gap:9px!important;
+}
+#grid.audioFileGrid .audioFileTile{
+ box-sizing:border-box!important;display:flex!important;position:relative!important;
+ height:149px!important;min-height:149px!important;max-height:149px!important;
+ margin:0!important;align-self:stretch!important;
+ padding:13px 14px 12px!important;
+}
+#grid.audioFileGrid .audioFileText{
+ display:flex!important;flex-direction:column!important;
+ width:100%!important;height:100%!important;min-height:0!important;
+}
+#grid.audioFileGrid .audioFileName{
+ line-height:1.4!important;max-height:calc(1.4em * 3)!important;
+ -webkit-line-clamp:3!important;line-clamp:3!important;
+}
+#grid.audioFileGrid .audioFileMeta{margin-top:6px!important;}
+#grid.audioFileGrid .audioStars{margin-top:auto!important;padding-top:6px!important;}
+/* Dense, ratio-correct justified rows. Native reading order, no visual column ordering. */
+#grid.grid:not(.videoTextGrid){
+ display:block!important;columns:auto!important;
+ padding:16px 20px 90px!important;
+}
+#grid.grid:not(.videoTextGrid) .jfPosterRow{
+ display:flex!important;align-items:flex-start!important;gap:11px!important;
+ width:100%!important;margin:0 0 11px!important;
+}
+#grid.grid:not(.videoTextGrid) .jfPosterRow>.jfCoverTile{
+ box-sizing:border-box!important;display:block!important;
+ flex:0 0 var(--jf-slot-w)!important;width:var(--jf-slot-w)!important;
+ min-width:0!important;margin:0!important;
+}
+@media(max-width:700px){
+ #grid.audioFileGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,175px),1fr))!important;gap:8px!important;}
+ #grid.audioFileGrid .audioFileTile{height:143px!important;min-height:143px!important;max-height:143px!important;padding:10px!important;}
+ #grid.grid:not(.videoTextGrid){padding:12px 12px 90px!important;}
+ #grid.grid:not(.videoTextGrid) .jfPosterRow{gap:8px!important;margin-bottom:8px!important;}
+}
+
+/* v6.20 — compact conversion progress; never masks player controls */
+#jfMediaJobHUD:not([hidden]){position:fixed;top:13px;left:50%;transform:translateX(-50%);width:205px;max-width:calc(100vw - 30px);z-index:300020;padding:8px 11px;border-radius:11px;border:1px solid rgba(207,228,250,.25);background:rgba(8,17,30,.78);backdrop-filter:blur(18px);color:#cedef1;box-shadow:0 7px 25px #0007;font:11px/1.35 system-ui;pointer-events:none}
+#jfMediaJobHUD .jfJobLine{display:flex;align-items:center;justify-content:space-between;gap:12px;white-space:nowrap}
+#jfMediaJobHUD .jfJobName{overflow:hidden;text-overflow:ellipsis}
+#jfMediaJobHUD .jfJobPercent{font-variant-numeric:tabular-nums;color:#e1f0ff}
+#jfMediaJobHUD .jfJobTrack{height:2px;margin-top:6px;border-radius:6px;background:#8da8c041;overflow:hidden}
+#jfMediaJobHUD .jfJobTrack i{display:block;width:0;height:100%;border-radius:inherit;background:#a7cff7;transition:width .25s linear}
+/* v6.21: video text cards and audio cards share a strict row-first fixed grid. */
+#grid.videoTextGrid{display:grid!important;columns:auto!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,255px),1fr))!important;grid-auto-flow:row!important;gap:9px!important;align-content:start!important;align-items:stretch!important;padding:17px 21px 90px!important}
+#grid.videoTextGrid .videoTextTile{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;width:100%!important;height:149px!important;min-height:149px!important;max-height:149px!important;margin:0!important;padding:13px 14px 12px!important;break-inside:auto!important;overflow:hidden!important}
+#grid.videoTextGrid .videoTextContent{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;width:100%!important;overflow:hidden!important}
+#grid.videoTextGrid .videoTextHeading{flex:0 1 auto!important;min-height:0!important}
+#grid.videoTextGrid .videoTextAuthor{flex:0 0 auto!important;margin-top:3px!important;white-space:nowrap!important;overflow:hidden!important}
+#grid.videoTextGrid .videoTextMeta{flex:0 0 auto!important;margin-top:3px!important}
+#grid.videoTextGrid .videoTextFoot{margin-top:auto!important;padding-top:8px!important;flex:0 0 auto!important}
+@media(max-width:700px){#grid.videoTextGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,172px),1fr))!important;gap:8px!important;padding:12px 12px 90px!important}#grid.videoTextGrid .videoTextTile{height:143px!important;min-height:143px!important;max-height:143px!important}}
+/* Rail open: move the mini-music control rather than stretching/overlapping either glass surface. */
+.audioDock.isMinimized:not([hidden]){translate:var(--jf-rail-music-shift,0px) 0!important}
+/* Hover previews are silent ephemeral elements; they never participate in global playback state. */
+#grid .jfCoverTile .coverWrap>.jfHoverPreview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1;pointer-events:none}
+#grid .jfCoverTile .coverWrap.previewLoading:after{content:"";position:absolute;top:10px;right:10px;width:11px;height:11px;border:2px solid #ffffff55;border-top-color:#e7f5ff;border-radius:50%;animation:jfPreviewSpin .9s linear infinite;z-index:5;pointer-events:none}
+@keyframes jfPreviewSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#grid .jfCoverTile .coverWrap.previewLoading:after{animation:none}}
+
+/* v6.22 · no-black-frame cover preview */
+#grid .jfCoverTile .coverWrap>.jfHoverPreview{background:transparent!important;opacity:0;visibility:hidden;transition:opacity .22s ease!important;will-change:opacity}
+#grid .jfCoverTile .coverWrap>.jfHoverPreview.jfPreviewVisible{opacity:1;visibility:visible}
+/* v6.22 · startup reveal: animation never imposes an artificial load delay */
+body.jfBooting{overflow:hidden!important}
+#jfAppSplash{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;background:radial-gradient(ellipse 55% 52% at 50% 44%,#172843 0%,#0b1527 43%,#050811 100%);opacity:1;visibility:visible;transition:opacity .5s cubic-bezier(.2,.7,.2,1),visibility .5s;isolation:isolate}
+#jfAppSplash[hidden]{display:none!important}
+#jfAppSplash.jfSplashExit{opacity:0;visibility:hidden;pointer-events:none}
+.jfSplashCenter{position:relative;display:flex;align-items:center;flex-direction:column;gap:12px;transform:translateY(-2vh)}
+.jfSplashHalo{position:absolute;left:50%;top:40px;width:150px;height:150px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #d8e9ff15;box-shadow:0 0 50px #a8cbff0d,inset 0 0 28px #ffffff06;animation:jfHaloBreath 2.2s ease-in-out infinite alternate;pointer-events:none}
+.jfSplashLogo{position:relative;display:block;width:66px;height:66px;object-fit:contain;filter:drop-shadow(0 0 18px #a9d4ff45);animation:jfSplashFloat 2.2s ease-in-out infinite}
+.jfSplashText{margin-top:14px;color:#a7bad0;font-size:11px;font-weight:500;letter-spacing:.18em}
+.jfSplashTrack{width:128px;height:2px;overflow:hidden;background:#a4c4ee22;border-radius:9px;margin-top:2px}
+.jfSplashTrack i{display:block;width:43%;height:100%;background:linear-gradient(90deg,transparent,#cfe8ff,transparent);animation:jfTrackFlow 1.45s ease-in-out infinite}
+@keyframes jfSplashFloat{50%{transform:translateY(-6px);filter:drop-shadow(0 0 27px #b1dcff75)}}
+@keyframes jfHaloBreath{to{transform:translate(-50%,-50%) scale(1.18);opacity:.45}}
+@keyframes jfTrackFlow{0%{transform:translateX(-110%)}100%{transform:translateX(350%)}}
+@media(prefers-reduced-motion:reduce){.jfSplashLogo,.jfSplashHalo,.jfSplashTrack i{animation:none!important}#jfAppSplash{transition:none!important}#grid .jfCoverTile .coverWrap>.jfHoverPreview{transition:none!important}}
+
+/* v6.31 time annotations — a compact rail, deliberately separate from native media controls */
+.feedItem .videoStage{position:relative!important}
+.jfAnnotationRail{position:absolute;z-index:5;bottom:53px;left:4%;width:92%;height:12px;pointer-events:none;border-radius:6px;background:linear-gradient(90deg,transparent,#b4d9ff10,transparent);opacity:.85;transition:opacity .2s}
+.jfAnnotationRail:empty{display:none}
+.jfAnnotationRail:hover{opacity:1}
+.jfAnnotationPoint,.jfAnnotationSpan{position:absolute;pointer-events:auto;cursor:pointer;border:0;padding:0;background:#9dd7ff;box-shadow:0 0 0 1px #0a1727,0 0 9px #8ccaff88;transform:translateX(-50%)}
+.jfAnnotationPoint{top:0;width:5px;min-width:5px;height:12px;border-radius:3px}
+.jfAnnotationSpan{top:4px;height:5px;min-width:4px;border-radius:4px;background:linear-gradient(90deg,#abddff9e,#9db6ffe8);transform:none}
+.jfAnnotationPoint:focus-visible,.jfAnnotationSpan:focus-visible{outline:2px solid white;outline-offset:3px}
+.audioSeekWrap{position:relative}
+.jfAnnotationAudioMarks{position:absolute;inset:0 9px;pointer-events:none;z-index:3}
+.jfAnnotationAudioMarks .jfAnnotationPoint{top:calc(50% - 5px);height:10px;width:4px}
+.jfAnnotationAudioMarks .jfAnnotationSpan{top:calc(50% - 2px);height:4px}
+#feedRangeMark[aria-pressed="true"],.jfAudioRange[aria-pressed="true"]{color:#b5e5ff!important;box-shadow:0 0 0 1px #8ecfff inset!important}
+.clipShelfToolbar{display:flex!important;align-items:center;gap:12px;padding:9px 18px}
+.clipShelfRowActions button[data-clip-action="play"]{color:#b5e3ff!important}
+.clipShelfRowActions button[data-clip-action="edit"]{color:#d9e5ff!important}
+.clipShelfRowInfo{white-space:normal!important;line-height:1.5}
+.clipShelfFormFields input{min-width:0}
+@media(max-width:720px){.jfAnnotationRail{left:5%;width:90%;bottom:58px}.clipShelfToolbar{padding:8px 12px}}
+
+/* Annotation shelf: prevent action buttons from being clipped by narrow cards. */
+.clipShelfList{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))!important}
+.clipShelfRowActions{grid-template-columns:repeat(2,minmax(0,1fr))!important;min-width:0!important;padding:0 12px 12px!important}
+.clipShelfRowActions button{white-space:nowrap!important;padding:8px 4px!important}
+.clipShelfRow.audio .clipShelfPoster{aspect-ratio:16/9!important;background:radial-gradient(ellipse at 32% 25%,#31507870,#070e1b 85%)!important}
+.jfAnnotationPosterGlyph{display:flex;justify-content:center;align-items:center;width:100%;height:100%;font-size:38px;color:#abd2f2ad}
+@media(max-width:660px){.clipShelfList{grid-template-columns:repeat(2,minmax(0,1fr))!important}.clipShelfRowActions{padding:0 6px 8px!important;gap:4px!important}}
+/* Time-reference cards should stay concise regardless of source aspect ratio. */
+.clipShelfList{align-items:start!important}
+.clipShelfRow{align-self:start!important}
+.clipShelfPoster{aspect-ratio:16/9!important}
+
+/* v6.32 · timeline and reference marks — separate from entertainment A/B */
+.feedItem .videoStage .jfTimeline{
+  position:absolute;z-index:9;left:max(18px,2.5vw);right:max(18px,2.5vw);bottom:14px;
+  display:flex;align-items:center;gap:12px;min-width:0;height:58px;padding:6px 12px;
+  border:1px solid rgba(200,223,250,.11);border-radius:15px;
+  background:linear-gradient(110deg,rgba(8,15,26,.79),rgba(13,25,39,.67));
+  backdrop-filter:blur(19px) saturate(135%);box-shadow:0 10px 35px rgba(0,0,0,.33);
+  color:#eef5ff;box-sizing:border-box;transition:opacity .18s,transform .18s;
+}
+.jfTimeline button{flex:0 0 auto;border:0;background:none;color:#dce9fb;border-radius:8px;padding:5px;cursor:pointer;display:grid;place-items:center;width:31px;height:31px}
+.jfTimeline button:hover{background:#bedbff26;color:white}
+.jfTimeline button svg{width:19px;height:19px}
+.jfTimelinePlay[data-playing="true"] svg{display:none}
+.jfTimelinePlay[data-playing="true"]:after{content:"";height:14px;width:12px;border-left:4px solid currentColor;border-right:4px solid currentColor;box-sizing:border-box}
+.jfTimelineTime{font-size:12px;color:#dceafa;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.jfTimelineTrack{height:37px;position:relative;flex:1;min-width:90px;display:flex;align-items:flex-end;padding:0 4px 6px;box-sizing:border-box}
+.jfTimelineTrack .jfAnnotationRail{position:absolute!important;display:block;left:calc(4px + 6.5px)!important;right:calc(4px + 6.5px)!important;width:auto!important;bottom:auto!important;z-index:3;background:none!important;border:0;overflow:visible;pointer-events:none;opacity:1}
+.jfTimelineTrack .jfAnnotationRail:empty{display:block}
+/* Marker buttons must not inherit the 5px padding from generic timeline controls. */
+.jfTimelineTrack .jfAnnotationPoint,.jfTimelineTrack .jfAnnotationSpan{padding:0!important;display:block!important;box-sizing:border-box!important}
+.jfVideoSeek{appearance:none;-webkit-appearance:none;display:block;width:100%;height:5px;margin:0;cursor:pointer;border:0;border-radius:30px;outline:none;background:linear-gradient(90deg,#c9e4ff 0%,#c9e4ff var(--jf-video-progress,0%),#5e748b var(--jf-video-progress,0%),#5e748b 100%)}
+.jfVideoSeek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;border:2px solid #dcf0ff;background:#eff7ff;box-shadow:0 0 0 3px #91caff35}
+.jfVideoSeek::-moz-range-thumb{width:11px;height:11px;border-radius:50%;border:2px solid #dcf0ff;background:#eff7ff}
+.jfVideoSeek:focus-visible{outline:2px solid #9dcfff;outline-offset:6px}
+.jfTimelineVolume{appearance:none;-webkit-appearance:none;width:52px;height:3px;accent-color:#badbff;border-radius:8px;background:#849ab2;cursor:pointer}
+.jfTimelineVolume::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#cfe6ff}
+.jfTimelineTrack .jfAnnotationPoint,.jfAnnotationAudioMarks .jfAnnotationPoint{top:0;height:11px;width:8px;min-width:8px;border-radius:3px 3px 2px 2px;background:#a9e5e7;border:1px solid #d0faf5;box-shadow:0 0 11px #70e7dc8c;transform:translateX(-50%)}
+.jfTimelineTrack .jfAnnotationPoint::after,.jfAnnotationAudioMarks .jfAnnotationPoint::after{content:"";position:absolute;left:50%;transform:translateX(-50%);top:10px;width:2px;height:4px;background:#91d8db}
+.jfTimelineTrack .jfAnnotationSpan,.jfAnnotationAudioMarks .jfAnnotationSpan{top:1px;height:6px;min-width:6px;border:1px solid #b9d9ff96;border-radius:3px;background:linear-gradient(90deg,#78b9e8af,#aad3ffdc);box-shadow:0 0 5px #83b9fa35}
+.jfTimelineTrack .jfAnnotationSpan::after,.jfAnnotationAudioMarks .jfAnnotationSpan::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:2px;border-left:2px solid #afceff;border-right:2px solid #afceff}
+/* Mark controls are above the seek surface. Dragging is always handled by the slider below. */
+.audioDock .audioSeekWrap{box-sizing:border-box!important}
+.audioDock .audioSeek{position:relative;z-index:2}
+.audioDock .jfAnnotationAudioMarks{top:10px!important;bottom:auto!important;left:5.5px!important;right:5.5px!important;inset:10px 5.5px auto 5.5px!important;height:12px;transform:none;z-index:3;overflow:visible}
+.audioDock .jfAudioBookmark svg,.audioDock .jfAudioRange svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.75}
+.audioDock .jfAudioBookmark,.audioDock .jfAudioRange{color:#b5dfe3!important;min-width:35px}
+.audioDock .jfAudioRange[aria-pressed="true"]{background:#244655!important;color:#dcffff!important}
+.feedHeader .jfAnnotationTools .feedTool{border-color:#81b5b02d!important}
+.feedHeader .jfEntertainmentTools .feedTool{border-color:#9ab7e52b!important}
+.jfMarkPopover{position:fixed;z-index:2147483000;width:min(295px,calc(100vw - 20px));padding:14px;background:#111d2cef;color:#ecf5ff;border:1px solid #aacde14a;border-radius:13px;box-shadow:0 19px 48px #000c;backdrop-filter:blur(22px);box-sizing:border-box}
+.jfMarkPopover[hidden],.jfCurrentMarksPanel[hidden]{display:none!important}
+.jfMarkPopoverType{font-size:11px;color:#9ad9dc;letter-spacing:.06em;margin-bottom:9px}
+.jfMarkPopover label{display:grid;gap:5px;font-size:11px;color:#9bafc4}
+.jfMarkPopoverName{width:100%;box-sizing:border-box;font:inherit;font-size:13px;color:#fff;background:#1a2b3e;border:1px solid #aac6e25c;border-radius:7px;padding:9px 10px}
+.jfMarkPopoverTime{margin:10px 0;color:#b6cbdc;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.jfMarkPopoverActions{display:flex;gap:6px;align-items:center}
+.jfMarkPopoverActions button{border:1px solid #b9d3e327;border-radius:7px;background:#2d4359;color:#e1efff;padding:7px 9px;font-size:11px;cursor:pointer;white-space:nowrap}
+.jfMarkPopoverActions button:hover{background:#3c5873}
+.jfMarkPopoverActions .warn{color:#f3bac5;background:#4b2e3a}
+.jfCurrentMarksPanel{position:fixed;right:20px;top:82px;bottom:90px;z-index:86;display:flex;flex-direction:column;width:min(350px,calc(100vw - 40px));border-radius:15px;background:#101c2bed;backdrop-filter:blur(23px);border:1px solid #d6eaff27;box-shadow:0 20px 50px #0008;color:#e9f2fe;overflow:hidden}
+.jfCurrentMarksPanel header{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid #cedff21b;font-size:13px}
+.jfCurrentMarksPanel header button{border:0;background:transparent;color:#a3bed6;font-size:24px;cursor:pointer}
+.jfCurrentMarksBody{overflow-y:auto;padding:8px;min-height:0}
+.jfCurrentMark{display:flex;gap:5px;align-items:center;border-radius:9px;border-bottom:1px solid #dae6ff10;padding:5px}
+.jfCurrentMark:hover{background:#a9ceff12}
+.jfCurrentMarkSeek{flex:1;min-width:0;background:none;border:0;text-align:left;cursor:pointer;color:#e2effc;padding:8px}
+.jfCurrentMarkSeek strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:570}
+.jfCurrentMarkSeek small{display:block;margin-top:5px;color:#9db8cf;font-size:11px;font-variant-numeric:tabular-nums}
+.jfCurrentMarkEdit{background:none;border:0;border-radius:8px;cursor:pointer;color:#b7cce1;padding:10px;font-size:18px}
+.jfCurrentMarkEdit:hover{background:#dae9ff1d}
+.jfEmptyMarks{padding:12px;font-size:12px;line-height:1.7;color:#a1b4cb}
+@media(max-width:650px){.feedItem .videoStage .jfTimeline{left:10px;right:10px;bottom:9px;gap:6px;padding:4px 7px;height:53px}.jfTimelineTime{font-size:10px}.jfTimelineVolume{display:none}.jfCurrentMarksPanel{right:10px;top:75px;bottom:75px}}
+@media(max-height:480px){.jfCurrentMarksPanel{top:10px;bottom:67px}.feedItem .videoStage .jfTimeline{bottom:3px;height:46px}}
+/* Keep playback immersive after inactivity, but never hide controls while hovered/focused. */
+.feedOverlay.chromeIdle .jfTimeline:not(:hover):not(:focus-within),
+.feedOverlay.chromeHidden .jfTimeline:not(:hover):not(:focus-within){opacity:0;pointer-events:none;transform:translateY(10px)}
+.feedOverlay.chromeIdle .jfTimeline:hover,
+.feedOverlay.chromeIdle .jfTimeline:focus-within,
+.feedOverlay.chromeHidden .jfTimeline:hover,
+.feedOverlay.chromeHidden .jfTimeline:focus-within{opacity:1;pointer-events:auto;transform:none}
+/* A dedicated visual break between work annotations and playback effects. */
+.feedHeader .jfEntertainmentTools #feedSetA{border-left:2px solid #789bb661!important}
+
+/* v6.33 — compact reference timeline and quiet immersive playback */
+.jfTimelineTrack{align-items:center!important;padding:3px 4px 0!important;height:31px!important}
+.jfTimelineTrack .jfAnnotationRail{top:1px!important;height:10px!important}
+.jfTimelineTrack .jfAnnotationPoint,.jfAnnotationAudioMarks .jfAnnotationPoint{height:8px!important;width:6px!important;min-width:6px!important;border-radius:3px!important;box-shadow:0 0 5px #8bdcd960!important}
+.jfTimelineTrack .jfAnnotationPoint::after{top:7px!important;height:3px!important}
+.jfTimelineTrack .jfAnnotationSpan{height:6px!important;top:1px!important;box-shadow:0 0 5px #83b9fa35!important}
+.jfTimelineTrack .jfAnnotationSpan::after{bottom:-3px!important;height:2px!important}
+.jfVideoSeek{height:4px!important;flex:0 0 auto!important;position:relative;top:0}
+.jfVideoSeek::-webkit-slider-thumb{width:12px;height:12px}
+.feedItem .videoStage .jfTimeline{align-items:center!important}
+.jfTimelineRate{font-size:12px!important;font-weight:600!important;width:39px!important;white-space:nowrap;font-variant-numeric:tabular-nums}
+.feedOverlay.chromeIdle .jfTimeline,.feedOverlay.chromeHidden .jfTimeline{opacity:0!important;pointer-events:none!important;transform:translateY(10px)!important}
+.feedOverlay.chromeIdle .jfTimeline:focus-within,.feedOverlay.chromeHidden .jfTimeline:focus-within{opacity:1!important;pointer-events:auto!important;transform:none!important}
+.jfMarkPopoverActions button{font-size:11px}
+#clipShelfNew{display:none!important}
+#clipShelfClose{width:38px!important;height:38px!important;padding:7px!important;display:grid!important;place-items:center!important}
+#clipShelfClose svg{width:21px;height:21px;display:block}
+.clipShelfRow{cursor:default}
+.clipShelfRow[data-clip-id]:not(.missing){cursor:pointer}
+.clipShelfRow[data-clip-id]:not(.missing):hover{border-color:#9ec8f655!important;background:#a8cfff10!important}
+.clipShelfRowActions{display:flex!important;justify-content:flex-end!important;gap:7px!important}
+.clipShelfRowActions button{width:auto!important;min-width:65px!important}
+#clipShelfBack:has(~ .feedOverlay.open) #clipShelfOnly{pointer-events:none}
+
+.audioDock .audioSeekWrap{padding-top:11px!important;height:39px!important}
+
+/* v6.35 — single color language for time references; never overlay the seek thumb. */
+.jfTimelineMarkActions{display:inline-flex;align-items:center;gap:2px;padding:1px 3px;border:1px solid #b9d0ed25;border-radius:10px;background:#bad2f50a;flex:none}
+.jfTimeline .jfTimelineMarkActions button{height:27px;width:27px;padding:4px;color:#b7dce2}
+.jfTimeline .jfTimelineMarkActions button svg{width:17px;height:17px}
+.jfTimeline .jfTimelineMarkRange[aria-pressed="true"]{color:#e9ffff;background:#73c6d43a;box-shadow:inset 0 0 0 1px #9adbd5a3}
+@media(max-width:680px){.jfTimelineMarkActions{gap:0;padding:1px}.jfTimeline .jfTimelineMarkActions button{width:24px;height:26px;padding:3px}.jfTimeline .jfTimelineMarkActions button svg{width:15px;height:15px}}
+.jfTimelineTrack .jfAnnotationPoint,.audioDock .jfAnnotationAudioMarks .jfAnnotationPoint{background:var(--jf-mark-color,#a9e5e7)!important;border-color:color-mix(in srgb,var(--jf-mark-color,#a9e5e7),white 38%)!important;box-shadow:0 0 6px color-mix(in srgb,var(--jf-mark-color,#a9e5e7),transparent 53%)!important}
+.jfTimelineTrack .jfAnnotationPoint::after,.audioDock .jfAnnotationAudioMarks .jfAnnotationPoint::after{background:var(--jf-mark-color,#a9e5e7)!important}
+.jfTimelineTrack .jfAnnotationSpan,.audioDock .jfAnnotationAudioMarks .jfAnnotationSpan{background:linear-gradient(90deg,color-mix(in srgb,var(--jf-mark-color,#a9e5e7),transparent 30%),var(--jf-mark-color,#a9e5e7))!important;border-color:color-mix(in srgb,var(--jf-mark-color,#a9e5e7),white 25%)!important}
+.jfTimelineTrack .jfAnnotationSpan::after,.audioDock .jfAnnotationAudioMarks .jfAnnotationSpan::after{border-color:var(--jf-mark-color,#a9e5e7)!important}
+.jfClipColorDot{display:inline-block;vertical-align:middle;width:7px;height:7px;margin-right:7px;border-radius:50%;background:var(--jf-mark-color,#a9e5e7);box-shadow:0 0 0 1px #d8e5ff50}
+.jfMarkColorPicker{display:flex;align-items:center;gap:8px;margin:0 0 13px;color:#a6bcce;font-size:11px}
+.jfMarkColorPicker span{margin-right:auto}
+.jfMarkColorPicker button{width:17px;height:17px;padding:0;border-radius:50%;border:1px solid #ffffff75;cursor:pointer;background:var(--jf-swatch);box-shadow:0 0 0 2px #0d1929}
+.jfMarkColorPicker button[aria-pressed="true"]{outline:2px solid #e4f8ff;outline-offset:3px}
+.jfMarkColorPicker button[data-jf-color="default"]{--jf-swatch:#a9e5e7}
+.jfMarkColorPicker button[data-jf-color="amber"]{--jf-swatch:#f3c377}
+.jfMarkColorPicker button[data-jf-color="rose"]{--jf-swatch:#f0a5b6}
+.jfMarkColorPicker button[data-jf-color="violet"]{--jf-swatch:#bdacf5}
+.jfMarkColorPicker button[data-jf-color="green"]{--jf-swatch:#91ddaf}
+.jfMarkColorPicker button[data-jf-color="blue"]{--jf-swatch:#9ecafa}
+/* Connect the audio pin directly to the seek rail: top 10px + 8px pin, stem descends to slider center (~25px). */
+.audioDock .jfAnnotationAudioMarks .jfAnnotationPoint::after{top:7px!important;height:9px!important;width:2px!important;border-radius:1px!important}
+/* A shelf icon uses exactly the same normalized glyph size/paint as adjacent audio controls. */
+.audioDock .jfAudioShelf{color:#b5dfe3!important}
+.audioDock .jfAudioShelf svg{display:block;width:18px!important;height:18px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.75!important;stroke-linejoin:round;stroke-linecap:round;opacity:.92}
+
+/* v6.36 — subtle pending-range beacon, visible without toast interruptions. */
+@keyframes jfRangeHeartbeat{0%,100%{opacity:.9;box-shadow:0 0 0 1px #9adbd559,0 0 0 0 #8dd9dc30}50%{opacity:1;box-shadow:0 0 0 1px #b0ecf3ae,0 0 0 4px #8dd9dc15}}
+#feedRangeMark[aria-pressed="true"],.jfTimelineMarkRange[aria-pressed="true"],
+.audioDock .jfAudioRange[aria-pressed="true"]{position:relative;animation:jfRangeHeartbeat 2.2s ease-in-out infinite!important}
+#feedRangeMark[aria-pressed="true"]::after,.jfTimelineMarkRange[aria-pressed="true"]::after,
+.audioDock .jfAudioRange[aria-pressed="true"]::after{content:"";position:absolute;right:3px;top:3px;width:4px;height:4px;border-radius:50%;background:#baf1ef;box-shadow:0 0 5px #aaf1f2}
+@media(prefers-reduced-motion:reduce){#feedRangeMark[aria-pressed="true"],.jfTimelineMarkRange[aria-pressed="true"],.audioDock .jfAudioRange[aria-pressed="true"]{animation:none!important}}
+/* The mini's hit boxes are positioned independently: hidden play buttons cannot
+   shift the icon off centre or overflow the round collapsed dock. */
+.audioDock.isMinimized .bgmMini{position:relative!important;display:block!important;padding:0!important}
+.audioDock.isMinimized .bgmMiniOpen{position:absolute!important;top:5px!important;left:5px!important;width:36px!important;height:36px!important;flex:none!important}
+.audioDock.isMinimized .bgmMiniPlay{position:absolute!important;top:5px!important;right:5px!important;width:36px!important;height:36px!important;flex:none!important}
+.audioDock.isMinimized.isSnappedRight:not([hidden]){left:auto!important;right:var(--bgm-mini-right,16px)!important}
+.studioHeader .studioBrandLogoOnly{cursor:pointer!important;border-radius:12px}
+.studioHeader .studioBrandLogoOnly:focus-visible{outline:2px solid #a9e5e7;outline-offset:3px}
+
+
+/* v6.37: non-invasive AI audio preparation controls and local export dialog */
+.jfAiLaunch{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;min-width:29px;min-height:29px;padding:5px!important;border:0;border-radius:10px;background:transparent;color:inherit;cursor:pointer;opacity:.8}
+.jfAiLaunch:hover,.jfAiLaunch:focus-visible{opacity:1;background:rgba(170,209,244,.14)}
+.jfAiLaunch svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:1.8}
+#jfAiAudioOverlay[hidden]{display:none!important}
+#jfAiAudioOverlay{position:fixed;z-index:999999;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.7);backdrop-filter:blur(10px)}
+.jfAiAudioPanel{width:min(530px,100%);max-height:calc(100vh - 48px);overflow-y:auto;border:1px solid rgba(181,211,240,.22);border-radius:21px;background:linear-gradient(135deg,#202c3f,#101722);box-shadow:0 25px 90px #000b;color:#eaf2fd;padding:24px;display:grid;gap:14px}
+.jfAiAudioPanel header{display:flex;align-items:center;justify-content:space-between;gap:18px;font-size:19px}
+.jfAiAudioPanel .jfAiClose{border:0;color:#cedbed;background:rgba(255,255,255,.1);width:33px;height:33px;border-radius:10px;cursor:pointer;font-size:22px;line-height:1}
+.jfAiHint{font-size:13px;line-height:1.6;color:#9cb2c9;margin:0}
+.jfAiSelected{overflow-wrap:anywhere;font-size:14px;margin:0}
+.jfAiAudioPanel .jfAiActions{display:flex;flex-wrap:wrap;gap:8px}
+.jfAiAudioPanel .jfAiActions button{border:1px solid rgba(167,201,242,.23);background:rgba(164,197,232,.15);color:#eaf2fd;border-radius:11px;padding:10px 12px;cursor:pointer;font-size:13px}
+.jfAiAudioPanel .jfAiActions button:hover{background:rgba(164,197,232,.25)}
+.jfAiAudioPanel .jfAiActions button[hidden]{display:none!important}
+.jfAiAudioPanel .jfAiActions button:disabled{opacity:.45;cursor:wait}
+.jfAiMeter{height:5px;border-radius:8px;background:#3b4d63;overflow:hidden;margin-bottom:9px}
+.jfAiMeter i{display:block;width:0;height:100%;background:#a5dee7;transition:width .3s}
+.jfAiStatus,.jfAiFolder,.jfAiParts,.jfAiClipboard{font-size:13px;line-height:1.65;overflow-wrap:anywhere;color:#b5c8e0;margin:0}
+.jfAiResult{display:grid;gap:7px}
+.jfAiAudioPanel [hidden]{display:none!important}
+
+/* v6.38 — focusable, non-blocking AI study notes drawer */
+.jfLearnLaunch{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;min-width:29px;height:29px;padding:5px!important;border:0;border-radius:10px;background:transparent;color:inherit;cursor:pointer;opacity:.85}
+.jfLearnLaunch:hover,.jfLearnLaunch:focus-visible{background:rgba(170,209,244,.15);opacity:1}
+.jfLearnLaunch svg{width:19px;height:19px;display:block}
+#jfAiLearningDrawer[hidden]{display:none!important}
+#jfAiLearningDrawer{position:fixed;right:14px;bottom:14px;z-index:999980;width:min(36vw,630px);min-width:340px;height:min(82vh,850px);display:flex;flex-direction:column;color:#e9f1fb;background:linear-gradient(155deg,rgba(27,42,63,.97),rgba(12,19,31,.97));border:1px solid rgba(176,207,238,.24);border-radius:22px;box-shadow:0 16px 65px #0009;backdrop-filter:blur(18px);overflow:hidden}
+.jfLearnHeader{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid #ffffff15}
+.jfLearnHeader>div{min-width:0;display:grid;gap:3px}
+.jfLearnHeader strong{font-size:16px;font-weight:650}
+.jfLearnSource{font-size:12px;color:#a7b9ce;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#jfAiLearningDrawer button{cursor:pointer;font:inherit;color:inherit}
+.jfLearnClose{width:37px;height:37px;background:#ffffff13;border:0;border-radius:12px;font-size:24px!important;line-height:1}
+.jfLearnTabs{display:flex;gap:6px;padding:12px 18px 3px}
+.jfLearnTabs button{border:0;background:transparent;color:#9fb4c9!important;border-radius:10px;padding:9px 16px;font-size:13px!important}
+.jfLearnTabs button[aria-selected=true]{color:#e8f7ff!important;background:#8bbdde27}
+.jfLearnToolbar{display:flex;gap:8px;padding:12px 18px}
+.jfLearnToolbar button,.jfLearnFileLabel{display:inline-flex;align-items:center;border-radius:9px;padding:8px 11px;font-size:12px!important;border:1px solid #b1c8db35;background:#b2c7da16;color:#d7e6f5;cursor:pointer}
+.jfLearnToolbar button:disabled{opacity:.4}
+.jfLearnStatus{padding:0 18px;margin:0;font-size:12px;color:#91d1c5;line-height:1.5;min-height:0}
+.jfLearnStatus.isError{color:#eea3b4}
+.jfLearnContent{overflow-y:auto;min-height:0;flex:1;padding:10px 18px 22px;overscroll-behavior:contain}
+.jfLearnEntry{padding:14px;margin-bottom:8px;border:1px solid #b8d4ee19;border-radius:13px;background:#c1d7f009}
+.jfLearnJump{display:flex;width:100%;align-items:baseline;gap:10px;min-width:0;border:0;background:none;text-align:left;padding:0 0 5px}
+.jfLearnJump:hover .jfLearnTitle{color:#b4eeef}
+.jfLearnTime{font-size:12px;color:#9ad9de;white-space:nowrap;font-variant-numeric:tabular-nums}
+.jfLearnTitle{font-size:14px;font-weight:600;line-height:1.5}
+.jfLearnNote,.jfLearnAnalysis,.jfLearnQuote{margin:7px 0 0;font-size:13px;line-height:1.75;color:#c4d2e3;overflow-wrap:anywhere}
+.jfLearnAnalysis{color:#c5bded}
+.jfLearnQuote{border-left:2px solid #8ecbc8;padding-left:9px;font-style:italic;color:#a9bccd}
+.jfLearnSubhead{margin-top:9px;color:#a6c9e6;font-size:12px}
+.jfLearnEmpty{font-size:13px;line-height:1.8;color:#92a6bd;margin:30px 8px}
+.jfLearnDrop{position:absolute;inset:0;z-index:10;background:#152840ed;border:2px dashed #9dd7df;border-radius:20px;display:grid;place-items:center;color:#d9faff;font-size:17px;pointer-events:none}
+.jfLearnDrop[hidden]{display:none!important}
+@media(max-width:900px){#jfAiLearningDrawer{width:min(540px,55vw);min-width:330px}}
+@media(max-width:650px){#jfAiLearningDrawer{width:calc(100vw - 20px);min-width:0;right:10px;bottom:10px;height:min(75vh,690px)}}
+/* v6.39 · speech-to-text correction, visually aligned with glass learning drawer */
+.jfAsrControls,.jfAsrSetup{display:grid;gap:11px;padding:12px 14px;border-radius:14px;border:1px solid #a0e4dc33;background:linear-gradient(135deg,#2d47444a,#11262c66);font-size:12px;color:#b8d9df}
+.jfAsrSetup p,.jfAsrDisclosure{margin:0;line-height:1.6;color:#b6cbd4}
+.jfAsrControls label{display:grid;gap:6px;color:#d7e9ed}
+.jfAsrControls input,.jfAsrSetup input{background:#07192399;color:#eff9f9;border:1px solid #9ad9cd55;border-radius:9px;padding:10px 12px;outline:0;width:100%;box-sizing:border-box}
+.jfAsrControls input:focus,.jfAsrSetup input:focus{border-color:#83e5d5;box-shadow:0 0 0 2px #6be7d51a}
+.jfAsrSetup .jfAsrKeyActions{display:flex;gap:8px}
+.jfAsrSetup button{padding:9px 12px;border-radius:9px;border:1px solid #9ad9cd55;background:#8aded333;color:#e3f6f2;cursor:pointer}
+.jfAsrStatus{font-size:12px;color:#98e8d7;margin:0}
+.jfLearnToolbar [hidden],.jfAiAudioPanel [hidden]{display:none!important}
+.jfLearnToolbar .jfTransConfirm{background:#78cfc729;border-color:#7bdcd159}
+.jfTransGuide{color:#b3c9d4;font-size:12px;line-height:1.7;margin:5px 0 15px}
+.jfTransEntry{}
+.jfTransJump{font-size:12px;font-variant-numeric:tabular-nums;cursor:pointer;padding-bottom:7px!important}
+.jfTransRowEdit{width:100%;min-height:65px;resize:vertical;box-sizing:border-box;background:#07172375;color:#eef6f7;border:1px solid #b5d7e51c;border-radius:9px;padding:10px 11px;font-family:inherit;font-size:13px;line-height:1.7;outline:0}
+.jfTransRowEdit:focus{border-color:#82daca99;box-shadow:0 0 0 2px #86ddd111}
+
+/* v6.42 · immersive, document-like transcript review */
+#jfAiLearningDrawer{width:min(48vw,880px);height:min(84vh,900px);max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);min-width:min(380px,calc(100vw - 24px));min-height:min(320px,calc(100vh - 24px));}
+.jfLearnHeader{padding:17px 22px 15px;background:rgba(9,14,21,.65)}
+.jfLearnTabs{padding:13px 20px 3px;gap:3px}
+.jfLearnToolbar{padding:13px 22px 8px;gap:9px}
+.jfLearnToolbar[hidden]{display:none!important}
+.jfLearnToolbar button{font-size:13px!important;padding:9px 15px;border-radius:10px;transition:background .18s,border-color .18s}
+.jfLearnToolbar .jfTransAnalyze{background:rgba(109,207,191,.18);border-color:rgba(111,217,199,.36);color:#c6f5ed}
+.jfLearnToolbar button:not(:disabled):hover{background:rgba(150,214,219,.2)}
+.jfLearnStatus{padding:1px 23px;color:#92adba;min-height:0}
+.jfLearnStatus:empty{display:none}
+.jfLearnContent{padding:12px 23px 30px;scrollbar-gutter:stable}
+.jfTransGuide{font-size:11px;letter-spacing:.02em;color:#758f9f;margin:5px 0 14px;line-height:1.6}
+.jfTransEntry{position:relative;padding:15px 0 13px!important;margin:0!important;border:0!important;border-bottom:1px solid rgba(174,206,227,.105)!important;background:transparent!important;border-radius:0!important}
+.jfTransEntry:focus-within{background:linear-gradient(90deg,rgba(88,167,162,.045),transparent)!important;border-bottom-color:rgba(113,214,198,.35)!important}
+.jfTransJump{position:absolute;top:7px;right:1px;display:inline-flex!important;width:auto!important;padding:3px 4px!important;font-size:10px!important;font-weight:400;color:#738d9a!important;letter-spacing:.02em;opacity:.72;z-index:1;line-height:1.4}
+.jfTransJump:hover,.jfTransJump:focus-visible{opacity:1;color:#a0e7d9!important}
+.jfTransRowEdit{display:block;min-height:44px!important;height:auto;resize:none;overflow:hidden;padding:13px 0 2px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#e1edf0;font-family:inherit;font-size:15px!important;font-weight:400;letter-spacing:.012em;line-height:1.95;white-space:pre-wrap;overflow-wrap:anywhere;outline:none}
+.jfTransRowEdit:focus{color:#f7ffff;box-shadow:none!important}
+.jfLearnResize{position:absolute;top:0;left:0;z-index:7;width:29px;height:29px;padding:6px;border:0;background:transparent;color:rgba(158,221,215,.55)!important;cursor:nwse-resize!important;touch-action:none;opacity:.5}
+.jfLearnResize svg{width:15px;height:15px;transform:rotate(180deg)}
+.jfLearnResize:hover,.jfLearnResize:focus-visible{opacity:1;color:#aaf1e5!important}
+@media(max-width:650px){#jfAiLearningDrawer{width:calc(100vw - 20px);height:min(78vh,720px);max-width:calc(100vw - 20px);max-height:calc(100vh - 20px)}}
+/* Global sticky-header z-index must never cover the resize grip. */
+#jfAiLearningDrawer>.jfLearnResize{z-index:40}
+
+/* v6.43 · minimal time-range edit affordance and no-typing picker */
+.jfTransTimeActions{position:absolute;top:5px;right:0;display:flex;align-items:center;gap:3px;z-index:2}
+.jfTransTimeActions>.jfTransJump{top:auto!important;right:auto!important;min-height:27px}
+.jfTransTimeEdit{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:5px;border:0;border-radius:8px;background:transparent;color:#7896a0;opacity:.56;cursor:pointer;transition:color .18s,opacity .18s,background .18s}
+.jfTransTimeEdit svg{width:13px;height:13px}
+.jfTransEntry:hover .jfTransTimeEdit,.jfTransTimeEdit:focus-visible{opacity:1;color:#acece0;background:#79dbc518}
+.jfTransTimeEdit:focus-visible{outline:2px solid #78dacc;outline-offset:1px}
+.jfTransTimePicker{position:fixed;z-index:1000001;width:min(330px,calc(100vw - 16px));box-sizing:border-box;padding:16px;border-radius:16px;border:1px solid #8ed8cf50;background:linear-gradient(145deg,#243541,#131e29 88%);box-shadow:0 24px 70px #000b,0 0 0 1px #ffffff08;color:#e6f4f3;backdrop-filter:blur(22px)}
+.jfTransPickerTitle{font-size:14px;font-weight:600;letter-spacing:.02em;margin-bottom:13px}
+.jfTransPickerColumns{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.jfTransPickerGroup{display:grid;gap:7px;min-width:0}
+.jfTransPickerLabel{font-size:11px;color:#91b5be}
+.jfTransPickerFields{display:flex;align-items:center;justify-content:space-between;gap:2px;border:1px solid #769da845;border-radius:10px;padding:5px 4px;background:#07141f92}
+.jfTransTimeSelect{appearance:none;min-width:0;flex:1;width:30px;border:0;outline:none;border-radius:5px;background:transparent;color:#f0faf8;font-variant-numeric:tabular-nums;text-align:center;font-size:13px;font-weight:500;padding:7px 0;cursor:pointer}
+.jfTransTimeSelect option{background:#192c38;color:#f0faf8}
+.jfTransTimeSelect:focus-visible{background:#76d8c828;outline:1px solid #7be9d5}
+.jfTransPickerColon{color:#5e8994;font-size:12px}
+.jfTransPickerError{min-height:32px;margin:10px 0 6px;color:#9db7bf;font-size:10px;line-height:1.55}
+.jfTransPickerError.isError{color:#f1ad98}
+.jfTransPickerActions{display:flex;justify-content:flex-end;gap:8px}
+.jfTransPickerActions button{border-radius:9px;padding:9px 12px;border:1px solid #8abfb444;background:#ffffff09;color:#b9d0d5;cursor:pointer;font-size:12px}
+.jfTransPickerActions .jfTransPickerApply{border-color:#75d6c36b;background:#72d0be29;color:#d6fcf3}
+.jfTransPickerActions button:disabled{opacity:.4;cursor:not-allowed}
+
+/* v6.44 · native-select-free precision time editor, quiet inline metadata */
+.jfTransTimeActions{top:7px;right:0;height:24px;display:flex;align-items:center;gap:3px}
+.jfTransTimeActions>.jfTransJump{position:static!important;display:inline-flex!important;align-items:center!important;justify-content:center;min-height:24px!important;height:24px!important;line-height:24px!important;padding:0 3px!important;margin:0!important;vertical-align:middle}
+.jfTransTimeActions>.jfTransTimeEdit{flex:0 0 24px;display:inline-flex;height:24px;width:24px;align-items:center;justify-content:center;padding:4px;line-height:1;vertical-align:middle}
+.jfTransTimeActions>.jfTransTimeEdit svg{display:block;width:13px;height:13px;flex:none}
+.jfTransTimePicker{width:min(388px,calc(100vw - 16px));padding:19px;border-radius:20px;background:linear-gradient(155deg,#21333d,#101924 92%);border:1px solid #a1dacb35;box-shadow:0 24px 85px #000b,inset 0 1px #ffffff16}
+.jfTransPickerTitle{font-size:13px;letter-spacing:.025em;color:#e5f5f2;margin-bottom:18px}
+.jfTransPickerColumns{gap:14px}
+.jfTransPickerGroup{gap:8px}
+.jfTransPickerFields{border-radius:12px;padding:4px;gap:0;background:#0a1721b8;box-shadow:inset 0 1px 4px #0004}
+.jfTransTimeSelect{flex:1;min-width:0;width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0!important;outline:none;cursor:default}
+.jfTransSpinNumber{font-size:15px;line-height:23px;font-weight:550;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:#e8f6f2}
+.jfTransTimeSelect>button{display:flex;align-items:center;justify-content:center;width:100%;height:17px;border:0;background:transparent;color:#779caa;font-size:12px;line-height:1;cursor:pointer;border-radius:5px;opacity:.72;padding:0}
+.jfTransTimeSelect:hover>button,.jfTransTimeSelect:focus-within>button{opacity:1;color:#a6eee2}
+.jfTransTimeSelect>button:hover{background:#75d9c21c}
+.jfTransTimeSelect:focus-visible{border-radius:7px;background:#7de2cd1a;outline:1px solid #91e7d5}
+.jfTransPickerColon{font-size:13px;align-self:center}
+.jfTransPickerError{margin-top:13px;min-height:24px}
+
+/* v6.44 · motion clips belong to the photo theater, never the video feed. */
+#assetView .photoImageSurface .jfLivePhotoVideo{display:block;max-width:100%;max-height:100%;min-width:0;width:auto;height:auto;object-fit:contain;transform-origin:center center;transition:none;will-change:transform;background:transparent;border:0;pointer-events:none;user-select:none}
+.pictureTile .jfLivePhotoMark{position:absolute;top:9px;right:10px;z-index:2;padding:3px 6px;border-radius:7px;background:#0c1723ad;backdrop-filter:blur(9px);color:#c4f7e9;font-size:10px;font-weight:600;letter-spacing:.09em}
+#assetView .photoImageSurface img[hidden]{display:none!important}
+#assetView .photoImageSurface .jfLivePhotoSound{position:absolute;z-index:9;right:26px;bottom:26px;border:1px solid #a2e8da55;border-radius:999px;background:#102730d9;backdrop-filter:blur(14px);color:#e3f9f3;padding:9px 15px;font-size:12px;letter-spacing:.015em;cursor:pointer;box-shadow:0 5px 24px #0007}
+#assetView .photoImageSurface .jfLivePhotoSound:hover{background:#1a4246e9}
+
+/* v6.46 - 无损原片的自由比例裁剪工作台 */
+#photoMorePanel #photoCropOpen{display:block;width:100%;text-align:left}
+.jfPhotoCropDialog[hidden]{display:none!important}
+.jfPhotoCropDialog{position:fixed;inset:0;z-index:270000;display:flex;flex-direction:column;background:#060b11f7;color:#e9f6f3;backdrop-filter:blur(22px)}
+.jfPhotoCropTop{height:66px;display:flex;align-items:center;justify-content:space-between;padding:12px 26px;font-size:15px;font-weight:650;border-bottom:1px solid #dff9f116}
+.jfPhotoCropTop button{background:#1d3036;border:1px solid #9de6d133;color:#e6f5f2;border-radius:13px;width:40px;height:40px;cursor:pointer;font-size:24px}
+.jfPhotoCropViewport{position:relative;flex:1;min-height:0;min-width:0;display:flex;justify-content:center;align-items:center;padding:26px;overflow:hidden}
+.jfPhotoCropBoard{position:relative;max-width:100%;max-height:100%;height:auto;width:min(88vw,calc((100dvh - 230px) * var(--jf-crop-ratio,1)));overflow:visible;box-shadow:0 16px 60px #0009;user-select:none;transform-origin:0 0;will-change:transform;touch-action:none;cursor:grab}
+.jfPhotoCropBoard img{display:block;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none;transform:rotate(var(--jf-crop-angle,0deg));transform-origin:center center;transition:transform 140ms ease}
+.jfPhotoCropBox{position:absolute;box-sizing:border-box;z-index:1;border:1.5px solid #c9fff2;background:#0000;box-shadow:0 0 0 200vmax #0009,0 0 0 1px #ffffff22 inset;cursor:move;touch-action:none;user-select:none}
+.jfPhotoCropGrid{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,transparent 33.25%,#ffffff45 33.33%,transparent 33.5%,transparent 66.5%,#ffffff45 66.66%,transparent 66.75%),linear-gradient(to bottom,transparent 33.25%,#ffffff45 33.33%,transparent 33.5%,transparent 66.5%,#ffffff45 66.66%,transparent 66.75%)}
+.jfPhotoCropBox [data-jf-crop-handle]{position:absolute;display:block;width:17px;height:17px;border:2px solid #ddfff7;background:#173e40;border-radius:5px;box-shadow:0 2px 10px #0008;touch-action:none}
+.jfPhotoCropBox [data-jf-crop-handle=nw]{left:-9px;top:-9px;cursor:nwse-resize}.jfPhotoCropBox [data-jf-crop-handle=n]{left:calc(50% - 8px);top:-9px;cursor:ns-resize}.jfPhotoCropBox [data-jf-crop-handle=ne]{right:-9px;top:-9px;cursor:nesw-resize}.jfPhotoCropBox [data-jf-crop-handle=e]{right:-9px;top:calc(50% - 8px);cursor:ew-resize}.jfPhotoCropBox [data-jf-crop-handle=se]{right:-9px;bottom:-9px;cursor:nwse-resize}.jfPhotoCropBox [data-jf-crop-handle=s]{left:calc(50% - 8px);bottom:-9px;cursor:ns-resize}.jfPhotoCropBox [data-jf-crop-handle=sw]{left:-9px;bottom:-9px;cursor:nesw-resize}.jfPhotoCropBox [data-jf-crop-handle=w]{left:-9px;top:calc(50% - 8px);cursor:ew-resize}
+.jfPhotoCropBottom{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 26px;border-top:1px solid #e0fff21a;background:#0e1b22ef;color:#a8c7c3;font-size:12px;flex-wrap:wrap}
+.jfPhotoCropBottom>div{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.jfPhotoCropBottom button{border-radius:11px;border:1px solid #87c6b347;background:#192c35;color:#d2e4e5;padding:10px 18px;cursor:pointer}
+.jfPhotoCropBottom #jfPhotoCropSave{background:#a3e6d1;color:#0c2929;font-weight:650}
+.jfPhotoCropBottom button:disabled{opacity:.5;cursor:wait}
+.jfPhotoCropAdjust{display:flex;align-items:center;gap:12px;padding:8px 14px;border:1px solid #97d8c82b;border-radius:999px;background:#102129d2;box-shadow:inset 0 1px 0 #ffffff0d}
+.jfPhotoCropAdjust>span{font-size:12px;color:#d7efea;letter-spacing:.04em}
+.jfPhotoCropAdjust input{width:min(260px,38vw);accent-color:#9ee6d1;margin:0}
+.jfPhotoCropAdjust output{min-width:52px;text-align:right;font-variant-numeric:tabular-nums;color:#e9fbf6}
+.jfPhotoCropAdjust #jfPhotoCropLevelReset{padding:8px 14px;border-radius:999px}
+@media(max-width:650px){.jfPhotoCropTop{padding:12px 14px}.jfPhotoCropViewport{padding:17px}.jfPhotoCropBoard{width:min(94vw,calc((100dvh - 245px) * var(--jf-crop-ratio,1)))}.jfPhotoCropBottom{padding:12px 14px}.jfPhotoCropBottom button{padding:10px 12px}.jfPhotoCropAdjust{width:100%;justify-content:space-between}.jfPhotoCropAdjust input{width:min(44vw,220px)}}
+
+/* v6.47: camera gently zooms to the crop after pointer release. Accessible motion preference. */
+@media(prefers-reduced-motion:reduce){.jfPhotoCropBoard{transition-duration:0ms!important}}
+
+/* v6.96: compact, non-modal zoom sensitivity inside picture actions. */
+.photoMorePanel .jfPhotoZoomSpeed{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;color:#c5dfdb;font:12px/1.4 system-ui;padding:11px 13px 13px;border-bottom:1px solid #a6ccba29;min-width:205px}
+.photoMorePanel .jfPhotoZoomSpeed output{color:#9bdcc8;text-align:right;font-variant-numeric:tabular-nums}
+.photoMorePanel .jfPhotoZoomSpeed input[type=range]{grid-column:1 / -1;width:100%;margin:5px 0 0;accent-color:#a0dfd0;cursor:ew-resize}
+
+/* v7.18: bounded cards; retain the frozen override budget.
+ * Cover view already uses block rows. Text wrappers span the existing CSS grid. */
+#grid.grid.jfVirtualGrid .jfVirtualSpacer{width:100%;pointer-events:none;contain:size layout paint}
+#grid.videoTextGrid.jfVirtualGrid .jfVirtualTextRow{grid-column:1/-1;display:grid;grid-template-columns:repeat(var(--jf-cols),minmax(0,1fr));gap:9px;width:100%;min-width:0}
+#grid.videoTextGrid.jfVirtualGrid .jfVirtualSpacer{grid-column:1/-1}
+@media(max-width:700px){#grid.videoTextGrid.jfVirtualGrid .jfVirtualTextRow{gap:8px}}

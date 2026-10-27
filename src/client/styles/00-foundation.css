@@ -1,0 +1,730 @@
+
+*{box-sizing:border-box}
+html,body{margin:0;background:#101114;color:#eceef2;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+body{min-height:100vh}
+button,input{font:inherit}
+header{position:sticky;top:0;z-index:20;background:rgba(16,17,20,.96);backdrop-filter:blur(14px);border-bottom:1px solid #292c33;padding:13px 20px}
+.top{display:flex;gap:10px;align-items:center}
+h1{font-size:19px;margin:0 10px 0 0;white-space:nowrap}
+#search{flex:1;min-width:180px;background:#1d1f24;color:#fff;border:1px solid #353943;border-radius:11px;padding:10px 12px;outline:none}
+#search:focus{border-color:#596171}
+.creatorToggle,.sortBtn{border:1px solid #353943;background:#1d1f24;color:#d9dde4;border-radius:10px;padding:9px 11px;cursor:pointer;white-space:nowrap}
+.sortBtn.active{background:#eef1f5;color:#17181b;border-color:#eef1f5;font-weight:700}
+.sortBtn:not(.active):hover{background:#272a31;border-color:#454a56}
+.creatorPanel{max-height:min(38vh,360px);overflow-x:hidden;overflow-y:auto;opacity:1;transition:max-height .18s ease,opacity .15s ease;scrollbar-gutter:stable}
+.creatorPanel::-webkit-scrollbar{width:8px}
+.creatorPanel::-webkit-scrollbar-track{background:transparent}
+.creatorPanel::-webkit-scrollbar-thumb{background:#343943;border:2px solid #101114;border-radius:999px}
+.creatorPanel.collapsed{max-height:0;overflow:hidden;opacity:0;pointer-events:none}
+.creatorTags{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 4px 6px 0}
+.creatorTag{min-height:30px;border:1px solid #353943;background:#1d1f24;color:#bfc5cf;border-radius:999px;padding:0 10px;font-size:12px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.creatorTag.on{background:#eee;color:#17181b;border-color:#eee;font-weight:700}
+.creatorTagGroup{height:30px;max-width:100%;flex:0 1 auto;display:inline-flex;align-items:stretch;border:1px solid #353943;border-radius:999px;overflow:hidden;background:#1d1f24}
+.creatorTagGroup .creatorTag{min-width:0;max-width:min(240px,40vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0;border-radius:0;background:transparent}
+.creatorTagGroup .creatorTag.on{background:#eee;color:#17181b;font-weight:700}
+.creatorRename{width:28px;height:100%;flex:0 0 28px;border:0;border-left:1px solid #353943;background:#202329;color:#8fa2ba;cursor:pointer;font-size:13px;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.creatorRename:hover{background:#2a2e36;color:#fff}
+.creatorRow{display:flex;align-items:center;gap:4px;min-width:0}
+.creatorEditBtn{width:24px;height:24px;border:0;background:transparent;color:#69788c;border-radius:6px;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.creatorEditBtn:hover{background:#252830;color:#c7d5e6}
+.creatorLinkBtn{width:24px;height:24px;border:0;background:transparent;color:#69788c;border-radius:6px;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;text-decoration:none;font-size:14px}
+.creatorLinkBtn:hover{background:#252830;color:#c7d5e6}
+.creatorLinkEdit{width:28px;height:100%;flex:0 0 28px;border:0;border-left:1px solid #353943;background:#202329;color:#8fa2ba;cursor:pointer;font-size:12px;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.creatorLinkEdit:hover{background:#2a2e36;color:#fff}
+@media(max-width:650px){.creatorPanel{max-height:32vh}.creatorTags{gap:6px;padding-right:2px}.creatorTagGroup .creatorTag{max-width:145px}}
+.status{font-size:12px;color:#969daa;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:15px;padding:18px}
+.mediaTabs{display:flex;gap:5px;padding:2px;border:1px solid #363a42;background:#1b1d22;border-radius:11px;white-space:nowrap}
+.mediaTabs button{border:0;color:#aeb8c6;background:transparent;border-radius:8px;padding:8px 13px;cursor:pointer}
+.mediaTabs button.on{background:#e5ebf5;color:#171b22;font-weight:750}
+.assetFolders{display:flex;flex-wrap:wrap;gap:8px;margin:13px 18px 0;align-items:center}
+.assetFolders button{border:1px solid #3c414c;border-radius:10px;background:#202329;color:#ccd2df;padding:9px 13px;cursor:pointer;text-align:left}
+.assetFolders button:hover,.assetFolders button.on{background:#394353;color:white}
+.folderContext{font-size:12px;color:#a8b1bd;padding:0 18px;margin-top:12px}
+.assetFolderTiles{display:flex;gap:10px;flex-wrap:wrap;margin:12px 18px 0}
+.assetFolderTiles .folderEntry{width:auto!important;min-width:160px;max-width:100%;margin:0!important}
+.pictureWall{column-count:5;column-gap:12px;padding:15px 18px}
+.pictureTile{display:inline-block;width:100%;break-inside:avoid;margin:0 0 12px;background:#1b1d22;border:1px solid #31353e;border-radius:10px;overflow:hidden;cursor:pointer}
+.pictureTile img{display:block;width:100%;height:auto;min-height:45px;background:#111;max-height:540px;object-fit:contain}
+.pictureTile span{display:block;padding:8px 9px;color:#cbd1dc;font-size:12px;overflow-wrap:anywhere}
+/* 音频：最大宽度操作区 + 长进度轨 + A/B 区间 + 弹出式竖直音量。 */
+.audioList{display:flex;flex-direction:column;gap:14px;padding:16px 18px;width:100%;max-width:none;margin:0;box-sizing:border-box}
+.audioTrack{background:#1b1e25;border:1px solid #343b48;border-radius:14px;padding:16px 18px;min-width:0;width:100%;box-sizing:border-box;box-shadow:0 2px 12px #00000014}
+.audioTrack:focus-within{border-color:#586679}
+.audioTrackHeader{display:flex;align-items:center;gap:12px;min-width:0;margin-bottom:15px}
+.audioArtwork{display:flex;align-items:center;justify-content:center;flex:0 0 42px;height:42px;border-radius:11px;background:#29394b;color:#9cc6ff;font-size:24px}
+.audioTrackInfo{flex:1;min-width:0}
+.audioTrack .audioTitle{font-size:15px;font-weight:650;color:#e9edf5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audioMeta{margin-top:4px;font-size:12px;color:#8994a7}
+.audioTrack audio{display:none}
+.audioTimeline{display:flex;align-items:center;gap:12px;width:100%;min-width:0}
+.audioIconBtn{height:34px;min-width:34px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;border:1px solid #3b4554;background:#232a35;color:#cdd9e9;border-radius:9px;cursor:pointer;flex:0 0 auto;font-size:12px;white-space:nowrap}
+.audioIconBtn:hover{background:#334154;color:#fff}
+.audioIconBtn:disabled{opacity:.4;cursor:not-allowed}
+.audioPlay{height:40px;width:40px;min-width:40px;border-radius:50%;background:#e5ebf5;color:#151922;border:0;padding:0;display:grid;place-items:center;line-height:0}
+.audioPlay:hover{background:#fff;color:#151922}
+.audioPlay svg{display:block;width:22px;height:22px;flex:none;overflow:visible}
+.audioPlay .audioGlyphPlay{transform:translateX(1px)}
+.audioPlay[data-playing="true"] .audioGlyphPlay{display:none}
+.audioPlay:not([data-playing="true"]) .audioGlyphPause{display:none}
+.audioPlay:focus-visible,.audioSpeed:focus-visible,.audioSpeedChoice:focus-visible{outline:2px solid #a7caff;outline-offset:3px}
+.audioTime{font-size:13px;color:#c2cbdb;font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto;text-align:center;min-width:61px}
+.audioSeekWrap{position:relative;flex:1;min-width:60px;display:flex;align-items:center;height:32px}
+.audioSeek{flex:1;width:100%;min-width:0;display:block;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;background:linear-gradient(to right,#bbd7ff 0%,#bbd7ff var(--audio-progress,0%),#465162 var(--audio-progress,0%),#465162 100%);border:0;border-radius:999px;height:7px;margin:0;accent-color:#a7caff}
+.audioSeek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#f0f6ff;border:2px solid #8baedb;box-shadow:0 0 0 3px #151a20}
+.audioSeek::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#f0f6ff;border:2px solid #8baedb}
+.audioSeek:focus-visible,.audioVolume:focus-visible{outline:2px solid #a7caff;outline-offset:6px}
+.audioMark{position:absolute;top:2px;height:12px;width:2px;border-radius:1px;pointer-events:none;display:none;transform:translateX(-50%);z-index:1}
+.audioMarkA{background:#7dbdff}.audioMarkB{background:#ffbb80}
+.audioTools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:13px 0 0 52px;flex-wrap:wrap}
+.audioABTools,.audioRightTools{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.audioABInfo{font-size:12px;color:#95a3b7;font-variant-numeric:tabular-nums;margin-left:3px}
+.audioABBtn{min-width:33px;padding:0 11px}
+.audioABBtn.on{color:#d9eaff;background:#294363;border-color:#6b96c9}
+.audioABLoop.on{background:#a7caff;color:#121b29;border-color:#d7e7ff;font-weight:750;box-shadow:0 0 0 2px #a7caff30}
+.audioABLoop.on:hover{background:#d7e7ff;color:#121b29}
+.audioABLoop.on:disabled{opacity:.4}
+.audioClip{color:#c2ddff}
+.audioLoop.on{color:#d9e7ff;background:#2b3c52;border-color:#58708f}
+.audioSpeedBox{position:relative;display:flex;align-items:center}
+.audioSpeed{min-width:53px;font-variant-numeric:tabular-nums}
+.audioSpeedPopup{position:absolute;bottom:calc(100% + 10px);right:0;min-width:98px;max-height:min(340px,55dvh);overflow-y:auto;padding:5px;border:1px solid #47566d;border-radius:11px;background:#242c39;box-shadow:0 12px 36px #0009;display:none;flex-direction:column;gap:2px;z-index:10}
+.audioSpeedBox.open .audioSpeedPopup{display:flex}
+.audioSpeedChoice{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:9px 11px;border:0;border-radius:7px;text-align:left;background:transparent;color:#dce6f4;font-size:13px;cursor:pointer}
+.audioSpeedChoice:hover,.audioSpeedChoice.on{background:#385071;color:#fff}
+.audioSpeedChoice.on:after{content:'✓';font-weight:750}
+.audioSpeedPopup::-webkit-scrollbar{width:5px}
+.audioSpeedPopup::-webkit-scrollbar-thumb{background:#58677d;border-radius:9px}
+.audioVolumeBox{position:relative;display:flex;align-items:center}
+.audioVolumePopup{position:absolute;bottom:calc(100% + 10px);right:0;width:52px;height:166px;border:1px solid #47566d;border-radius:12px;background:#242c39;box-shadow:0 12px 36px #0009;display:none;align-items:center;justify-content:center;z-index:8}
+.audioVolumeBox.open .audioVolumePopup{display:flex}
+.audioVolume{appearance:none;-webkit-appearance:none;writing-mode:vertical-lr;direction:rtl;width:9px;height:126px;border-radius:999px;background:#4b5c73;accent-color:#a7caff;cursor:pointer;outline:none}
+.audioVolume::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border:2px solid #83a6d4;border-radius:50%;background:#e5eeff}
+.audioVolume::-moz-range-thumb{width:15px;height:15px;border:2px solid #83a6d4;border-radius:50%;background:#e5eeff}
+.audioTrack .assetRemove{padding:7px 11px;flex:0 0 auto}
+.audioMessage{font-size:12px;color:#f0adad;padding:8px 0 0 52px;min-height:0}
+.audioMessage:empty{display:none}
+@media(max-width:700px){.audioList{padding:10px}.audioTrack{padding:12px}.audioTimeline{gap:7px}.audioTime{font-size:11px;min-width:44px}.audioTools{margin-left:0}.audioIconBtn{padding:0 8px}.audioABInfo{width:100%;margin:2px 0}.audioMessage{padding-left:0}}
+
+/* 音频列表与播放区解耦：多列展示，最多三行文件名。 */
+.audioFileGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));gap:12px;padding:16px 18px 24px;align-content:start}
+.audioFileTile{display:flex;align-items:flex-start;min-width:0;min-height:108px;gap:11px;background:#1b1e25;border:1px solid #343b48;border-radius:12px;padding:13px 11px;position:relative;cursor:default;transition:border-color .13s,background .13s}
+.audioFileTile:hover{background:#222834;border-color:#5b6880}
+.audioFileTile.isActive{background:#233348;border-color:#7ca6dc;box-shadow:inset 0 0 0 1px #7ca6dc45}
+.audioFileTile:focus-visible{outline:2px solid #a7caff;outline-offset:3px}
+.audioFileArt{flex:0 0 35px;width:35px;height:35px;border-radius:9px;background:#303c50;color:#a7caff;display:grid;place-items:center;font-size:20px}
+.audioFileText{flex:1;min-width:0;padding-top:1px}
+.audioFileName{font-size:14px;font-weight:630;line-height:1.45;color:#e7edf8;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow-wrap:anywhere;min-height:20px;max-height:calc(1.45em * 3)}
+.audioFileMeta{margin-top:7px;color:#8795a8;font-size:11px}
+.audioFileActions{display:flex;flex:0 0 auto;flex-direction:column;align-items:center;gap:7px}
+.audioFileRename{color:#b6cadf;background:transparent;border:0;border-radius:6px;padding:3px 5px;line-height:1;cursor:pointer;opacity:.7}
+.audioFileRename:hover,.audioFileRename:focus-visible{background:#314256;color:#d8eaff;opacity:1}
+.audioRenameRow{display:flex;align-items:center;gap:5px;min-width:0;max-width:100%;flex-wrap:wrap}
+.audioRenameInput{flex:1 1 110px;min-width:75px;width:100%;padding:6px 7px;background:#0f1825;color:#f3f7ff;border:1px solid #7da3d8;border-radius:6px;font-size:13px;outline:none}
+.audioRenameExt{font-size:11px;color:#a9b9cf;white-space:nowrap}
+.audioRenameConfirm,.audioRenameCancel{padding:4px 6px;border-radius:5px;background:#2a3e59;color:#eaf2ff;border:1px solid #577395;cursor:pointer;font-size:12px}
+.audioRenameCancel{background:#292b32;border-color:#4c5563}
+.audioRenameHint{margin-top:5px;color:#9aaac0;font-size:10px}
+.audioFileTile.isRenaming{border-color:#7da3d8}
+.audioFileTile.isRenaming .audioFileActions{display:none}
+.audioFileDelete{flex:0 0 auto;color:#a4adba;background:transparent;border:0;border-radius:6px;cursor:pointer;font-size:21px;line-height:1;padding:1px 4px;opacity:.6}
+.audioFileTile:hover .audioFileDelete,.audioFileDelete:focus-visible{opacity:1;color:#f4aab7;background:#3a2934}
+.audioDock[hidden]{display:none!important}
+.audioDock{position:fixed;z-index:65;inset:auto 0 0;background:#12161cf5;border-top:1px solid #455166;box-shadow:0 -15px 48px #000a;backdrop-filter:blur(15px);padding:9px max(18px,calc((100vw - 1640px)/2)) calc(10px + env(safe-area-inset-bottom));box-sizing:border-box}
+.audioDock .audioTrack{width:100%;border:0;border-radius:0;background:transparent;box-shadow:none;padding:3px 0 0}
+.audioDock .audioTrackHeader{margin-bottom:8px;gap:10px}
+.audioDock .audioArtwork{width:32px;height:32px;flex-basis:32px;font-size:18px}
+.audioDock .audioTrack .audioTitle{font-size:13px}
+.audioDock .audioMeta{display:none}
+.audioDock .audioTimeline{gap:11px}
+.audioDock .audioTools{margin:7px 0 0 43px}
+.audioDock .audioPlay{width:37px;height:37px;min-width:37px}
+.audioDockClose{margin-left:auto;color:#b4bfce;border:1px solid #3b4555;border-radius:8px;background:#252e3b;cursor:pointer;width:31px;height:29px;font-size:20px;line-height:1}
+.audioDockClose:hover{background:#424c5c;color:white}
+body.audioDockVisible:has(#audioDock:not([hidden])){padding-bottom:190px}
+@media(max-width:700px){
+.audioFileGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,165px),1fr));gap:9px;padding:10px}
+.audioFileTile{padding:10px 8px;min-height:116px;gap:7px}
+.audioFileArt{height:28px;width:28px;flex-basis:28px;font-size:16px}
+.audioFileName{font-size:12px}
+.audioFileDelete{font-size:18px}
+.audioDock{padding:7px 10px calc(8px + env(safe-area-inset-bottom))}
+.audioDock .audioTimeline{gap:6px}
+.audioDock .audioTools{margin-left:0}
+.audioDock .audioABInfo{width:auto}
+body.audioDockVisible:has(#audioDock:not([hidden])){padding-bottom:255px}
+}
+
+.assetRemove{border:1px solid #574047;color:#f0aab4;border-radius:7px;background:#33242a;padding:7px 12px;cursor:pointer}
+.assetView{position:fixed;inset:0;z-index:250000;background:rgba(0,0,0,.97);display:none;align-items:center;justify-content:center;flex-direction:column;padding:16px;gap:8px}
+.assetView.open{display:flex}
+.assetView img{max-width:min(96vw,1400px);max-height:calc(100dvh - 130px);object-fit:contain}
+.assetViewControls{display:flex;gap:10px;align-items:center;max-width:95vw}
+.assetViewControls button{border:1px solid #536072;color:#eef1f8;background:#252b34;border-radius:9px;padding:9px 12px;cursor:pointer}
+.assetViewName{font-size:12px;color:#c9ced8;max-width:50vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 截图逐帧工作台：视频复用浏览器解码，保持清晰、低等待、无大批图片。 */
+.shotStudioBack{position:fixed;inset:0;z-index:250100;display:flex;align-items:center;justify-content:center;background:#050609ed;backdrop-filter:blur(10px);padding:18px;overscroll-behavior:contain}
+body.shotStudioOpen{overflow:hidden}
+.shotStudio{width:min(1450px,100%);height:min(94dvh,950px);min-height:300px;display:flex;flex-direction:column;background:#16191f;color:#eef2f8;border:1px solid #424a57;border-radius:16px;overflow:hidden;box-shadow:0 20px 80px #000c}
+.shotTop{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-bottom:1px solid #313742;flex:0 0 auto}
+.shotHeading{display:flex;flex-direction:column;min-width:0;gap:4px}.shotHeading strong{font-size:16px}.shotHeading small{font-size:12px;color:#a9b3c2;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;max-width:50vw}
+.shotActions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.shotActions button,.shotFoot button{border:1px solid #485365;color:#e9eef8;background:#292f39;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:650;white-space:nowrap;cursor:pointer}
+.shotActions button:hover:enabled,.shotFoot button:hover:enabled{background:#384659}
+.shotActions .shotSave{background:#e5ebf5;color:#1b2028;border-color:#e5ebf5}
+.shotActions .shotSave:hover:enabled{background:#fff;color:#1b2028}
+.shotActions .shotCover{color:#b7d4ff;border-color:#4c678a}
+.shotActions .shotClose{font-size:21px;padding:6px 12px;line-height:1.1}
+.shotStudio button:disabled{opacity:.45;cursor:not-allowed}
+.shotStage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#030405;overflow:hidden}
+.shotStage .shotVideo,.shotSnapshot{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;border:0;border-radius:0;background:#030405}
+.shotSnapshot{position:absolute;inset:0;z-index:1;pointer-events:none}
+.shotSnapshot[hidden]{display:none}
+.shotThumbProgress{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:2;background:#161a20d8;border:1px solid #4d5867;border-radius:20px;padding:5px 12px;color:#dce8f9;font-size:12px;pointer-events:none;white-space:nowrap}.shotThumbProgress[hidden]{display:none}
+.shotFoot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex:0 0 auto;border-top:1px solid #313742;padding:12px 16px}
+.shotInfo{display:flex;flex-direction:column;gap:3px;align-items:center;text-align:center;min-width:0}
+.shotIndex{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:#f0f4ff}
+.shotTime{font-size:12px;color:#a5afc0;font-variant-numeric:tabular-nums}
+.shotFeedback{font-size:12px;color:#a0e4bd;min-height:1em;overflow-wrap:anywhere}
+@media(max-width:700px){.shotStudioBack{padding:6px}.shotStudio{height:97dvh;border-radius:11px}.shotTop{padding:9px;gap:7px;flex-wrap:wrap}.shotHeading{flex:1;min-width:100px}.shotHeading small{max-width:48vw}.shotActions{gap:5px}.shotActions button,.shotFoot button{padding:8px 9px;font-size:12px}.shotFoot{padding:10px 8px;gap:6px}.shotTime{font-size:11px}.shotIndex{font-size:12px}}
+@media(max-width:1100px){.pictureWall{column-count:4}}
+@media(max-width:700px){.pictureWall{column-count:2;padding:10px;column-gap:8px}.top .mediaTabs{order:-1}.assetFolders{margin:10px}.audioList{padding:10px}}
+.card{background:#191b20;border:1px solid #292d34;border-radius:14px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.16)}
+.coverWrap{position:relative;aspect-ratio:9/16;background:#090a0c;cursor:pointer;overflow:hidden}
+.cover{width:100%;height:100%;object-fit:cover;display:block}
+.badges{position:absolute;left:8px;bottom:8px;display:flex;gap:5px;flex-wrap:wrap}
+.badge{padding:3px 6px;border-radius:6px;background:rgba(0,0,0,.7);font-size:11px}
+.coverSeek{padding:7px 10px 6px;background:#15171b;border-top:1px solid #262930}
+.coverSeekTop{display:flex;justify-content:space-between;font-size:10px;color:#aeb3be;margin-bottom:3px}
+.coverRange{display:block;width:100%;margin:0;cursor:pointer;accent-color:#d8dbe2}
+.coverSeek.loading{opacity:.6}
+.body{padding:11px}
+.creatorText{font-size:12px;color:#8fa2ba;display:inline-block;border-radius:5px;padding:2px 3px;margin-left:-3px;cursor:text}
+.creatorText:hover,.titleText:hover{background:#252830}
+.titleText{display:block;font-size:14px;line-height:1.45;color:#f0f1f4;min-height:41px;border-radius:6px;padding:2px 3px;margin:2px 0 0 -3px;cursor:text}
+.inlineInput{width:100%;background:#101216;color:#fff;border:1px solid #566070;border-radius:7px;padding:6px 7px;outline:none}
+.meta{display:flex;gap:7px;flex-wrap:wrap;font-size:11px;color:#8d95a1;margin-top:7px}
+.actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid #292d34}
+.stars{display:flex;align-items:center;gap:1px;touch-action:none;user-select:none;transition:transform .12s ease}
+.stars.ratingActive{transform:scale(1.05)}
+.ratingStar{position:relative;width:22px;height:24px;border:0;background:none;padding:0;font-size:22px;line-height:24px;cursor:pointer}
+.ratingStarBase{position:absolute;inset:0;color:#555;pointer-events:none}
+.ratingStarFill{position:absolute;left:0;top:0;bottom:0;color:#ffc857;overflow:hidden;white-space:nowrap;pointer-events:none;transition:width .05s linear}
+.ratingStar.hot{transform:scale(1.15)}
+.ratingValue{font-size:10px;color:#9299a5;margin-left:4px;min-width:23px}
+.iconActions{margin-left:auto;display:flex;gap:5px}
+.iconBtn{width:29px;height:29px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #3b3f48;background:#21242a;color:#aeb4bf;border-radius:8px;padding:0;cursor:pointer}
+.iconBtn:hover{background:#2b3037;color:#fff}
+.iconBtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.deleteBtn{color:#bd9498}
+.deleteBtn.armed{background:#7b252d;color:#fff;border-color:#b13c47}
+.card.deleting{pointer-events:none;animation:deleteCard .32s ease forwards}
+@keyframes deleteCard{to{opacity:0;transform:scale(.93)}}
+.empty{padding:70px;text-align:center;color:#8d939d}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9);z-index:50;padding:20px}
+.modal.open{display:flex}
+.modalBox{width:min(1100px,96vw)}
+video{width:100%;max-height:88vh;background:#000;border-radius:10px}
+.close{float:right;margin-bottom:7px;border:0;border-radius:8px;background:#292d35;color:#fff;padding:6px 10px;cursor:pointer}
+
+.feedOverlay{position:fixed;inset:0;z-index:60;background:#08090b;display:none}
+.feedOverlay.open{display:block}
+.feedHeader{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(rgba(0,0,0,.72),rgba(0,0,0,0))}
+.feedClose,.feedMulti,.feedDelete{width:38px;height:38px;border:1px solid rgba(255,255,255,.18);background:rgba(18,20,24,.72);color:#fff;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.feedClose svg,.feedMulti svg,.feedDelete svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.feedDelete{color:#e7a7ad}.feedDelete.armed{background:#7b252d;color:#fff;border-color:#b13c47}
+.feedScroller{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
+.feedScroller::-webkit-scrollbar{display:none}
+.feedItem{height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;position:relative;padding:52px 14px 18px}
+.feedMedia{max-width:min(620px,94vw);max-height:92vh;width:auto;height:auto;background:#000;border-radius:12px;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.feedMedia.feedVideo{width:min(620px,94vw)}
+.feedInfo{position:absolute;left:max(18px,calc(50% - 310px));right:max(18px,calc(50% - 310px));bottom:22px;pointer-events:none;text-shadow:0 2px 8px #000}
+.feedCreator{font-size:13px;font-weight:700;margin-bottom:4px}
+.feedTitle{font-size:14px;line-height:1.4}
+.feedRating{position:absolute;right:24px;bottom:calc(78px + var(--safe-bottom,0px));margin-top:0;width:max-content;max-width:calc(100vw - 48px);padding:5px 8px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(10,12,16,.72);backdrop-filter:blur(8px);pointer-events:auto;text-shadow:none;z-index:3}
+.feedRating .ratingStar{width:20px;height:22px;font-size:20px;line-height:22px}
+.feedRating .ratingValue{color:#d7dbe2}
+.feedVideo.nativeSwitching{opacity:1!important} /* retain next cover during first-frame decoding */
+.feedVideo::backdrop{background:#000}
+.multiDock{position:fixed;inset:0;z-index:80;pointer-events:none}
+.miniPlayer{position:absolute;width:320px;height:360px;min-width:220px;min-height:180px;max-width:90vw;background:#17191e;border:1px solid #343840;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.42);pointer-events:auto;display:flex;flex-direction:column}
+.miniHead{display:flex;align-items:center;gap:7px;padding:7px 8px;font-size:11px;color:#c8ccd3;cursor:move;user-select:none;touch-action:none;background:#1d2026;border-bottom:1px solid #2b2f36}
+.miniLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.miniMediaWrap{position:relative;min-height:0;flex:1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.miniPlayer video,.miniPlayer img{display:block;width:100%;height:100%;object-fit:contain;background:#000}
+.miniResize{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;z-index:3;touch-action:none}
+.miniResize:before,.miniResize:after{content:"";position:absolute;right:4px;bottom:4px;border-right:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55)}
+.miniResize:before{width:9px;height:9px}
+.miniResize:after{width:5px;height:5px;right:8px;bottom:8px}
+.mediaKindBadge{position:absolute;right:8px;top:8px;padding:3px 6px;border-radius:6px;background:rgba(0,0,0,.62);font-size:10px}
+
+.videoStage{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;width:100%;height:100%}
+.rotatableVideo{transform-origin:center center;will-change:transform}
+.rotateBtn.rotated{color:#a9d2ff;border-color:#48698b;background:#223140}
+.feedRotate{width:38px;height:38px;border:1px solid rgba(255,255,255,.18);background:rgba(18,20,24,.72);color:#fff;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.feedRotate svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.miniRotate,.miniClose{width:26px;height:26px;border:0;background:#272a31;color:#ddd;border-radius:7px;cursor:pointer;flex:0 0 auto}
+.miniRotate:hover,.miniClose:hover{background:#343842;color:#fff}
+
+.miniVisibilityToggle,.miniSyncStart{position:fixed;bottom:14px;z-index:999;width:42px;height:42px;border:1px solid #464b55;background:rgba(27,30,36,.92);color:#d9dde4;border-radius:12px;display:none;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(8px)}
+.miniVisibilityToggle{right:14px}
+.miniSyncStart{right:64px;font-size:12px;font-weight:750;letter-spacing:-.2px}
+.miniVisibilityToggle.show,.miniSyncStart.show{display:inline-flex}
+.miniVisibilityToggle:hover,.miniSyncStart:hover{background:#2c3138;color:#fff;border-color:#5d6572}
+.miniVisibilityToggle svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.miniSyncStart:active{transform:translateY(1px)}
+.multiDock.hiddenWindows .miniPlayer{visibility:hidden;pointer-events:none}
+
+.miniABBtn,.miniClipBtn{height:26px;min-width:26px;border:0;background:#272a31;color:#cfd4dd;border-radius:7px;padding:0 6px;cursor:pointer;flex:0 0 auto;font-size:11px;line-height:26px}
+.miniABBtn:hover,.miniClipBtn:hover{background:#343842;color:#fff}
+.miniABBtn.set{color:#a9d2ff;background:#223140}
+.miniABBtn.active{color:#b7efc7;background:#233b2b}
+.miniClipBtn.loading{opacity:.6;cursor:wait}
+.miniClipBtn.done{color:#b7efc7;background:#233b2b}
+
+.feedABBtn{height:38px;min-width:38px;border:1px solid rgba(255,255,255,.18);background:rgba(18,20,24,.72);color:#fff;border-radius:10px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;white-space:nowrap}
+.feedABBtn:hover{background:rgba(45,49,57,.9)}
+.feedABBtn.set{color:#a9d2ff;border-color:#4d6c8e;background:#223140}
+.feedABBtn.active{color:#b7efc7;border-color:#416f4d;background:#233b2b}
+.feedABBtn.loading{opacity:.6;cursor:wait}
+.feedABBtn.done{color:#b7efc7;border-color:#416f4d;background:#233b2b}
+.feedHeaderActions::-webkit-scrollbar{display:none}
+.feedPortrait{font-weight:700;letter-spacing:-.4px}
+.feedPortrait:disabled,.miniPortrait:disabled{opacity:.42;cursor:wait}
+.miniPortrait{height:26px;min-width:33px;border:0;background:#272a31;color:#d6dded;border-radius:7px;padding:0 6px;cursor:pointer;flex:0 0 auto;font-size:10px;font-weight:700}
+.miniPortrait:hover{background:#343842;color:#fff}
+/* 9:16 动态裁剪预览：原视频实时播放，画面白框可左右拖动，播放器可暂停、跳转。 */
+.portraitDialogBack{position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,.83);backdrop-filter:blur(9px);display:flex;justify-content:center;align-items:center;padding:18px;overscroll-behavior:contain}
+.portraitDialog{width:min(970px,100%);max-height:calc(100dvh - 36px);overflow:auto;background:#1b1d22;border:1px solid #444951;box-shadow:0 24px 80px #0009;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;color:#e9edf4}
+.portraitDialogTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.portraitDialogTop h3{font-size:17px;font-weight:650;margin:0 0 5px}
+.portraitDialogTop p{font-size:12px;color:#a5aab6;margin:0;line-height:1.6}
+.portraitClose{background:none;border:0;color:#bdc4d0;font-size:25px;line-height:1;cursor:pointer;padding:0 5px}
+.portraitStage{min-height:150px;display:flex;align-items:center;justify-content:center;background:#0a0b0d;border-radius:11px;overflow:hidden;position:relative;padding:8px}
+.portraitFrame{position:relative;overflow:hidden;touch-action:none;max-width:100%;border-radius:3px;background:#000;user-select:none}
+.portraitFrame canvas{display:block;width:100%;height:100%;pointer-events:none}
+.portraitSelection{position:absolute;border:2px solid #fff;box-shadow:0 0 0 200vmax rgba(0,0,0,.57),inset 0 0 0 1px #ffffff50;cursor:grab;touch-action:none;z-index:2;pointer-events:none}
+.portraitSelection:after{content:'⇆';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-weight:700;font-size:24px;text-shadow:0 1px 4px black;opacity:.75;pointer-events:none}
+/* 裁剪预览下方提供独立时间轴；不把播放手势和拖动选区混在一起。 */
+.portraitPlayerBar{display:flex;align-items:center;gap:12px;min-height:35px}
+.portraitPlayerBar button{border:1px solid #4a505b;border-radius:8px;background:#292d34;color:#e8edf6;padding:7px 10px;cursor:pointer;white-space:nowrap;min-width:70px}
+.portraitPlayerBar button:hover{background:#383d47}
+.portraitPlayerBar button:disabled{opacity:.45;cursor:default}
+.portraitTimeline{flex:1;min-width:35px;accent-color:#d5e7ff;cursor:pointer}
+.portraitTimeline:disabled{opacity:.5;cursor:default}
+.portraitClock{font-size:12px;color:#d0d5de;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:86px;text-align:right}
+.portraitPlayerBar .portraitSound{min-width:36px;padding:7px 8px}
+.portraitScaleBox{display:flex;gap:10px;align-items:center}
+.portraitScaleBox label{font-size:13px;color:#d7dbe4;white-space:nowrap}
+.portraitScaleBox input{width:100%;flex:1;accent-color:#d5e7ff;min-width:0;cursor:pointer}
+.portraitCropValue{color:#b8d7ff;font-variant-numeric:tabular-nums;font-size:12px;min-width:45px;text-align:right}
+.portraitDialogBottom{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.portraitDialogHelp{font-size:12px;color:#9ba1ab;line-height:1.55}
+.portraitDialogActions{display:flex;gap:9px;margin-left:auto}
+.portraitDialogActions button{padding:10px 17px;border-radius:9px;border:1px solid #4a505b;background:#292d34;color:#f1f3f6;cursor:pointer}
+.portraitDialogActions .portraitSubmit{background:#dce8fa;color:#111820;border:1px solid #dce8fa;font-weight:700}
+.portraitDialogActions button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:600px){.portraitDialog{padding:12px;gap:11px}.portraitStage{min-height:105px;padding:4px}.portraitDialogActions{width:100%}.portraitDialogActions button{flex:1}.portraitPlayerBar{gap:7px}.portraitPlayerBar button{min-width:60px;padding:7px 6px;font-size:12px}.portraitPlayerBar .portraitSound{min-width:32px}.portraitClock{min-width:75px;font-size:11px}}
+
+.magnifyBtn.active,.feedMagnify.active,.miniMagnify.active{color:#b7e0ff;border-color:#52789d;background:#223140}
+.videoFocusHost{position:relative;overflow:hidden!important;background:#000}
+.videoFocusMode{cursor:grab!important;user-select:none;touch-action:none;will-change:transform}
+.videoFocusMode.dragging{cursor:grabbing!important}
+.feedHeader{transition:opacity .22s ease,transform .22s ease}
+.feedOverlay.focusImmersive.chromeHidden .feedHeader{opacity:0;transform:translateY(-14px);pointer-events:none}
+.feedOverlay.focusImmersive.cursorHidden,.feedOverlay.focusImmersive.cursorHidden *{cursor:none!important}
+.feedMagnify{width:38px;height:38px;border:1px solid rgba(255,255,255,.18);background:rgba(18,20,24,.72);color:#fff;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.feedMagnify svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.miniMagnify{width:26px;height:26px;border:0;background:#272a31;color:#ddd;border-radius:7px;cursor:pointer;flex:0 0 auto}
+.miniMagnify:hover{background:#343842;color:#fff}
+
+/* v1.2.6：Feed 真正全屏。header / footer 只做覆盖层，不参与布局。 */
+.feedOverlay{position:fixed;inset:0;z-index:70;background:#000;display:none;overflow:hidden}
+.feedOverlay.open{display:block}
+.feedScroller{position:absolute;inset:0;width:100vw;height:100vh;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;background:#000}
+.feedItem{position:relative;width:100vw;height:100vh!important;min-height:100vh!important;max-height:100vh!important;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+.feedItem .videoStage{position:absolute!important;inset:0!important;width:100vw!important;height:100vh!important;min-height:100vh!important;max-height:100vh!important;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000}
+.feedMedia{display:block}
+.feedMedia.feedVideo,.feedMedia.feedImage{width:100vw;height:100vh;max-width:100vw;max-height:100vh;object-fit:contain;border-radius:0}
+.feedHeader{position:fixed!important;left:0;right:0;top:0;z-index:82;display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px;pointer-events:none}
+.feedHeader button,.feedHeader>div{pointer-events:auto}
+.feedInfo{position:absolute!important;left:0;right:0;bottom:0;z-index:81;padding:72px 24px 22px;background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,.22),transparent);pointer-events:none}
+.feedCreator,.feedTitle{pointer-events:none}
+.feedOverlay.chromeHidden .feedInfo{opacity:0;transform:translateY(12px);pointer-events:none}
+.feedInfo{transition:opacity .22s ease,transform .22s ease}
+
+/* v1.3.0 - iPad / 手机 */
+:root{
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+}
+
+/* 视频切换必须由手势控制：原生滚动惯性可一次跨过数个 feedItem。 */
+.feedScroller{
+  overflow-y:hidden!important;
+  scroll-snap-type:none!important;
+  touch-action:none;
+  overscroll-behavior:contain;
+}
+.feedScroller .feedItem,
+.feedScroller .videoStage,
+.feedScroller .feedVideo,
+.feedScroller .feedImage{
+  touch-action:none;
+}
+.feedVideo{
+  -webkit-user-select:none;
+  user-select:none;
+}
+.videoFocusMode{
+  touch-action:none!important;
+}
+
+@supports(height:100dvh){
+  .feedOverlay,
+  .feedScroller,
+  .feedItem,
+  .feedItem .videoStage{
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+  }
+
+  .feedMedia.feedVideo,
+  .feedMedia.feedImage{
+    height:100dvh;
+    max-height:100dvh;
+  }
+}
+
+.feedScroller{
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+.feedHeader{
+  padding-top:calc(12px + var(--safe-top))!important;
+  padding-right:calc(12px + var(--safe-right))!important;
+  padding-left:calc(12px + var(--safe-left))!important;
+}
+
+.feedInfo{
+  padding-bottom:calc(18px + var(--safe-bottom))!important;
+  padding-left:calc(18px + var(--safe-left))!important;
+  padding-right:calc(18px + var(--safe-right))!important;
+}
+
+@media(pointer:coarse){
+  .feedHeader{
+    gap:8px;
+  }
+
+  .feedHeader>div{
+    max-width:calc(100vw - 76px - var(--safe-left) - var(--safe-right));
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:2px;
+  }
+
+  .feedHeader>div::-webkit-scrollbar{
+    display:none;
+  }
+
+  .feedClose,
+  .feedRotate,
+  .feedMulti,
+  .feedDelete,
+  .feedMagnify,
+  .feedABBtn{
+    min-width:44px!important;
+    width:auto;
+    height:44px!important;
+    min-height:44px!important;
+    border-radius:12px!important;
+    flex:0 0 auto;
+  }
+
+  .feedABBtn{
+    padding:0 12px!important;
+    font-size:13px!important;
+  }
+
+  .miniHead{
+    min-height:44px;
+  }
+
+  .miniRotate,
+  .miniMagnify,
+  .miniClose,
+  .miniABBtn,
+  .miniClipBtn{
+    min-width:36px!important;
+    width:auto;
+    height:36px!important;
+    min-height:36px!important;
+    line-height:36px!important;
+    padding:0 9px!important;
+  }
+
+  .miniResize{
+    width:34px!important;
+    height:34px!important;
+  }
+
+  .miniVisibilityToggle{
+    right:calc(14px + var(--safe-right))!important;
+    bottom:calc(14px + var(--safe-bottom))!important;
+    width:48px!important;
+    height:48px!important;
+  }
+
+  .miniSyncStart{
+    right:calc(70px + var(--safe-right))!important;
+    bottom:calc(14px + var(--safe-bottom))!important;
+    width:48px!important;
+    height:48px!important;
+    font-size:13px!important;
+  }
+}
+
+
+/* v1.3.2：移动端 Feed 性能模式 */
+@media(pointer:coarse){
+  .feedItem{
+    content-visibility:auto;
+    contain:layout paint style;
+    contain-intrinsic-size:100vw 100dvh;
+  }
+}
+@media(max-width:650px){
+  .feedHeader{
+    padding-top:calc(8px + var(--safe-top))!important;
+    padding-left:calc(8px + var(--safe-left))!important;
+    padding-right:calc(8px + var(--safe-right))!important;
+  }
+
+  .feedInfo{
+    padding-left:14px!important;
+    padding-right:14px!important;
+    padding-bottom:calc(14px + var(--safe-bottom))!important;
+  }
+
+  .feedRating{
+    right:14px!important;
+    bottom:calc(72px + var(--safe-bottom,0px))!important;
+    max-width:calc(100vw - 28px)!important;
+  }
+
+  .feedCreator{
+    font-size:14px!important;
+  }
+
+  .feedTitle{
+    font-size:13px!important;
+    line-height:1.35!important;
+  }
+
+  .miniPlayer{
+    min-width:200px!important;
+    min-height:160px!important;
+  }
+}
+@media(max-width:650px){header{padding:10px 12px}.top{flex-wrap:wrap}h1{width:100%}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.body{padding:8px}.titleText{font-size:13px}}
+
+/* 照片图库：紧凑网格、相簿拼贴、多选工具栏与沉浸式原图浏览 */
+#photoToolbar[hidden],#photoSelectionBar[hidden]{display:none!important}
+.photoToolbar{padding:18px 22px 8px;color:#f5f5f7}
+.photoToolbarHead{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;flex-wrap:wrap}
+.photoToolbarHead>div:first-child{display:flex;align-items:baseline;gap:12px}
+.photoToolbarHead strong{font-size:25px;letter-spacing:-.04em}
+.photoSummary{font-size:12px;color:#929cab}
+.photoToolbarActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.photoToolbarActions button,.photoSelectionBar button{border:1px solid #414854;background:#252a32;color:#e3e8f0;border-radius:10px;padding:9px 13px;cursor:pointer;font-size:13px}
+.photoToolbarActions button:hover,.photoSelectionBar button:hover{background:#343c47}
+#photoSelect{background:#276bdb;color:#fff;border-color:#3478ee}
+#photoSelect[aria-pressed="true"]{background:#e9eef7;color:#121720}
+.photoZoomControl{display:flex;align-items:center;gap:7px;color:#aeb6c2;font-size:12px;border:1px solid #3b424d;border-radius:10px;padding:5px 10px}
+.photoZoomControl input{accent-color:#6fa5ff;width:170px;cursor:pointer}
+.photoSelectionBar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding-top:13px;color:#c2cfdf;font-size:13px}
+.photoSelectionBar #photoSelectedCount{margin-right:auto}
+.photoSelectionBar .photoDestructive,.photoDestructive{color:#ffaaa9!important}
+.photoSelectionBar .photoDestructive:disabled{opacity:.4;cursor:not-allowed}
+body:has(#photoToolbar:not([hidden])) #assetFolders{margin:9px 22px 6px;gap:4px}
+body:has(#photoToolbar:not([hidden])) #assetFolders button{border:0;background:none;color:#b7becb;padding:6px 9px;font-size:13px;border-radius:7px}
+body:has(#photoToolbar:not([hidden])) #assetFolders button.on{color:#fff;background:#2c3440}
+body:has(#photoToolbar:not([hidden])) #folderContext{margin:5px 0 10px;padding:0 22px;color:#798695}
+body:has(#photoToolbar:not([hidden])) .assetFolderTiles{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin:8px 22px 15px}
+.photoAlbum{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:none;color:#e6eaf0;text-align:left;cursor:pointer;min-width:0}
+.photoAlbumMosaic{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));aspect-ratio:1/1;border-radius:14px;overflow:hidden;gap:2px;background:#252b32;transition:transform .15s}
+.photoAlbum:hover .photoAlbumMosaic{transform:translateY(-2px)}
+.photoAlbumMosaic img{height:100%;width:100%;object-fit:cover;display:block;background:#2c3037}
+.photoAlbumMosaic[data-count="1"] img{grid-row:span 2;grid-column:span 2}
+.photoAlbumMosaic[data-count="2"] img{grid-row:span 2}
+.photoAlbumMosaic span{grid-column:span 2;grid-row:span 2;display:grid;place-items:center;font-size:42px;color:#8292a7}
+.photoAlbumName{font-size:14px;font-weight:650;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.photoAlbumCount{font-size:12px;color:#919aa7;margin-top:-5px}
+#grid.pictureWall{--photo-cell:150px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--photo-cell)),1fr));column-count:unset;gap:3px;padding:0 22px 80px;align-items:stretch}
+#grid.pictureWall.photoOriginalRatio{grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--photo-cell)),1fr));align-items:start;gap:8px}
+#grid.pictureWall .pictureTile{position:relative;display:block;width:100%;margin:0;padding:0;border:0;background:#242931;border-radius:2px;overflow:hidden;aspect-ratio:1/1;min-width:0;break-inside:auto;cursor:pointer;content-visibility:auto;contain-intrinsic-size:150px 150px}
+#grid.pictureWall.photoOriginalRatio .pictureTile{aspect-ratio:auto;content-visibility:visible;border-radius:8px;min-height:80px}
+#grid.pictureWall .pictureTile img{display:block;width:100%;height:100%;min-height:0;max-height:none;object-fit:cover;aspect-ratio:1/1;background:linear-gradient(130deg,#20232b,#353b46);transition:transform .16s ease,opacity .2s}
+#grid.pictureWall.photoOriginalRatio .pictureTile img{height:auto;object-fit:contain;aspect-ratio:auto;max-height:420px}
+@media(hover:hover){#grid.pictureWall .pictureTile:hover img{transform:scale(1.035)}}
+#grid.pictureWall .pictureTile .photoTileName{position:absolute;left:0;right:0;bottom:0;max-width:100%;color:#fff;background:linear-gradient(transparent,#000b);padding:22px 8px 7px;font-size:11px;line-height:1.3;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;opacity:0;pointer-events:none}
+@media(hover:hover){#grid.pictureWall .pictureTile:hover .photoTileName{opacity:1}}
+#grid.pictureWall .pictureTile .photoCheck{display:grid;place-items:center;position:absolute;top:9px;right:9px;width:23px;height:23px;border-radius:50%;border:2px solid #fff;background:#0006;color:transparent;box-shadow:0 1px 5px #0007;font-size:14px;opacity:0}
+#grid.pictureWall.photoSelecting .photoTileName{opacity:1}
+#grid.pictureWall.photoSelecting .photoCheck{opacity:1}
+#grid.pictureWall .pictureTile.selected .photoCheck{background:#2581ff;border-color:#2581ff;color:white;opacity:1}
+#grid.pictureWall .pictureTile.selected:after{content:"";position:absolute;inset:0;pointer-events:none;border:3px solid #2685ff}
+.photoGridMore{grid-column:1/-1;display:grid;place-items:center;color:#8d98a8;padding:20px;font-size:12px;min-height:60px}
+/* 查看器 */
+body.photoDetailOpen{overflow:hidden}
+#assetView.photoDetail{position:fixed;inset:0;z-index:250000;padding:0;gap:0;display:none;flex-direction:column;background:#08090b;color:#f4f5f7}
+#assetView.photoDetail.open{display:flex}
+.photoDetailTop{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;flex:0 0 auto;background:#15171c;border-bottom:1px solid #30343b;min-height:62px}
+.photoDetailTop button{background:#292e36;color:#f2f3f5;border:0;border-radius:10px;padding:9px 13px;cursor:pointer;font-size:13px}
+.photoDetailTop button:hover{background:#3a414c}
+.photoBack{white-space:nowrap}.photoBack:first-letter{font-size:23px}
+.photoDetailHeading{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;gap:3px}
+.photoDetailHeading #assetViewName{max-width:min(50vw,620px);font-size:13px;color:#f1f3f6;font-weight:650;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.photoDetailHeading small{color:#8994a1;font-size:11px}
+.photoDetailActions{display:flex;gap:7px;white-space:nowrap}
+#assetView .photoDetailStage{width:100%;min-height:0;flex:1;display:flex;align-items:center;justify-content:space-between;gap:4px;overflow:hidden;padding:0 8px}
+.photoImageSurface{display:flex;justify-content:center;align-items:center;flex:1;min-height:0;min-width:0;height:100%;overflow:hidden;position:relative;touch-action:pan-y}
+#assetView .photoImageSurface img{display:block;object-fit:contain;max-width:100%;max-height:100%;width:auto;height:auto;transition:opacity .1s;background:transparent}
+#assetView .photoImageSurface.zoomed{overflow:auto;justify-content:safe center;align-items:safe center;touch-action:pan-x pan-y}
+#assetView .photoImageSurface.zoomed img{max-width:none;max-height:none;min-width:100%;max-width:250%;cursor:zoom-out;object-fit:contain}
+.photoLoading{display:none;position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:#1d2330c9;color:#bfcde0;border-radius:99px;padding:7px 14px;font-size:12px;pointer-events:none}
+.photoImageSurface.isLoading .photoLoading{display:block}
+#assetView .photoSideArrow{border:0;background:#20242ab8;color:#e1e7ef;border-radius:50%;width:40px;height:40px;flex:0 0 40px;cursor:pointer;font-size:30px;line-height:0;padding:0;display:grid;place-items:center}
+#assetView .photoSideArrow:hover{background:#323b49}
+.photoDetailBottom{width:100%;display:flex;align-items:center;flex-direction:column;gap:8px;padding:9px 12px 11px;background:#15171c;border-top:1px solid #30343b}
+.photoFilmstrip{max-width:100%;display:flex;align-items:center;gap:5px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#566171 transparent;scroll-behavior:smooth}
+.photoFilmstrip button{width:51px;height:54px;flex:0 0 51px;border:2px solid transparent;border-radius:5px;overflow:hidden;background:#2a313a;padding:0;cursor:pointer;opacity:.65}
+.photoFilmstrip button.isCurrent{border-color:#f3f5f8;opacity:1}
+.photoFilmstrip img{display:block;height:100%;width:100%;object-fit:cover}
+.photoDetailHelp{font-size:11px;color:#838d9b}
+@media(max-width:700px){
+.photoToolbar{padding:12px 11px 6px}.photoToolbarHead strong{font-size:22px}.photoToolbarHead{gap:8px}.photoToolbarHead>div:first-child{gap:7px}
+.photoToolbarActions{width:100%;justify-content:space-between}.photoZoomControl input{width:72px}
+body:has(#photoToolbar:not([hidden])) #assetFolders{margin:8px 10px}
+body:has(#photoToolbar:not([hidden])) #folderContext{padding:0 11px;margin-bottom:8px}
+body:has(#photoToolbar:not([hidden])) .assetFolderTiles{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;margin:9px 11px}
+#grid.pictureWall{--photo-cell:105px;gap:2px;padding:0 6px 45px}
+#grid.pictureWall.photoOriginalRatio{gap:5px}
+.photoDetailTop{padding:8px 9px;gap:5px;min-height:56px}.photoBack span{display:none}.photoDetailHeading #assetViewName{max-width:40vw}
+.photoDetailTop button{padding:8px 7px;font-size:11px}.photoDetailActions{gap:3px}
+#assetView .photoSideArrow{width:27px;height:35px;flex-basis:27px;border-radius:8px;font-size:23px}
+#assetView .photoDetailStage{padding:0 2px;gap:0}.photoFilmstrip button{width:43px;height:48px;flex-basis:43px}.photoDetailHelp{font-size:10px}
+}
+
+
+/* 片段库：非破坏性 A/B 预设，保存只是写入 data.json。 */
+.clipShelfButton{border:1px solid #424955;background:#242933;color:#e5edff;border-radius:10px;padding:9px 13px;white-space:nowrap;cursor:pointer}
+.clipShelfButton:hover{background:#303d50}
+.clipShelfBack[hidden],.clipShelfForm[hidden]{display:none!important}
+.clipShelfBack{position:fixed;inset:0;z-index:260000;background:#03050acc;backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;padding:18px;overscroll-behavior:contain}
+.clipShelf{background:#171b22;border:1px solid #3a4351;border-radius:18px;width:min(1050px,100%);height:min(820px,calc(100dvh - 36px));display:flex;flex-direction:column;color:#eef2fa;overflow:hidden;box-shadow:0 30px 90px #000b}
+.clipShelf button,.clipShelf input{font:inherit}
+.clipShelfHead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #363d49}
+.clipShelfHead h2{font-size:19px;margin:0}
+.clipShelfHead small{color:#99a5b6;font-size:12px}
+.clipShelf button{border:1px solid #465061;border-radius:9px;padding:9px 12px;background:#282f3a;color:#e9eef7;cursor:pointer;white-space:nowrap}
+.clipShelf button:hover:not(:disabled){background:#3b4656}
+.clipShelf button:disabled{opacity:.42;cursor:not-allowed}
+.clipShelf button.primary{background:#bcd8ff;color:#101923;border-color:#bcd8ff;font-weight:700}
+.clipShelf button.warn{color:#f1abb3;border-color:#75444d}
+.clipShelfToolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:12px 20px;border-bottom:1px solid #343d48}
+.clipShelfToolbar input[type=search]{flex:1;min-width:140px}
+.clipShelf input:not([type=checkbox]){background:#101319;border:1px solid #495363;color:#f3f5fa;border-radius:8px;padding:9px;min-width:0}
+.clipShelfToolbar label{font-size:12px;color:#c0c9d4;display:flex;align-items:center;gap:5px}
+.clipShelfList{overflow:auto;min-height:0;flex:1;padding:14px 20px;scrollbar-color:#505b70 #171b22;scrollbar-width:thin}
+.clipShelfRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 18px;align-items:center;padding:14px;border:1px solid #343e4d;background:#1e242e;border-radius:12px;margin-bottom:10px}
+.clipShelfRow.missing{opacity:.65}
+.clipShelfRowTitle{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clipShelfRowInfo{font-size:12px;color:#aab5c6;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clipShelfRowActions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.clipShelfRowActions button{font-size:12px;padding:7px 9px}
+.clipShelfRowActions button.fave{color:#ffcf68;border-color:#82652b}
+.clipShelfEmpty{padding:58px 10px;text-align:center;color:#96a3b5}
+.clipShelfForm{padding:14px 20px;border-top:1px solid #3e4755;background:#1b222d;display:grid;gap:10px}
+.clipShelfFormFields{display:grid;grid-template-columns:minmax(140px,2fr) minmax(75px,1fr) minmax(75px,1fr) auto;gap:9px;align-items:end}
+.clipShelfForm label{font-size:12px;color:#abb8cc;display:grid;gap:5px}
+.clipShelfFormActions{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.clipShelfToast{font-size:12px;color:#b8e6c2;flex:1;min-width:0}
+@media(max-width:650px){.clipShelfBack{padding:0}.clipShelf{height:100dvh;border-radius:0;width:100%}.clipShelfHead,.clipShelfToolbar,.clipShelfList,.clipShelfForm{padding-left:12px;padding-right:12px}.clipShelfRow{grid-template-columns:1fr}.clipShelfRowActions{justify-content:flex-start}.clipShelfFormFields{grid-template-columns:1fr 1fr}.clipShelfFormFields label:first-child{grid-column:1/-1}}
+
+/* 统一媒体交互：选择模式、右键菜单、重命名、状态反馈 */
+#unifiedBatchBar[hidden],#unifiedContext[hidden],#unifiedRenameBack[hidden],#unifiedMoveBack[hidden],#unifiedAlbumBack[hidden],#unifiedToast[hidden]{display:none!important}
+.unifiedFolderNew{border:1px solid #55647a;background:#303a48;color:#f1f5ff;padding:9px 12px;border-radius:10px;cursor:pointer;white-space:nowrap}
+.unifiedMoveBack,.unifiedAlbumBack{position:fixed;inset:0;z-index:310000;background:#02040bdd;display:flex;align-items:center;justify-content:center;padding:16px}
+.unifiedMovePanel{width:min(470px,100%);padding:23px;display:grid;gap:14px;background:#202630;color:#f1f5ff;border:1px solid #526277;border-radius:17px;box-shadow:0 20px 65px #000c}
+.unifiedMovePanel h3{font-size:19px;margin:0}.unifiedMovePanel p{font-size:12px;color:#aebdd0;margin:0}
+.unifiedMovePanel label{display:grid;gap:7px;font-size:13px}
+.unifiedMovePanel input,.unifiedMovePanel select{width:100%;padding:12px;background:#141a23;border:1px solid #65748b;border-radius:10px;color:#f4f6fa;font:inherit}
+.unifiedMoveActions{display:flex;justify-content:flex-end;gap:8px}.unifiedMoveActions button{padding:10px 16px;border:1px solid #5d6d82;background:#313d4f;color:#eff5ff;border-radius:9px;cursor:pointer}.unifiedMoveActions button[type=submit]{background:#d7e7ff;color:#162640;font-weight:700}
+#folderTiles .unifiedDropTarget,#assetFolders .unifiedDropTarget{outline:3px solid #82b0ff!important;outline-offset:2px;background:#35465f!important}
+/* File operations are shared; folders have their own visibly accessible menu. */
+.unifiedFolderTile{position:relative;min-width:170px;min-height:44px;max-width:100%}
+.unifiedFolderTile>.folderEntry{width:100%!important;min-width:0!important;padding:12px 42px 12px 14px!important;min-height:48px;height:100%;text-align:left;border:1px solid #455060;background:#242b35;color:#e8eefa;border-radius:11px;cursor:pointer;overflow-wrap:anywhere;font-size:13px}
+.unifiedFolderTile>.folderEntry:hover,.unifiedFolderTile>.folderEntry:focus-visible{background:#313c4d;border-color:#6a7d98}
+.unifiedFolderTile>.photoAlbum{width:100%;padding:0}
+.unifiedFolderTile>.unifiedFolderMore{position:absolute;right:7px;top:8px;z-index:3;width:29px;height:29px;display:grid;place-items:center;background:#293345e8;color:#f1f5fb;border:1px solid #536178;border-radius:8px;font-weight:700;cursor:pointer}
+.unifiedFolderTile>.unifiedFolderMore:hover,.unifiedFolderTile>.unifiedFolderMore:focus-visible{background:#4b6586}
+.unifiedFolderTile>.photoAlbum+.unifiedFolderMore{top:8px;right:8px}
+.unifiedFolderTile:focus-within{outline:2px solid #8aaeff;outline-offset:3px;border-radius:8px}
+body:has(#photoToolbar:not([hidden])) .unifiedFolderTile{min-width:0}
+#unifiedAlbumParentLabel[hidden]{display:none!important}
+
+body.unifiedDragging #folderTiles [data-open-folder]{border-color:#7496bd!important}
+.unifiedBatchBar button#unifiedMove:disabled{opacity:.4}
+
+#photoSelectionBar,#photoSelect{display:none!important}
+.unifiedHeaderButton{padding:9px 15px;background:#282e39;border:1px solid #485366;color:#e5ebf5;border-radius:10px;cursor:pointer;white-space:nowrap}
+.unifiedHeaderButton[aria-pressed="true"]{background:#d7e7ff;color:#132039;border-color:#d7e7ff;font-weight:700}
+#unifiedFavoriteFilter[aria-pressed="true"]{background:#4f4126;color:#ffe1a1;border-color:#b69043}
+.unifiedBatchBar{position:fixed;bottom:17px;left:50%;transform:translateX(-50%);z-index:180000;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 22px);padding:11px;border-radius:15px;background:#242b37;box-shadow:0 13px 48px #000b;border:1px solid #607087;color:#edf4ff;flex-wrap:wrap;justify-content:center}
+.unifiedBatchBar strong{font-size:13px;white-space:nowrap;margin:0 8px}
+.unifiedBatchBar button{background:#323b49;color:#e8eef8;border:1px solid #536072;padding:8px 12px;border-radius:9px;cursor:pointer;font-size:12px;white-space:nowrap}
+.unifiedBatchBar button:hover:not(:disabled){background:#455165}
+.unifiedBatchBar button:disabled{opacity:.4;cursor:not-allowed}
+.unifiedBatchBar .danger{color:#ffb8c4;border-color:#89505c}
+body.audioDockVisible .unifiedBatchBar{bottom:190px}
+@media(max-width:700px){body.audioDockVisible .unifiedBatchBar{bottom:245px}}
+.mediaTile{position:relative}
+.mediaTile[data-favorite="true"]:before{content:"★";position:absolute;top:8px;left:9px;z-index:4;color:#ffd479;font-size:16px;text-shadow:0 1px 5px #000b;pointer-events:none}
+.audioFileTile .unifiedMore{margin-left:auto;align-self:flex-start;flex:0 0 auto}
+.mediaTileCheck{display:none;position:absolute;top:10px;right:10px;z-index:5;width:27px;height:27px;border-radius:50%;border:2px solid #eee;background:#1119;color:transparent;font-weight:bold;align-items:center;justify-content:center;box-shadow:0 2px 9px #0009;cursor:pointer}
+body.unifiedSelecting .mediaTileCheck{display:flex}
+.mediaTile.unifiedSelected .mediaTileCheck{background:#3484f5;border-color:#3484f5;color:white}
+.mediaTile.unifiedSelected{outline:3px solid #3484f5;outline-offset:-3px}
+.card .deleteBtn,.audioFileTile .audioFileActions{display:none!important}
+#grid.pictureWall .pictureTile.unifiedSelected:after{content:"";pointer-events:none;position:absolute;inset:0;border:3px solid #3484f5}
+#grid.pictureWall .pictureTile.unifiedSelected .photoCheck{background:#3484f5;border-color:#3484f5;color:white;opacity:1}
+#grid.pictureWall .pictureTile .unifiedMore{position:absolute;right:7px;bottom:7px;z-index:2;background:#141920c9}
+body.unifiedSelecting .unifiedMore{display:none!important}
+.unifiedMore{min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:#303846;color:#e7eef9;border:1px solid #566276;border-radius:8px;cursor:pointer;line-height:1}
+.unifiedMore:hover{background:#506078}
+.unifiedContext{position:fixed;z-index:300000;display:flex;flex-direction:column;min-width:190px;max-width:min(280px,90vw);padding:5px;background:#232a34;border:1px solid #657083;border-radius:12px;box-shadow:0 14px 48px #000b;color:#f3f5fa}
+.unifiedContext .contextHeading{padding:8px 11px;color:#aebbd0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid #495261;margin-bottom:4px}
+.unifiedContext button{font:inherit;font-size:13px;color:inherit;border:0;background:transparent;border-radius:7px;padding:9px 11px;cursor:pointer;text-align:left}
+.unifiedContext button:hover,.unifiedContext button:focus-visible{background:#3d4959;outline:none}
+.unifiedContext button.danger{color:#ffbbc3}
+.unifiedRenameBack{position:fixed;inset:0;background:#02040bcc;z-index:310000;display:flex;align-items:center;justify-content:center;padding:16px}
+.unifiedRenamePanel{width:min(450px,100%);padding:24px;background:#1d232d;color:#eaf0f9;border:1px solid #536174;border-radius:16px;box-shadow:0 20px 70px #000c;display:grid;gap:12px}
+.unifiedRenamePanel h3{font-size:20px;margin:0}.unifiedRenamePanel p{font-size:12px;margin:0 0 8px;color:#aeb9c8}.unifiedRenamePanel label{font-size:12px;color:#c9d2e0}
+.unifiedRenameRow{display:flex;gap:5px;align-items:center;background:#111821;border:1px solid #60718b;border-radius:10px;padding:4px 10px}
+.unifiedRenameRow input{min-width:0;flex:1;background:transparent;color:white;border:0;outline:0;padding:9px 0;font:inherit}
+.unifiedRenameRow span{color:#91a5bc;font-size:13px}
+.unifiedRenameButtons{display:flex;justify-content:flex-end;gap:8px}
+.unifiedRenameButtons button{background:#303b4b;border:1px solid #53647c;color:#eaf0fa;border-radius:9px;padding:10px 18px;cursor:pointer}
+.unifiedRenameButtons .primary{background:#cfe3ff;border-color:#cfe3ff;color:#152438;font-weight:700}
+.unifiedToast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:320000;background:#34445b;color:#fff;padding:11px 18px;border:1px solid #7b91b2;border-radius:12px;box-shadow:0 12px 38px #000a;font-size:13px;max-width:90vw}
+@media(max-width:650px){.unifiedBatchBar{bottom:8px;gap:5px;padding:8px}.unifiedBatchBar button{padding:8px}.unifiedHeaderButton{padding:8px 11px}.unifiedMore{min-width:26px;height:26px}}
+
+

@@ -1,0 +1,21 @@
+# Just Fun: generated artifacts and private user data
+node_modules/
+dist/
+*.log
+*.tmp
+*.bak
+*.swp
+.env
+.env.*
+!.env.example
+.douyin-nav-cache/
+.douyin-nav-cache*/
+**/.douyin-nav-cache/
+**/workspace.json
+**/vault.json
+**/ai-learning/
+**/.asr-task.json
+**/data/
+**/private-media/
+.DS_Store
+Thumbs.db

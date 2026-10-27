@@ -1,0 +1,700 @@
+/* ── 影格 Studio / Unified visual system (2026-10-19) ──
+   Presentation only: existing API, storage and player event handlers stay untouched. */
+:root { --studio-bg:#0b1119; --studio-surface:#121c29; --studio-panel:#182535;
+  --studio-raised:#203249; --studio-line:#2b3d50; --studio-line-strong:#3b5672;
+  --studio-text:#e9f0f8; --studio-muted:#91a5bc; --studio-faint:#637c96;
+  --studio-accent:#7aa9e8; --studio-accent-bg:#263e59; --studio-danger:#ef9daa;
+  --studio-r-sm:8px; --studio-r:12px; --studio-r-lg:17px;
+  color-scheme:dark; }
+html, body {background:var(--studio-bg);color:var(--studio-text);font-size:14px;-webkit-font-smoothing:antialiased}
+button,input,select {font-family:inherit}
+button {transition:background-color .14s ease,border-color .14s ease,color .14s ease,box-shadow .14s ease}
+button:focus-visible,[role="button"]:focus-visible,a:focus-visible {outline:2px solid var(--studio-accent)!important;outline-offset:2px}
+input:focus-visible,select:focus-visible {outline:2px solid var(--studio-accent);outline-offset:1px}
+input[type="range"] {accent-color:var(--studio-accent)}
+button:disabled {cursor:not-allowed}
+[hidden] {display:none!important}
+.studioHeader {position:relative;top:auto;z-index:20;background:var(--studio-bg);backdrop-filter:none;border-bottom:1px solid var(--studio-line);padding:0 30px}
+.studioTop {display:grid;grid-template-columns:240px minmax(260px,max-content) 1fr;align-items:center;gap:25px;min-height:80px;border-bottom:1px solid #202e3d}
+.studioBrand {display:flex;align-items:center;gap:12px;min-width:0}
+.studioMark {width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border:1px solid #385572;border-radius:13px;background:linear-gradient(145deg,#1b3653,#17283a);color:#bcd7fa;box-shadow:0 5px 16px #0003}
+.studioMark svg {width:27px;height:27px}
+.studioBrandText {display:flex;flex-direction:column;gap:2px;min-width:0}
+.studioBrandText small,.studioEyebrow {font-size:9px;letter-spacing:.2em;color:#8ea9c8;font-weight:750;white-space:nowrap}
+.studioBrandText strong {font-size:21px;font-weight:760;letter-spacing:-.025em;white-space:nowrap;line-height:1.3}
+.studioBrandText em {font-size:10px;color:#8fb7eb;font-weight:750;letter-spacing:.16em;font-style:normal;vertical-align:middle}
+.studioTop .mediaTabs {display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:4px;border:1px solid var(--studio-line);background:#0d1722;border-radius:13px}
+.studioTop .mediaTabs button {min-width:86px;padding:10px 18px;border:1px solid transparent;color:#a7bbd3;font-weight:600;border-radius:9px}
+.studioTop .mediaTabs button.on {background:var(--studio-accent-bg);color:#e0eeff;border-color:#466b95;box-shadow:0 1px 5px #0003}
+.studioTop .mediaTabs button:not(.on):hover {background:#192b3f;color:white}
+.studioTabIcon {font-size:16px;margin-right:5px;color:#8fb4e3}
+.studioTopRight {justify-self:end;display:flex;align-items:center;gap:22px;min-width:0}
+.studioLocal {font-size:11px;color:#91a5bb;white-space:nowrap}
+.studioLocal i,.studioStatusDot {display:inline-block;width:8px;height:8px;border-radius:50%;background:#65bea5;box-shadow:0 0 0 4px #65bea517;margin-right:7px;vertical-align:middle}
+.studioWorkspace {display:flex;align-items:center;gap:26px;padding:21px 0 13px}
+.studioContextTitle {width:200px;flex:0 0 200px;min-width:0}
+.studioContextTitle h1 {margin:8px 0 0;font-size:25px;font-weight:730;letter-spacing:-.04em;line-height:1.1;color:#f3f7fc}
+.studioControls {display:flex;align-items:center;gap:12px;flex:1;min-width:0;flex-wrap:wrap}
+.studioSearchWrap {display:flex;align-items:center;gap:10px;flex:1 1 230px;min-width:170px;height:43px;background:#101c2a;border:1px solid var(--studio-line);border-radius:11px;padding:0 12px;color:#7f98b5;transition:border-color .15s}
+.studioSearchWrap:focus-within {border-color:#5c87bc;box-shadow:0 0 0 3px #547eb323}
+.studioSearchWrap svg {width:17px;height:17px;flex:0 0 17px}
+.studioSearchWrap #search {width:100%;height:100%;min-width:0;padding:0;color:var(--studio-text);background:transparent;border:0;outline:none;box-shadow:none;font-size:13px}
+.studioSearchWrap #search::-webkit-search-cancel-button {cursor:pointer}
+.studioSearchWrap kbd {white-space:nowrap;border:1px solid #324960;border-radius:5px;font-size:10px;font-weight:500;padding:3px 5px;color:#829ab6;background:#1b2b3d}
+.studioActions {display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.studioSort {display:flex;gap:5px;align-items:center}
+.studioActions button,.studioTopRight button,.photoToolbarActions button,#assetFolders button,.assetFolderTiles button.folderEntry,.unifiedBatchBar button {border:1px solid var(--studio-line);background:#182637;color:#cbdaf0;border-radius:10px;padding:10px 12px;font-size:12px;min-height:39px;white-space:nowrap}
+.studioTopRight button {background:#263a54;border-color:#3a5471;color:#e0eaff}
+.studioActions button:hover:not(:disabled),.studioTopRight button:hover,#assetFolders button:hover,.assetFolderTiles button.folderEntry:hover {background:#293e55;border-color:#577595;color:#fff}
+.studioActions .sortBtn.active,.studioActions .unifiedHeaderButton[aria-pressed="true"] {background:#2b4563;color:#e4f0ff;border-color:#6489b5}
+.studioActions #unifiedFavoriteFilter[aria-pressed="true"] {background:#413827;color:#ffdda4;border-color:#876b3a}
+.studioStatus {display:flex;align-items:center;min-height:37px;gap:0;padding:4px 0 10px}
+.studioStatusDot {width:6px;height:6px;box-shadow:0 0 0 3px #65bea514;margin-right:10px;flex:0 0 6px}
+.studioStatus .status {margin:0;font-size:11px;color:#93a7be;min-width:0}
+.studioHint {margin-left:auto;color:#607791;font-size:11px;white-space:nowrap}
+.creatorPanel {max-height:min(25vh,260px);border-top:1px solid #223043}
+.creatorTags {padding:10px 0}
+.creatorTag,.creatorTagGroup {background:#172637!important;border-color:#354a61!important;color:#b5c8df!important}
+.creatorTag.on,.creatorTagGroup .creatorTag.on {background:#304c69!important;color:#e6f2ff!important}
+/* Content regions */
+#photoToolbar {padding:19px 30px 9px;background:var(--studio-bg)}
+.photoToolbarHead strong {font-size:23px;color:#eaf1fc;font-weight:710}
+.photoSummary,.folderContext {color:var(--studio-muted);font-size:12px}
+.photoToolbarActions button,.photoSelectionBar button {background:#192839;border-color:var(--studio-line);color:#d7e4f4}
+.photoZoomControl {color:#a5b9d1}
+.assetFolders {margin:0;padding:10px 30px 9px;border-bottom:1px solid #223143;gap:7px;min-height:55px}
+.assetFolders button,.assetFolders .unifiedFolderNew {background:transparent;border-color:transparent;color:#acbfd5;font-size:12px;min-height:34px;padding:7px 11px}
+.assetFolders button.on {background:#29435f;border:1px solid #496d93;color:#eaf5ff;font-weight:650}
+#folderContext {padding:0 30px;margin:12px 0;color:#8098b2}
+.assetFolderTiles {margin:10px 30px 4px;gap:13px}
+.assetFolderTiles .folderEntry {min-width:160px}
+.unifiedFolderTile {min-width:0}
+.unifiedFolderTile>.unifiedFolderMore {background:#203249;border-color:#47607b;color:#dae8f7}
+.grid {grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:16px;padding:18px 30px 70px;align-items:start}
+.card {background:#131e2b;border:1px solid #26384b;border-radius:14px;box-shadow:none;transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease}
+@media(hover:hover){.card:hover {transform:translateY(-2px);border-color:#436280;box-shadow:0 10px 30px #0005}}
+.coverWrap {background:#070b11;aspect-ratio:9/15;}
+.coverSeek {background:#111d2a;border-top-color:#2e4052}
+.coverSeekTop {color:#9fb2ca}
+.body {padding:12px 13px 13px}
+.creatorText {color:#86aace;font-size:11px}
+.titleText {color:#ebf3fb;font-size:13px;font-weight:610;line-height:1.5;min-height:39px}
+.creatorText:hover,.titleText:hover {background:#27394a}
+.meta,.ratingValue {color:#8498b0}
+.actions {border-top-color:#293c50}
+.iconBtn,.unifiedMore {background:#1d2c3d;border-color:#3c536b;color:#d8e5f6}
+.iconBtn:hover,.unifiedMore:hover {background:#314a65;color:white}
+.mediaTile.unifiedSelected {outline-color:var(--studio-accent)}
+.mediaTile.unifiedSelected .mediaTileCheck {background:#477cad;border-color:#477cad}
+/* Photos: crisp square grid and Apple Photos-like albums */
+body:has(#photoToolbar:not([hidden])) #assetFolders {margin:3px 30px 6px;padding:5px 0 10px}
+body:has(#photoToolbar:not([hidden])) #folderContext {padding:0 30px;margin:7px 0 12px}
+body:has(#photoToolbar:not([hidden])) .assetFolderTiles {margin:9px 30px 18px;grid-template-columns:repeat(auto-fill,minmax(160px,190px));gap:16px}
+.photoAlbumMosaic {background:#1d2a37;border-radius:12px}
+.photoAlbumName {color:#e8f0fa;font-weight:620}
+.photoAlbumCount {color:#889db6}
+#grid.pictureWall {padding:0 30px 85px;gap:5px}
+#grid.pictureWall.photoOriginalRatio {gap:9px}
+#grid.pictureWall .pictureTile {background:#172534;border-radius:8px}
+#grid.pictureWall.photoOriginalRatio .pictureTile {border-radius:10px}
+#grid.pictureWall .pictureTile img {background:#1d2d40}
+/* Audio: compact grid, readable line clamping, calm fixed dock */
+.audioFileGrid {grid-template-columns:repeat(auto-fill,minmax(min(100%,215px),1fr));padding:17px 30px 80px;gap:11px}
+.audioFileTile {background:#152232;border:1px solid #2b3e52;min-height:106px;border-radius:12px;padding:12px;cursor:default}
+.audioFileTile:hover {background:#1d3045;border-color:#506f90}
+.audioFileTile.isActive {background:#243c54;border-color:#7aa9e8;box-shadow:inset 0 0 0 1px #709ace40}
+.audioFileArt,.audioArtwork {background:#253e58;color:#a7cbf6;border-radius:10px}
+.audioFileName {font-weight:590;font-size:13px;color:#e9f0fa;line-height:1.4;-webkit-line-clamp:3;line-clamp:3;max-height:calc(1.4em * 3)}
+.audioFileMeta {color:#879eb7}
+.audioDock {background:#101b2af7;border-top:1px solid #3b5269;box-shadow:0 -16px 42px #0008}
+.audioDock .audioTrack {background:transparent}
+.audioIconBtn {background:#1d3045;border:1px solid #375370;color:#dce9f8;border-radius:9px}
+.audioIconBtn:hover,.audioSpeedChoice:hover {background:#314d69;color:#fff}
+.audioSeek {background:linear-gradient(to right,#86b1ed 0%,#86b1ed var(--audio-progress,0%),#3b5169 var(--audio-progress,0%),#3b5169 100%)}
+.audioSpeedPopup,.audioVolumePopup {background:#192b40;border-color:#496585}
+/* Dialog consistency */
+.unifiedContext {background:#1a2a3c;border:1px solid #4b657e;box-shadow:0 20px 65px #000b;border-radius:13px;padding:6px}
+.unifiedContext .contextHeading {color:#91a9c2;border-bottom-color:#354a60}
+.unifiedContext button:hover,.unifiedContext button:focus-visible {background:#30465d}
+.unifiedRenameBack,.unifiedMoveBack,.unifiedAlbumBack,.clipShelfBack {background:#020710c9}
+.unifiedRenamePanel,.unifiedMovePanel,.clipShelf,.shotStudio,.portraitDialog {background:#152335;color:#eaf1fb;border-color:#3d5570;box-shadow:0 24px 70px #0009;border-radius:17px}
+.unifiedRenamePanel p,.unifiedMovePanel p,.clipShelfHead small {color:#94a8c0}
+.unifiedRenameRow,.unifiedMovePanel input,.unifiedMovePanel select,.clipShelf input:not([type=checkbox]) {background:#101a27;border-color:#465e77;color:#e9f1fc}
+.unifiedRenameButtons button,.unifiedMoveActions button,.clipShelf button,.portraitDialogActions button,.photoDetailTop button {background:#24364b;border-color:#425e7c;color:#e7f1fd;border-radius:9px}
+.unifiedRenameButtons .primary,.unifiedMoveActions button[type=submit],.clipShelf button.primary,.portraitDialogActions .portraitSubmit {background:#88b1e5;border-color:#88b1e5;color:#102037;font-weight:700}
+.clipShelfHead,.clipShelfToolbar {border-bottom-color:#344c65}
+.clipShelfRow {background:#1c3045;border-color:#344f6a}
+.clipShelfForm {background:#18293c}
+.unifiedBatchBar {background:#1c3046;border-color:#55718d;box-shadow:0 12px 50px #000a}
+.unifiedToast {background:#294562;border-color:#6486aa}
+/* Full-screen control chrome; retain video gesture and layout mechanics. */
+.feedHeader {background:linear-gradient(to bottom,#071019d9,transparent)}
+.feedHeader .feedABBtn,.feedHeader .feedClose,.feedHeader .feedMagnify,.feedHeader .feedRotate,.feedHeader .feedMulti,.feedHeader .feedDelete {border:1px solid #52677b92;background:#182a3cdb;color:#edf3fc;border-radius:10px;backdrop-filter:blur(8px)}
+.feedHeader button:hover:not(:disabled) {background:#315172e8}
+.feedHeader .feedABBtn.set,.feedHeader .feedABBtn.active {background:#385775;color:#eff6ff;border-color:#83a9cc}
+.photoDetailTop,.photoDetailBottom {background:#101b29;border-color:#2d4256}
+#assetView .photoSideArrow {background:#25384dbd}
+#assetView .photoSideArrow:hover {background:#3b5673}
+.photoFilmstrip button.isCurrent {border-color:#92bbec}
+::selection {background:#4876a5;color:white}
+::-webkit-scrollbar {width:9px;height:9px}
+::-webkit-scrollbar-thumb {border-radius:9px;background:#314559;border:2px solid var(--studio-bg)}
+::-webkit-scrollbar-track {background:transparent}
+@media(max-width:1120px){
+ .studioTop {grid-template-columns:205px minmax(220px,max-content) 1fr;gap:14px}
+ .studioTop .mediaTabs button {min-width:70px;padding:9px 12px}
+ .studioContextTitle {width:175px;flex-basis:175px}
+ .studioWorkspace {gap:18px}
+ .studioLocal {display:none}
+ .studioSort {display:none}
+}
+@media(max-width:760px){
+ .studioHeader {padding:0 13px}
+ .studioTop {grid-template-columns:minmax(0,1fr) auto;gap:8px;min-height:63px;padding-top:5px;padding-bottom:5px}
+ .studioMark {height:38px;width:38px;flex-basis:38px;border-radius:12px}
+ .studioBrand {gap:9px}
+ .studioBrandText strong {font-size:19px}
+ .studioBrandText small {font-size:8px;letter-spacing:.15em}
+ .studioTopRight {gap:7px}
+ .studioTopRight .clipShelfButton {min-height:35px;padding:7px 10px;font-size:11px}
+ .studioTop .mediaTabs {grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;margin:0 0 5px}
+ .studioTop .mediaTabs button {min-width:0;padding:10px 4px}
+ .studioWorkspace {display:block;padding:17px 0 11px}
+ .studioContextTitle {width:auto;margin-bottom:13px}
+ .studioContextTitle h1 {font-size:23px;margin-top:5px}
+ .studioControls {display:block}
+ .studioSearchWrap {width:100%;height:42px;margin-bottom:10px}
+ .studioSearchWrap kbd {display:none}
+ .studioActions {justify-content:flex-start;gap:8px}
+ .studioActions button {min-height:36px;padding:8px 12px}
+ .studioHint {display:none}
+ .studioStatus {min-height:34px;padding:3px 0 9px}
+ .studioStatus .status {font-size:10px}
+ #photoToolbar {padding:15px 13px 9px}
+ .photoToolbarHead {align-items:start;gap:9px}
+ .photoToolbarHead strong {font-size:21px}
+ .assetFolders {margin:0;padding:9px 13px 9px;gap:5px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+ .assetFolders::-webkit-scrollbar {display:none}
+ .assetFolders button {flex:0 0 auto;padding:7px 9px;min-height:34px}
+ #folderContext {margin:10px 0;padding:0 13px;font-size:11px}
+ .assetFolderTiles {margin:10px 13px 6px;gap:9px}
+ .grid {padding:13px 13px 80px;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .card {border-radius:12px}
+ .card .body {padding:10px}
+ .titleText {font-size:12px}
+ .coverWrap {aspect-ratio:9/14}
+ .ratingStar {width:18px;font-size:19px}
+ body:has(#photoToolbar:not([hidden])) #assetFolders {margin:2px 13px 7px;padding:6px 0 9px}
+ body:has(#photoToolbar:not([hidden])) #folderContext {padding:0 13px}
+ body:has(#photoToolbar:not([hidden])) .assetFolderTiles {margin:7px 13px 15px;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+ #grid.pictureWall {padding:0 13px 75px;gap:4px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #grid.pictureWall.photoOriginalRatio {gap:6px}
+ #grid.pictureWall .pictureTile {border-radius:6px}
+ .audioFileGrid {grid-template-columns:repeat(2,minmax(0,1fr));padding:12px 13px 80px;gap:9px}
+ .audioFileTile {padding:10px 8px;min-height:112px;gap:7px}
+ .audioFileName {font-size:12px}
+ .audioDock {padding:9px 12px calc(12px + env(safe-area-inset-bottom))}
+ .audioDock .audioTrackHeader {margin-bottom:8px}
+ .audioDock .audioTools {gap:7px}
+ .audioABTools,.audioRightTools {gap:5px}
+ .audioDock .audioIconBtn {min-height:34px}
+ .unifiedBatchBar {bottom:calc(10px + env(safe-area-inset-bottom));gap:5px;padding:9px}
+}
+@media(max-width:360px){
+ .studioBrandText small {font-size:7px}
+ .studioTopRight .clipShelfButton {font-size:10px;padding:6px 8px}
+ .studioActions button {padding:8px 9px}
+ .studioContextTitle h1 {font-size:21px}
+ .audioFileArt {display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ button,.card,#grid.pictureWall .pictureTile img {transition:none!important}
+}
+
+
+/* 影格 Studio · 播放器统一工具栏：一致图标、标签、状态和分组。 */
+.feedHeader {gap:12px;padding:12px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left));align-items:flex-start}
+.feedHeader>.feedClose {flex:0 0 40px;width:40px;height:40px;min-width:40px;border-radius:11px}
+.feedHeaderActions {display:flex;align-items:center;flex:1 1 auto;justify-content:flex-end;gap:9px;min-width:0;max-width:none!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:0 1px 5px;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.feedHeaderActions::-webkit-scrollbar {display:none}
+.feedToolGroup {display:flex;align-items:center;gap:5px;flex:0 0 auto;padding-right:9px;border-right:1px solid #6985a13f}
+.feedToolGroup:last-child {padding-right:0;border-right:0}
+.feedHeader .feedTool {box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;height:40px;min-height:40px;min-width:40px;width:auto;padding:0 10px;border:1px solid #60799388;border-radius:10px;background:#152638e8;color:#dce9f7;font:550 12px/1.1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:0;white-space:nowrap;cursor:pointer;transition:background .14s,border-color .14s,color .14s,box-shadow .14s}
+.feedHeader .feedTool:hover:not(:disabled) {background:#284562;border-color:#7093b7;color:#fff}
+.feedHeader .feedTool:focus-visible {outline:2px solid #94bdeb;outline-offset:2px}
+.feedHeader .feedTool:active:not(:disabled) {background:#355875}
+.feedToolGlyph {display:flex;align-items:center;justify-content:center;flex:0 0 18px;width:18px;height:18px;color:inherit}
+.feedToolGlyph svg {display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.feedToolLetter {font-size:13px;font-weight:720;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;border:1px solid currentColor;border-radius:5px;width:18px;height:18px;flex-basis:18px}
+.feedToolLabel {display:inline-block;line-height:1.15}
+.feedHeader .feedTool.set,.feedHeader .feedTool.active,.feedHeader .feedTool[aria-pressed="true"] {background:#294761;color:#bcdbff;border-color:#668db9}
+.feedHeader .feedTool.set .feedToolLetter {background:#8ebcf5;color:#112339;border-color:#8ebcf5}
+.feedHeader .feedTool.loading {cursor:wait;border-color:#607993;opacity:.75}
+.feedHeader .feedTool.done {background:#21483f;border-color:#608e7f;color:#b6e2d3}
+.feedHeader .feedTool:disabled {opacity:.37;cursor:not-allowed}
+.feedHeader .feedTool.armed,.feedHeader .feedTool.armed:hover {background:#7c2f3c;color:#fff1f2;border-color:#dc8190}
+.feedToolGroupDanger .feedTool:not(.armed) {color:#e5b5bc}
+@media(max-width:1180px) {
+ .feedHeaderActions {justify-content:flex-start}
+ .feedHeader .feedTool {gap:6px;padding:0 9px}
+ .feedToolGroup {padding-right:7px;gap:4px}
+}
+@media(max-width:760px) {
+ .feedHeader {gap:8px;padding:calc(9px + env(safe-area-inset-top)) calc(9px + env(safe-area-inset-right)) 9px calc(9px + env(safe-area-inset-left))}
+ .feedHeader>.feedClose {height:44px;min-height:44px;flex-basis:44px;width:44px;border-radius:11px}
+ .feedHeaderActions {flex:1 1 0;max-width:none!important;padding:0 1px 3px}
+ .feedHeader .feedTool {height:44px!important;min-height:44px!important;min-width:44px!important;width:44px!important;padding:0!important;border-radius:11px!important}
+ .feedToolLabel {display:none}
+ .feedToolGroup {gap:5px;padding-right:9px}
+}
+@media(prefers-reduced-motion:reduce) { .feedHeader .feedTool {transition:none} }
+
+
+/* 影格 Studio · UI 文案及控件规范 v1 (2026-10-19)
+   使用共享尺寸、线性图标、清楚的状态。只针对显示层；保留原事件、API 与媒体数据。 */
+:root {
+  --studio-control-sm:36px;
+  --studio-control-md:40px;
+  --studio-control-touch:44px;
+  --studio-icon-size:18px;
+  --studio-control-gap:7px;
+  --studio-control-radius:10px;
+  --studio-ease:140ms ease;
+}
+/* 菜单：与工具栏同一文字层级和图标描边，危险动作单独分隔 */
+.unifiedContext {min-width:224px;max-width:min(290px,calc(100vw - 16px));padding:6px;border:1px solid var(--studio-line-strong);border-radius:var(--studio-r);background:var(--studio-panel);box-shadow:0 18px 56px #000a}
+.unifiedContext .contextHeading {font-size:11px;font-weight:550;letter-spacing:.015em;color:var(--studio-muted);padding:9px 11px 10px;margin-bottom:5px;border-bottom:1px solid var(--studio-line);max-width:260px}
+.unifiedContext .studioMenuRow {display:flex;align-items:center;gap:11px;width:100%;min-height:var(--studio-control-md);padding:9px 11px;line-height:1.35;font-size:13px;font-weight:500;color:var(--studio-text);border:1px solid transparent;border-radius:8px;white-space:nowrap}
+.unifiedContext .studioMenuRow:hover,.unifiedContext .studioMenuRow:focus-visible {background:#29425b;border-color:#365575;outline:none}
+.unifiedContext .studioMenuRow.danger {color:var(--studio-danger);margin-top:5px;border-top:1px solid var(--studio-line);border-radius:0 0 8px 8px;padding-top:12px}
+.unifiedContext .studioMenuRow.danger:hover {background:#4b2b3a;border-color:transparent}
+.studioMenuIcon,.audioControlIcon {display:inline-flex;align-items:center;justify-content:center;flex:0 0 var(--studio-icon-size);width:var(--studio-icon-size);height:var(--studio-icon-size)}
+.studioMenuIcon svg,.audioControlIcon svg {width:var(--studio-icon-size);height:var(--studio-icon-size);display:block;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.studioMenuLabel,.audioControlLabel {display:inline-block;line-height:1.25}
+/* 音频控制：按钮与视频共用视觉规格；时间标记另置，不挤压动作 */
+.audioDock {background:#101b2af8;border-top:1px solid var(--studio-line-strong)}
+.audioDock .audioTrackHeader {margin-bottom:9px}
+.audioDock .audioTrack .audioTitle {font-size:13px;font-weight:620;color:var(--studio-text)}
+.audioDock .audioTimeline {gap:10px}
+.audioDock .audioTools {display:flex;align-items:center;justify-content:space-between;gap:8px 15px;margin:11px 0 0;flex-wrap:wrap}
+.audioDock .audioABTools,.audioDock .audioRightTools {gap:6px;flex-wrap:nowrap}
+.audioDock .audioIconBtn {height:var(--studio-control-sm);min-height:var(--studio-control-sm);min-width:var(--studio-control-sm);display:inline-flex;align-items:center;gap:6px;padding:0 10px;background:#1b2c40;color:#d9e7f6;border:1px solid #415a75;border-radius:var(--studio-control-radius);font-size:12px;font-weight:550;line-height:1.15;box-shadow:none;transition:background var(--studio-ease),border-color var(--studio-ease),color var(--studio-ease)}
+.audioDock .audioIconBtn:hover:not(:disabled),.audioDock .audioIconBtn:focus-visible {color:#fff;background:#2c4865;border-color:#6a8db5}
+.audioDock .audioIconBtn:disabled {opacity:.37}
+.audioLetterIcon {display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px;width:18px;height:18px;font:700 12px ui-monospace,SFMono-Regular,Consolas,monospace;border:1px solid currentColor;border-radius:5px}
+.audioDock .audioIconBtn.on,.audioDock .audioIconBtn[aria-pressed="true"] {background:#294761;color:#bcdbff;border-color:#668db9}
+.audioDock .audioABBtn.on .audioLetterIcon {color:#112339;border-color:#8ebcf5;background:#8ebcf5}
+.audioDock .audioABInfo {order:2;flex:1 1 120px;margin:0;color:var(--studio-muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.audioDock .audioRightTools {margin-left:auto;order:3}
+.audioDock .audioSpeed {font-variant-numeric:tabular-nums;min-width:54px}
+.audioDock .audioMute {width:var(--studio-control-sm);padding:0}
+.audioMute[data-muted="false"] .audioVolumeOff,.audioMute[data-muted="true"] .audioVolumeOn {display:none}
+.audioDock .audioPlay {width:40px;min-width:40px;height:40px;min-height:40px;padding:0}
+.audioDock .audioABTools .audioABLoop,.audioDock .audioABTools .audioClip {min-width:0}
+.audioDock .audioClip.loading {cursor:wait}
+.audioDock .audioSeek {min-width:0}
+.audioVolumePopup,.audioSpeedPopup {border-radius:var(--studio-r);background:var(--studio-panel);border-color:var(--studio-line-strong)}
+/* 图片预览：桌面快捷键和手机手势分别解释，统一简短术语 */
+.photoDetailBottom {gap:7px;padding:8px 12px 10px}
+.photoDetailHelp {font-size:11px;font-weight:500;color:var(--studio-muted);opacity:.78;letter-spacing:.01em}
+.photoDetailHelp .helpMobile {display:none}
+.photoDetailTop button,.clipShelf button,.unifiedRenameButtons button,.unifiedMoveActions button {font-size:12px;font-weight:550}
+@media(max-width:900px) {
+  .audioDock .audioTools {gap:7px 11px}
+  .audioDock .audioABInfo {flex-basis:100%;order:4}
+}
+@media(max-width:760px) {
+  .unifiedContext .studioMenuRow {min-height:var(--studio-control-touch);font-size:13px}
+  .audioDock .audioTools {align-items:center;row-gap:8px}
+  .audioDock .audioABTools {max-width:100%;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .audioDock .audioABTools::-webkit-scrollbar {display:none}
+  .audioDock .audioRightTools {margin-left:0;flex-wrap:nowrap;order:2}
+  .audioDock .audioABInfo {order:3;flex-basis:100%;font-size:11px}
+  .audioDock .audioIconBtn {min-height:var(--studio-control-touch);height:var(--studio-control-touch);min-width:var(--studio-control-touch);padding:0 10px}
+  .audioDock .audioMute {width:var(--studio-control-touch)}
+  .audioDock .audioPlay {width:var(--studio-control-touch);height:var(--studio-control-touch)}
+  .audioDock .audioRightTools {margin-left:auto}
+  .photoDetailHelp .helpDesktop {display:none}
+  .photoDetailHelp .helpMobile {display:inline}
+}
+@media(max-width:410px) {
+  .audioDock .audioControlLabel {font-size:11px}
+  .audioDock .audioABTools .audioIconBtn {padding:0 7px}
+  .audioDock .audioABTools {width:100%}
+  .audioDock .audioRightTools {width:100%;justify-content:flex-end}
+  .audioDock .audioTools {gap:7px}
+}
+
+/* 导航/文件目录/音频封面，使用与操作控件一致的线性图标 */
+.studioTop .mediaTabs button {display:flex;align-items:center;justify-content:center;gap:7px}
+.studioTabIcon,.studioTopActionIcon,.studioFolderIcon {display:inline-flex;align-items:center;justify-content:center;flex:0 0 17px;width:17px;height:17px}
+.studioTabIcon {margin:0}
+.studioTabIcon svg,.studioTopActionIcon svg,.studioFolderIcon svg {width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.studioTopRight .clipShelfButton,#unifiedFavoriteFilter,#photoRatio {display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.unifiedFolderTile>.folderEntry {display:flex;align-items:center;gap:8px}
+.studioFolderIcon {flex:0 0 18px;color:#8eafd0}
+.studioFolderName {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audioFileArt svg,.audioArtwork svg {display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.audioArtwork {display:grid;place-items:center}
+
+
+/* 影格 Studio v2 · 视频操作与片头信息布局修复（不修改媒体处理逻辑） */
+.feedHeaderActions {
+  --feed-tool-gap: 8px;
+  gap: var(--feed-tool-gap) !important;
+  align-items: center;
+  padding-bottom: 3px;
+}
+/* 语义分组保留在 DOM/无障碍信息中，但视觉间隔一致。 */
+.feedToolGroup,
+.feedToolGroup:last-child {
+  gap: var(--feed-tool-gap) !important;
+  padding-right: 0 !important;
+  border-right: 0 !important;
+  margin: 0 !important;
+}
+.feedHeader .feedTool {
+  gap: 7px;
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+/* A/B 是两个纯文本操作，不再重复字母徽记；激活态仅通过颜色表达。 */
+.feedHeader #feedSetA,
+.feedHeader #feedSetB {
+  min-width: 90px;
+  padding: 0 13px;
+  font-variant-numeric: tabular-nums;
+}
+.feedHeader #feedSetA.set,
+.feedHeader #feedSetB.set {
+  box-shadow: inset 0 -2px 0 #8ebcf5;
+}
+/* 原生 video controls 处于底部独立层。标题和创作者整体上移到安全区域。 */
+.feedItem > .feedInfo {
+  position: absolute !important;
+  z-index: 3;
+  top: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: calc(96px + var(--safe-bottom, 0px)) !important;
+  box-sizing: border-box;
+  padding: 12px 24px !important;
+  background: linear-gradient(90deg, rgba(0,0,0,.62),rgba(0,0,0,.18) 67%,transparent);
+  pointer-events: none;
+}
+.feedItem > .feedInfo .feedCreator,
+.feedItem > .feedInfo .feedTitle {
+  max-width: min(680px, calc(100vw - 245px));
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.feedItem > .feedInfo .feedCreator {
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.feedItem > .feedInfo .feedTitle {
+  font-size: 14px;
+  line-height: 1.42;
+  font-weight: 500;
+}
+/* 评分悬浮控件独立定位，避免挤占标题两行。 */
+.feedItem > .feedRating {
+  position: absolute;
+  right: calc(20px + var(--safe-right, 0px)) !important;
+  bottom: calc(100px + var(--safe-bottom, 0px)) !important;
+  z-index: 4;
+}
+@media (max-width: 760px) {
+  .feedHeader #feedSetA,
+  .feedHeader #feedSetB {
+    min-width: 44px !important;
+    width: 44px !important;
+    padding: 0 !important;
+  }
+  /* 移动端以简洁 A/B 文本保留区间操作的可辨识性。 */
+  .feedHeader #feedSetA .feedToolLabel,
+  .feedHeader #feedSetB .feedToolLabel {
+    display: block !important;
+    font: 700 13px/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+  }
+  .feedHeader #feedSetA .feedToolLabel { font-size: 0; }
+  .feedHeader #feedSetA .feedToolLabel::after { content: 'A'; font-size: 14px; }
+  .feedHeader #feedSetB .feedToolLabel { font-size: 0; }
+  .feedHeader #feedSetB .feedToolLabel::after { content: 'B'; font-size: 14px; }
+  .feedItem > .feedInfo {
+    bottom: calc(90px + var(--safe-bottom, 0px)) !important;
+    padding: 10px 14px !important;
+    background: linear-gradient(90deg,rgba(0,0,0,.65),rgba(0,0,0,.15));
+  }
+  .feedItem > .feedInfo .feedCreator,
+  .feedItem > .feedInfo .feedTitle {
+    max-width: calc(100vw - 28px);
+  }
+  .feedItem > .feedRating {
+    right: calc(14px + var(--safe-right, 0px)) !important;
+    bottom: calc(182px + var(--safe-bottom, 0px)) !important;
+  }
+}
+
+
+/* 影格 Studio v3 · 紧凑的信息/评分组合；原生播放控制条拥有自己的底部区域。 */
+.feedItem > .feedDetails {
+  position:absolute;
+  z-index:81;
+  left:calc(20px + var(--safe-left,0px));
+  bottom:calc(78px + var(--safe-bottom,0px));
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:14px;
+  width:max-content;
+  max-width:calc(100vw - 40px - var(--safe-left,0px) - var(--safe-right,0px));
+  box-sizing:border-box;
+  padding:10px 12px;
+  border:1px solid rgba(137,166,198,.20);
+  border-radius:12px;
+  background:rgba(11,19,30,.76);
+  box-shadow:0 4px 18px rgba(0,0,0,.20);
+  -webkit-backdrop-filter:blur(9px);
+  backdrop-filter:blur(9px);
+  transition:opacity .22s ease,transform .22s ease;
+  pointer-events:none;
+}
+.feedItem > .feedDetails > .feedInfo {
+  position:static!important;
+  inset:auto!important;
+  z-index:auto!important;
+  display:block!important;
+  flex:0 1 auto;
+  min-width:0;
+  width:auto!important;
+  max-width:min(440px,calc(100vw - 268px));
+  box-sizing:border-box;
+  padding:0!important;
+  margin:0!important;
+  background:none!important;
+  transform:none!important;
+  opacity:1!important;
+  text-shadow:0 1px 6px rgba(0,0,0,.65);
+}
+.feedItem > .feedDetails .feedCreator,
+.feedItem > .feedDetails .feedTitle {
+  display:block!important;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  overflow-wrap:normal;
+  -webkit-line-clamp:unset;
+  line-clamp:unset;
+}
+.feedItem > .feedDetails .feedCreator {font-size:12px!important;line-height:1.5!important;font-weight:650;margin:0 0 1px!important;color:#f4f7fc}
+.feedItem > .feedDetails .feedTitle {font-size:13px!important;line-height:1.45!important;font-weight:450;margin:0!important;color:#d3deeb}
+.feedItem > .feedDetails > .feedRating {
+  position:static!important;
+  inset:auto!important;
+  z-index:auto!important;
+  display:flex;
+  align-items:center;
+  flex:0 0 auto;
+  min-width:0;
+  width:auto!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:2px 0 2px 12px!important;
+  border:0;
+  border-left:1px solid rgba(148,173,201,.3);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  pointer-events:auto;
+}
+.feedItem > .feedDetails .feedRating .ratingStar {width:19px;height:22px;font-size:19px;line-height:22px}
+.feedOverlay.chromeHidden .feedItem > .feedDetails,
+.feedOverlay.focusImmersive.chromeHidden .feedItem > .feedDetails {opacity:0;transform:translateY(10px);pointer-events:none}
+@media(max-width:760px){
+  .feedItem > .feedDetails {
+    left:calc(12px + var(--safe-left,0px));
+    bottom:calc(78px + var(--safe-bottom,0px));
+    flex-wrap:wrap;
+    gap:6px;
+    max-width:calc(100vw - 24px - var(--safe-left,0px) - var(--safe-right,0px));
+    padding:8px 10px;
+  }
+  .feedItem > .feedDetails > .feedInfo {flex:1 1 100%;max-width:calc(100vw - 46px)}
+  .feedItem > .feedDetails > .feedRating {padding:0!important;border:0;max-width:100%}
+  .feedItem > .feedDetails .feedCreator {font-size:12px!important}
+  .feedItem > .feedDetails .feedTitle {font-size:12px!important}
+}
+@media(max-height:390px){
+  .feedItem > .feedDetails {bottom:calc(68px + var(--safe-bottom,0px));padding:6px 10px}
+  .feedItem > .feedDetails > .feedInfo .feedCreator {line-height:1.2!important}
+  .feedItem > .feedDetails > .feedInfo .feedTitle {line-height:1.25!important}
+}
+
+
+/* ===== 影格 Studio v4 · PURE VIEWING · 只让内容成为主角 ===== */
+:root{--yg-bg:#070b11;--yg-surface:#0d1420;--yg-line:#ffffff17;--yg-bright:#d9e7f8;--yg-soft:#8a97aa;--yg-accent:#9bc4ff}
+html,body{background:var(--yg-bg);color:var(--yg-bright)}
+body{padding-left:82px;background:radial-gradient(ellipse at 85% 1%,#17253d 0,transparent 42%),#070b11}
+/* A single quiet top line; library navigation floats independently at the left. */
+.studioHeader{display:flex;align-items:center;gap:22px;min-height:76px;padding:11px 28px!important;border-bottom:1px solid #ffffff12;background:#090f19ed}
+.studioTop{display:flex;align-items:center;min-height:52px;padding:0!important;flex:0 0 auto;gap:8px}
+.studioBrand{gap:9px}.studioBrandText small,.studioEyebrow,.studioHint,.studioLocal,.studioStatus,.studioContextTitle{display:none!important}
+.studioBrandText strong{font-size:16px;letter-spacing:-.025em;font-weight:570}.studioBrandText em{font-size:12px;font-weight:440;letter-spacing:.02em}
+.studioMark{width:34px;height:34px;flex-basis:34px;border-radius:10px;background:#17273a;border:1px solid #ffffff1a}
+.studioTop .mediaTabs{position:fixed!important;left:12px;top:92px;bottom:auto;z-index:24;width:58px!important;display:flex!important;flex-direction:column;gap:8px;padding:5px!important;background:#0e1723;border:1px solid #ffffff15;border-radius:17px;box-shadow:0 15px 42px #0008}
+.studioTop .mediaTabs button{width:46px!important;height:48px;min-width:46px!important;min-height:48px!important;padding:0!important;border-radius:12px;color:#8197ad;font-size:0!important}
+.studioTop .mediaTabs button.on{color:#c5defa;background:#24405f;box-shadow:inset 0 0 0 1px #6c91bb52}
+.studioTop .mediaTabs button .studioTabIcon,.studioTop .mediaTabs button .studioTabIcon svg{width:21px;height:21px}
+.studioTopRight{position:fixed;left:17px;top:263px;z-index:25;display:flex!important}
+.studioTopRight #clipShelfTop{height:46px;width:46px;min-height:46px;padding:0!important;background:transparent;border:1px solid transparent;font-size:0;color:#8ba4c2;border-radius:12px}
+.studioTopRight #clipShelfTop:hover{background:#233b55}.studioTopRight #clipShelfTop svg{width:21px;height:21px}
+.studioWorkspace{flex:1;min-width:0;margin:0;padding:0!important;display:block}.studioControls{display:flex;gap:14px;align-items:center;flex-wrap:nowrap}
+.studioSearchWrap{height:42px;flex:1 1 260px;max-width:660px;background:#121f30;border:1px solid #ffffff1b;border-radius:13px}
+.studioSearchWrap kbd{display:none}.studioActions{flex-wrap:nowrap;gap:8px}.studioActions button{background:transparent;border-color:#ffffff1a;color:#aabace;border-radius:10px;font-weight:470}
+.studioActions .sortBtn.active{background:#203248;border-color:#496b8d;color:#dceafa}
+#unifiedFavoriteFilter,#unifiedFavorite,.studioFavoriteLabel{display:none!important}
+#creatorToggle{font-size:0;min-width:42px}.creatorToggle:after{content:'⌁';font-size:21px;line-height:1}.creatorPanel.collapsed{display:none!important}.creatorPanel:not(.collapsed){position:absolute;top:75px;left:82px;right:0;z-index:31;padding:10px 28px;background:#0e1724f5;border:1px solid #ffffff1a;border-radius:0 0 15px 15px;box-shadow:0 15px 35px #000a}
+#photoToolbar{background:transparent}.studioRoomEyebrow{font-size:10px;letter-spacing:.26em;color:#8293aa}
+.studioEntrance{display:block;margin:0;padding:26px 28px 0}.studioEntrance[hidden]{display:none!important}
+.studioRoomIntro{display:flex;align-items:end;justify-content:space-between;padding:18px 0 38px;gap:10px}
+.studioRoomIntro h2{font-size:clamp(29px,3.1vw,48px);line-height:1.13;letter-spacing:-.07em;font-weight:350;margin:14px 0 6px;color:#e8effc}
+.studioRoomAccent{color:#8cb7ee}.studioRoomIntro p{font-size:12px;letter-spacing:.15em;color:#788fa9;margin:0}.studioRoomCount{font-size:12px;color:#8597ac;padding-bottom:11px}
+.studioRoomSection{margin-bottom:26px}.studioRoomSectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:20px;margin:0 0 14px}
+.studioRoomSectionHead h3{font-size:16px;font-weight:560;margin:0;color:#dce7f4;letter-spacing:.01em}.studioRoomSectionHead>span{font-size:11px;color:#687e99}.studioLibraryHeading{margin:31px 0 12px}
+.studioRoomRow{display:flex;align-items:stretch;gap:13px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#37516e transparent;padding:0 1px 12px;scroll-snap-type:x proximity}
+.studioRoomTile{position:relative;display:block;flex:0 0 clamp(136px,13vw,196px);aspect-ratio:9/13;border:1px solid #ffffff20;border-radius:12px;padding:0;overflow:hidden;background:linear-gradient(160deg,#1e3049,#070c14);color:white;cursor:pointer;text-align:left;scroll-snap-align:start;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.studioRoomTile>img{width:100%;height:100%;display:block;object-fit:cover;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.studioRoomTile:hover{transform:translateY(-3px);border-color:#91b5da;box-shadow:0 17px 38px #0008}.studioRoomTile:hover>img{transform:scale(1.04)}
+.studioRoomShade{position:absolute;inset:36% 0 0;background:linear-gradient(0deg,#020509eb 0%,#02050954 44%,transparent)}
+.studioRoomPlay{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:29px;height:29px;border:1px solid #ffffff53;border-radius:50%;background:#080d13a3;opacity:0;transition:opacity .18s}.studioRoomTile:hover .studioRoomPlay,.studioRoomTile:focus-visible .studioRoomPlay{opacity:1}
+.studioRoomPlay svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6}.studioRoomCaption{position:absolute;bottom:0;left:0;right:0;padding:18px 11px 12px;display:grid;gap:4px}
+.studioRoomCaption strong{font-weight:510;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.studioRoomCaption small{font-size:10px;color:#bac7d4}.studioRoomPlaceholder{position:absolute;inset:0;display:grid;place-items:center;color:#759cbd}.studioRoomPlaceholder svg{width:40px;height:40px}
+#assetFolders{margin:0 28px!important;padding:9px 0 12px!important;border-bottom:1px solid #ffffff14;min-height:0;gap:6px}
+#folderContext{padding:0 28px!important;color:#667f98;font-size:11px;margin:9px 0!important}
+#folderTiles.assetFolderTiles{padding:0 28px;margin:16px 0;gap:12px}
+.grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;padding:18px 28px 80px}.card{background:#0d1520;border-color:#ffffff16;border-radius:12px;overflow:hidden;transition:transform .2s,border-color .2s}.card:hover{border-color:#7e9ebc73;transform:translateY(-2px)}
+.coverWrap{aspect-ratio:9/13;background:#080e16}.card .cover{transition:transform .3s ease}.card:hover .cover{transform:scale(1.035)}
+.card .body{padding:10px 11px}.card .creatorText{font-size:10px;color:#7f9fbd}.card .titleText{font-size:12px;font-weight:510;min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.card .meta{display:none}.card .actions{margin-top:6px;padding-top:4px;border:0}.card .creatorEditBtn,.card .creatorLinkBtn,.card .coverSeek{opacity:0;transition:opacity .15s}.card:hover .creatorEditBtn,.card:focus-within .creatorEditBtn,.card:hover .creatorLinkBtn,.card:focus-within .creatorLinkBtn,.card:hover .coverSeek,.card:focus-within .coverSeek{opacity:1}
+.card .coverSeek{position:absolute;left:0;right:0;bottom:0;z-index:3;background:#070c12ed}.card .stars{transform:scale(.82);transform-origin:left center;margin-right:-25px}.card .mediaKindBadge{display:none!important}
+.mediaTile[data-favorite=true]:before{display:none!important}
+#grid.pictureWall{padding:8px 28px 85px}.audioFileGrid{padding:18px 28px 85px}
+/* Player is an entirely separate, edge-to-edge space. Zero fixed banner height. */
+.feedOverlay{background:#020407!important}
+.feedItem,.feedItem .videoStage{background:#020407!important}
+.feedBackdrop{position:absolute;inset:-12%;width:124%;height:124%;object-fit:cover;filter:blur(70px) brightness(.50) saturate(.85);opacity:.47;pointer-events:none;z-index:0;transform:scale(1.08)}
+.feedMedia.feedVideo{position:relative;z-index:1;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;object-fit:contain;filter:none;box-shadow:none;border-radius:0}
+.feedHeader{position:fixed!important;inset:0 0 auto!important;height:0!important;min-height:0!important;overflow:visible!important;display:block!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;pointer-events:none!important;z-index:85}
+.feedHeader>.feedClose,.feedToolsToggle,.feedRailToggle,.feedRatingToggle{position:fixed;display:grid;place-items:center;width:40px;height:40px;min-width:40px;min-height:40px;padding:0!important;z-index:87;pointer-events:auto!important;background:#0b142094!important;border:1px solid #ffffff36!important;color:#d6e3f3!important;border-radius:50%!important;box-shadow:0 6px 18px #0005;cursor:pointer;transition:opacity .22s,background .16s,transform .16s}
+.feedHeader>.feedClose{left:18px;top:18px;width:40px!important;height:40px!important}
+.feedToolsToggle{right:20px;top:18px}.feedRatingToggle{right:20px;top:69px}.feedRailToggle{left:18px;top:69px}
+.feedToolsToggle svg,.feedRailToggle svg,.feedRatingToggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.feedToolsToggle svg circle{fill:currentColor;stroke:none}
+.feedOverlay.toolsOpen .feedToolsToggle,.feedOverlay.infoVisible .feedRatingToggle,.feedOverlay.railOpen .feedRailToggle{background:#284967!important;border-color:#93b8df!important;color:#fff!important}
+.feedHeader .feedHeaderActions{position:fixed!important;right:18px;top:126px;z-index:89;box-sizing:border-box;width:300px!important;max-width:calc(100vw - 36px)!important;max-height:calc(100dvh - 144px);overflow-y:auto!important;overflow-x:hidden!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important;padding:13px!important;border:1px solid #ffffff31;background:#0b1421ed;box-shadow:0 25px 75px #000c;border-radius:18px;backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);visibility:hidden;opacity:0;pointer-events:none!important;transform:translateY(-8px) scale(.985);transition:opacity .18s,transform .18s,visibility .18s}
+.feedOverlay.toolsOpen .feedHeaderActions{visibility:visible;opacity:1;pointer-events:auto!important;transform:translateY(0) scale(1)}
+.feedHeader .feedToolGroup,.feedHeader .feedToolGroup:last-child{display:contents!important;padding:0!important;border:0!important}
+.feedHeader .feedHeaderActions .feedTool{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;height:74px;min-height:74px!important;padding:10px 3px!important;border-radius:12px;background:#111d2dbd!important;border:1px solid #ffffff1c!important;color:#c9d9eb;font-weight:450;letter-spacing:0}
+.feedHeader .feedToolGlyph,.feedHeader .feedToolGlyph svg{width:22px;height:22px;flex-basis:22px}
+.feedHeader .feedToolLabel{display:block!important;font-size:11px!important;font-weight:450!important;line-height:1.2}.feedHeader #feedSetA .feedToolLabel::after,.feedHeader #feedSetB .feedToolLabel::after{content:none!important}
+.feedHeader .feedTool.active,.feedHeader .feedTool.set{background:#2b4764!important;color:#dcebff;border-color:#7eafd9!important}.feedHeader .feedTool:disabled{opacity:.35}
+.feedHeader .feedToolGroupDanger .feedTool{color:#e5a8b1!important}
+.feedHeader .feedTool:hover:not(:disabled){background:#28435e!important;border-color:#8cabca!important}
+.feedItem > .feedDetails{position:fixed!important;left:18px;bottom:96px!important;width:min(390px,calc(100vw - 36px));max-width:calc(100vw - 36px);z-index:86;opacity:0;transform:translateY(12px);pointer-events:none;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;background:#0c1520e8;border-color:#ffffff24;border-radius:14px;box-shadow:0 12px 35px #000a}
+.feedOverlay.infoVisible .feedItem.studioCurrent > .feedDetails{opacity:1;visibility:visible;transform:none;pointer-events:auto}
+.feedItem > .feedDetails > .feedInfo{max-width:230px!important}.feedItem > .feedDetails .feedRating{pointer-events:auto}
+.feedFilmstrip{position:fixed;left:14px;top:124px;bottom:18px;width:78px;padding:8px 7px;display:flex;flex-direction:column;align-items:stretch;gap:9px;z-index:83;overflow-y:auto;scrollbar-width:none;background:#070c14c9;border:1px solid #ffffff24;border-radius:15px;backdrop-filter:blur(18px);box-shadow:0 17px 44px #0008;visibility:hidden;opacity:0;transform:translateX(-12px);pointer-events:none;transition:opacity .2s,transform .2s,visibility .2s}
+.feedOverlay.railOpen .feedFilmstrip{visibility:visible;opacity:1;transform:none;pointer-events:auto}
+.feedFilmTile{flex:0 0 auto;width:62px;height:92px;border-radius:8px;border:1px solid #ffffff28;background:#142033;overflow:hidden;padding:0;color:#bbcfe6;cursor:pointer}.feedFilmTile img{display:block;width:100%;height:100%;object-fit:cover}.feedFilmTile.current{border-color:#a2c8fa;box-shadow:0 0 0 2px #719de65c}
+.feedOverlay.chromeHidden .feedHeader>.feedClose,.feedOverlay.chromeHidden .feedToolsToggle,.feedOverlay.chromeHidden .feedRailToggle,.feedOverlay.chromeHidden .feedRatingToggle,.feedOverlay.chromeIdle .feedHeader>.feedClose,.feedOverlay.chromeIdle .feedToolsToggle,.feedOverlay.chromeIdle .feedRailToggle,.feedOverlay.chromeIdle .feedRatingToggle{opacity:0;pointer-events:none!important}
+.feedOverlay.toolsOpen .feedToolsToggle,.feedOverlay.infoVisible .feedRatingToggle,.feedOverlay.railOpen .feedRailToggle{opacity:1;pointer-events:auto!important}
+#clipShelfFavOnly,#clipShelfFav{display:none!important}
+@media(max-width:820px){body{padding-left:60px}.studioHeader{padding:9px 14px!important;gap:8px;flex-wrap:wrap}.studioTop .mediaTabs{left:6px;top:75px;width:47px!important;padding:3px!important}.studioTop .mediaTabs button{width:40px!important;min-width:40px!important;height:44px!important;min-height:44px!important}.studioTopRight{left:5px;top:231px}.studioTopRight #clipShelfTop{width:46px!important;height:44px!important}.studioControls{flex-wrap:wrap}.studioRoomIntro h2{font-size:29px}.studioRoomTile{flex-basis:142px}.studioEntrance,#folderTiles.assetFolderTiles{padding-left:14px;padding-right:14px}.grid{padding-left:14px;padding-right:14px}.feedHeader .feedHeaderActions{top:115px;right:12px}.feedToolsToggle,.feedRatingToggle{right:12px}.feedRailToggle,.feedHeader>.feedClose{left:12px}.feedBackdrop{filter:blur(45px) brightness(.48)}}
+@media(max-height:480px){.feedFilmstrip{top:66px}.feedItem > .feedDetails{bottom:62px!important}.feedHeader .feedHeaderActions{top:65px;max-height:calc(100dvh - 80px)}.feedRatingToggle{top:18px;right:72px}.feedRailToggle{top:18px;left:72px}}
+@media(prefers-reduced-motion:reduce){.studioRoomTile,.studioRoomTile img,.feedHeaderActions,.feedFilmstrip,.feedDetails{transition:none!important}}
+
+/* ===== 影格 Studio v5 · CINEMA FIRST / ONE DESIGN LANGUAGE ===== */
+:root {
+  --v5-bg:#07090e;--v5-ink:#edf0f6;--v5-secondary:#89929e;--v5-hairline:rgba(202,214,231,.105);
+  --v5-panel:#111823;--v5-hover:#1b2634;--v5-highlight:#b9d2f5;--v5-warn:#e6a8b2;
+  --v5-radius:14px;--v5-ease:cubic-bezier(.22,.8,.24,1);
+}
+html{color-scheme:dark}
+body{padding-left:86px;background:radial-gradient(ellipse 45% 35% at 94% 13%,#17243b 0%,transparent 100%),var(--v5-bg)!important;color:var(--v5-ink);font-feature-settings:'tnum' 1}
+::selection{background:#608bb866;color:white}
+:where(button,input,select,textarea){-webkit-tap-highlight-color:transparent}
+:where(button,[tabindex],input,select):focus-visible{outline:2px solid #bed8ff!important;outline-offset:3px}
+:where(button){transition:background-color .18s ease,border-color .18s ease,color .18s ease,opacity .18s ease,transform .18s var(--v5-ease)}
+:where(button):disabled{cursor:not-allowed;opacity:.42}
+/* A coherent, discreet app chrome: the library can show tools; the film cannot. */
+.studioHeader{min-height:77px!important;gap:20px!important;background:#090d14ee!important;border:0!important;border-bottom:1px solid var(--v5-hairline)!important;padding:12px 33px 12px 27px!important;box-shadow:none!important;backdrop-filter:blur(28px)}
+.studioTop{min-height:49px!important}.studioBrand{padding:0 18px 0 0;min-width:170px;border-right:1px solid var(--v5-hairline)}
+.studioMark{border-radius:12px!important;width:37px;height:37px;flex-basis:37px;background:linear-gradient(140deg,#293548,#151c29)!important;border-color:#ffffff15!important;color:#dce8f7}
+.studioBrandText strong{font-size:16px!important;letter-spacing:-.045em!important;font-weight:650!important}.studioBrandText em{font-size:11px!important;font-weight:420!important;letter-spacing:.105em!important;color:#adbfda}
+.studioWorkspace{min-width:0!important}.studioControls{gap:18px!important}
+.studioSearchWrap{height:43px!important;max-width:min(640px,55vw)!important;border:1px solid #ffffff15!important;background:#151d29!important;border-radius:12px!important;transition:border-color .16s,background .16s!important}
+.studioSearchWrap:focus-within{border-color:#7899bd!important;background:#192434!important}
+.studioSearchWrap svg{opacity:.75}.studioSearchWrap input{font-size:13px!important;letter-spacing:.01em}
+.studioActions{gap:7px!important}.studioActions button{min-height:36px!important;height:36px;padding:0 12px!important;border-radius:9px!important;background:#101824!important;border:1px solid #ffffff15!important;font-size:12px!important;color:#aebacc!important;font-weight:500!important}
+.studioActions button:hover:not(:disabled){background:#1b293a!important;border-color:#6583a355!important;color:#f0f5fb!important}
+.studioActions button.active{background:#26394f!important;border-color:#8aaac36e!important;color:#f7faff!important}
+.studioSort{display:flex;gap:6px}
+.studioStatus{display:none!important}
+/* Media type switches are a quiet icon rail, rather than a second banner. */
+.studioTop .mediaTabs{left:16px!important;top:114px!important;bottom:auto!important;gap:6px!important;width:54px!important;padding:6px!important;background:#0e141ebf!important;border:1px solid #ffffff13!important;border-radius:17px!important;box-shadow:0 20px 50px #0005!important;backdrop-filter:blur(20px)}
+.studioTop .mediaTabs button{width:40px!important;min-width:40px!important;height:45px!important;min-height:45px!important;border-radius:11px!important;background:transparent!important;color:#8d9cae!important}
+.studioTop .mediaTabs button.on{background:#27384d!important;color:#f1f6fd!important;box-shadow:inset 0 0 0 1px #9cbbe343!important}
+.studioTop .mediaTabs button:hover{color:#f1f6ff!important;background:#182638!important}
+.studioTopRight{left:22px!important;top:278px!important}
+.studioTopRight #clipShelfTop{width:42px!important;height:42px!important;background:transparent!important;border:0!important;color:#8d9eaf!important}
+.studioTopRight #clipShelfTop:hover{background:#1a293d!important;color:#e5efff!important}
+/* Entrance: the imagery is the hero. Less prose, quiet hierarchy, generous rhythm. */
+.studioEntrance{padding:29px 35px 0!important}
+.studioRoomIntro{padding:0 0 24px!important;align-items:end}
+.studioRoomIntro h2{font-size:clamp(27px,2.5vw,42px)!important;letter-spacing:-.065em!important;font-weight:440!important;margin:7px 0!important;line-height:1.2!important}
+.studioRoomIntro p{font-size:11px!important;letter-spacing:.04em!important;color:#6e7e94!important}
+.studioRoomCount{font-size:11px!important;color:#8092a7!important}
+.studioRoomSection{margin-bottom:25px!important}.studioRoomSectionHead{margin:0 0 14px!important}.studioRoomSectionHead h3{font-size:14px!important;font-weight:580!important;letter-spacing:.015em!important}
+.studioRoomSectionHead>span{font-size:11px!important;opacity:.65}
+.studioRoomRow{gap:13px!important;padding:2px 2px 12px!important;scrollbar-color:#2c3b52 transparent}
+.studioRoomTile{flex-basis:clamp(140px,12.5vw,210px)!important;aspect-ratio:9/13.25!important;border-radius:12px!important;border-color:#ffffff16!important;background:#141b26!important;box-shadow:0 10px 26px #0003}
+.studioRoomTile:hover{transform:translateY(-4px)!important;box-shadow:0 18px 40px #0008!important;border-color:#c0d6ed83!important}
+.studioRoomTile:focus-visible{outline-offset:3px}.studioRoomShade{inset:34% 0 0!important;background:linear-gradient(0deg,#05080ded,transparent 94%)!important}
+.studioRoomCaption{padding:28px 12px 12px!important}.studioRoomCaption strong{font-size:12px!important;font-weight:510!important}.studioRoomCaption small{color:#acbacb!important}
+.studioRoomPlay{background:#0c111c99!important;backdrop-filter:blur(10px)}
+.studioLibraryHeading{margin:16px 0 5px!important;border-top:1px solid var(--v5-hairline);padding:20px 0 0}
+#assetFolders{margin:0 35px!important;padding:11px 0 15px!important;gap:7px!important;border-color:var(--v5-hairline)!important}
+#assetFolders button{border:1px solid transparent!important;background:transparent!important;color:#8d9bad!important;font-size:12px!important;border-radius:9px!important;padding:8px 11px!important;min-height:34px!important}
+#assetFolders button.on{border-color:#627c9a55!important;background:#1e2b3a!important;color:#dbe9fa!important}
+#assetFolders button:hover{color:#edf3fd!important;background:#192535!important}
+#assetFolders .unifiedFolderNew{margin-left:auto;border-color:#ffffff19!important;background:#111a26!important}
+#folderTiles.assetFolderTiles{padding:0 35px!important;margin:17px 0 0!important;gap:11px!important}
+#folderTiles .unifiedFolderTile{min-width:178px;max-width:250px;position:relative;border-radius:11px;overflow:hidden}
+#folderTiles .unifiedFolderTile>.folderEntry{min-width:178px!important;min-height:59px!important;padding:12px 40px 12px 14px!important;background:#111a27!important;border:1px solid #ffffff16!important;border-radius:11px!important;color:#d3dce8!important;font-weight:450!important;font-size:12px!important}
+#folderTiles .unifiedFolderTile>.folderEntry:hover{background:#1b2a3b!important;border-color:#718faa6c!important}
+#folderTiles .unifiedFolderMore{border-radius:8px!important;background:#182536aa!important;border:0!important;color:#93a4b6!important}
+#folderContext{margin:12px 0 0!important;padding:0 35px!important;color:#708197!important;font-size:11px!important}
+.grid{grid-template-columns:repeat(auto-fill,minmax(164px,1fr))!important;gap:14px!important;padding:22px 35px 90px!important}
+.card{border:1px solid #ffffff15!important;border-radius:12px!important;background:#0f1620!important;box-shadow:0 12px 30px #0003!important}
+.card:hover{transform:translateY(-3px)!important;border-color:#9cbce573!important;box-shadow:0 15px 36px #0009!important}
+.coverWrap{aspect-ratio:9/13.4!important;background:#070a10!important}.card .body{padding:9px 11px 11px!important}
+.card .titleText{font-weight:480!important;font-size:12px!important;color:#dfe8f4!important}.card .creatorText{color:#91a4bb!important}
+.card .actions{margin-top:2px!important}.card .stars{opacity:.82}
+.grid.pictureWall{padding:20px 35px 90px!important;column-gap:13px!important}
+.pictureTile{background:#0d151e!important;border-color:#ffffff19!important;border-radius:12px!important;margin-bottom:13px!important;transition:transform .2s var(--v5-ease),border-color .2s}
+.pictureTile:hover{transform:translateY(-2px);border-color:#a8c3dc8c!important}.pictureTile .photoTileName{color:#acbacb;font-size:11px}
+.audioFileGrid{padding:20px 35px 90px!important;gap:10px!important}
+.audioFileTile{background:#111923!important;border:1px solid #ffffff17!important;border-radius:11px!important;min-height:95px!important;transition:background .18s,border-color .18s}
+.audioFileTile:hover{background:#1a293a!important;border-color:#92afca85!important}.audioFileTile.isActive{border-color:#a1bdde91!important;background:#1a2b3f!important}
+.audioFileName{font-weight:520!important}.audioFileMeta{color:#7f90a8!important}
