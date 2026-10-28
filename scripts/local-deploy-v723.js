@@ -60,10 +60,20 @@ function vendorOk() {
     return pkg.version===requiredPdfJs && ['build/pdf.min.mjs','build/pdf.worker.min.mjs','cmaps','standard_fonts'].every(x=>fs.existsSync(path.join(base,x))) && hash(path.join(base,'build/pdf.min.mjs'))===requiredPdfModuleSha;
   } catch {return false;}
 }
+function npmInstallCommand(platform=process.platform,comspec=process.env.ComSpec) {
+  const args=['install','--no-save','--package-lock=false','--ignore-scripts','--omit=optional','--no-audit','--no-fund','pdfjs-dist@6.4.299'];
+  if(platform==='win32') {
+    // Node spawnSync cannot execute .cmd/.bat directly on Windows (EINVAL).
+    // The command is deliberately fixed: never interpolate media paths or user input.
+    return {program:comspec||'cmd.exe',args:['/d','/s','/c','npm.cmd '+args.join(' ')]};
+  }
+  return {program:'npm',args};
+}
 function ensureVendor() {
   if(vendorOk())return;
   console.log('首次准备锁定版本 PDF.js 6.4.299（需要 npm 网络或本机缓存）…');
-  run(process.platform==='win32'?'npm.cmd':'npm',['install','--no-save','--package-lock=false','--ignore-scripts','--omit=optional','--no-audit','--no-fund','pdfjs-dist@6.4.299'],{timeout:240000,stdio:'inherit'});
+  const command=npmInstallCommand();
+  run(command.program,command.args,{timeout:240000,stdio:'inherit'});
   if(!vendorOk())throw Error('PDF.js 依赖未安装完整，保留原运行版本。');
 }
 function validateCandidate(stage,commit) {
@@ -154,4 +164,4 @@ function main() {
   } else throw Error('用法：node scripts/local-deploy-v723.js <start|update|prepare|rollback|status>');
 }
 if(require.main===module){try{main();}catch(e){console.error('[Just Fun]',e.message);process.exitCode=1;}}
-module.exports={current,update,rollback,validateCandidate,hash};
+module.exports={current,update,rollback,validateCandidate,hash,npmInstallCommand};

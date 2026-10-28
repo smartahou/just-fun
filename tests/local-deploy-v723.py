@@ -37,11 +37,16 @@ def main():
     r=run(['node','scripts/local-deploy-v723.js','start','--doctor'],local)
     check('Verified installed application starts', '"readOnly": true' in r.stdout or '"readOnly":true' in r.stdout)
     sentinel=td/'private-library-sentinel';sentinel.write_bytes(b'PRIVATE-FIXTURE-DO-NOT-TOUCH')
-    (author/'package.json').write_text((author/'package.json').read_text().replace('"7.23.0"','"7.23.1"'))
+    manifest=author/'package.json'
+    before_version=json.loads(manifest.read_text())['version']
+    version_parts=before_version.split('.')
+    assert len(version_parts)==3 and all(part.isdigit() for part in version_parts)
+    upgraded_version='.'.join([*version_parts[:2],str(int(version_parts[2])+1)])
+    manifest.write_text(manifest.read_text().replace('"version": "'+before_version+'"','"version": "'+upgraded_version+'"'))
     git(author,'add','package.json');git(author,'commit','-m','test: version update');git(author,'push','origin','main')
     run(['node','scripts/local-deploy-v723.js','update'],local)
     next_state=json.loads((local/'.justfun-runtime'/'current.json').read_text())
-    check('Remote fast-forward builds and publishes',next_state['version']=='7.23.1' and next_state['commit']==git(local,'rev-parse','HEAD').stdout.strip())
+    check('Remote fast-forward builds and publishes',next_state['version']==upgraded_version and next_state['commit']==git(local,'rev-parse','HEAD').stdout.strip())
     check('Previous known-good is retained',sha(local/'.justfun-runtime'/'previous.js')==state['sha256'])
     run(['node','scripts/local-deploy-v723.js','rollback'],local)
     rolled=json.loads((local/'.justfun-runtime'/'current.json').read_text())
