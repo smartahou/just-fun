@@ -43,7 +43,7 @@ SMOKE=['notes-group-image-consistency-v702','pdf-mark-merge-v701',
        'reading-recovery-v715','reading-v2-sandbox-txn-v716',
        'scan-lifecycle-v717','books-poll-coalesce-v717','lifecycle-stress-v717',
        'video-home-stress-v718','video-feed-stress-v719','feed-warm-window-v720',
-       'feed-session-isolation-v721','media-tab-memory-v722','local-deploy-v723','windows-npm-bootstrap-v7231']
+       'feed-session-isolation-v721','media-tab-memory-v722','local-deploy-v723','windows-npm-bootstrap-v7231','windows-crlf-build-v7232']
 EVIDENCE=ROOT/'dist'/'release-gate-v703'
 ARTIFACT=ROOT/'dist'/'douyin.js'
 

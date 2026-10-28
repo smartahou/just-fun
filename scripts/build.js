@@ -9,7 +9,10 @@ const child = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'build.manifest.json'), 'utf8'));
-const read = p => fs.readFileSync(path.join(root, p), 'utf8');
+// Normalize Git's optional Windows CRLF checkout on textual source inputs only.
+// This preserves the byte-identical LF release artifact across operating systems.
+// Never normalize binary assets or the third-party PDF.js distribution.
+const read = p => fs.readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '\n');
 const hash = t => crypto.createHash('sha256').update(t).digest('hex');
 const replaceOnce = (text, needle, replacement) => {
   if (text.split(needle).length !== 2) throw Error('Missing/duplicate build marker: '+needle);

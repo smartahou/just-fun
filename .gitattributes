@@ -1,0 +1,10 @@
+# Reproducible Git checkouts for all application/build/test sources.
+# Build also normalizes legacy Windows worktrees that were already checked out with CRLF.
+*.js text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.cmd text eol=crlf
+*.ico binary
