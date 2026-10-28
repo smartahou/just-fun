@@ -1,4 +1,35 @@
 
+let jfBatchAudioRunning=false;
+async function jfBatchExtractAudio(keys){
+  if(jfBatchAudioRunning||libraryMode!=='video')return;
+  const items=[...new Set(keys)].map(key=>allItems.find(x=>x.key===key))
+    .filter(item=>item&&item.kind==='video');
+  if(!items.length)return;
+  if(items.length>150){unifiedToast('一次最多提取 150 个视频，请分批选择');return;}
+  if(!confirm('从选中的 '+items.length+' 个视频中提取完整音轨？\n\n优先原样复制音频流；不支持直接封装的编码改存 FLAC（无额外有损压缩）。\n输出在「音频 → 提取的音轨」，原视频不会改变。'))return;
+  jfBatchAudioRunning=true;syncUnifiedControls();
+  let success=0,copied=0,flac=0;const failures=[];
+  try{
+    for(let i=0;i<items.length;i++){
+      const item=items[i];
+      const btn=document.querySelector('#unifiedExtractAudio');
+      if(btn)btn.textContent='提取 '+(i+1)+'/'+items.length;
+      try{
+        const result=await jfTrackedMediaPost('/api/extract-audio',{key:item.key},
+          '提取音轨 '+(i+1)+'/'+items.length);
+        success++;if(result.method==='copy')copied++;else if(result.method==='flac')flac++;
+        // Failed items stay selected for retry; original video is never changed.
+        mediaSelectedKeys.delete(item.key);
+      }catch(e){failures.push((item.title||item.originalName||'视频')+'：'+(e.message||e));}
+    }
+    lastStamp='';await load();
+    const summary='完成 '+success+'/'+items.length+'；原音轨 '+copied+'，FLAC '+flac+
+      (failures.length?'，失败 '+failures.length:'');
+    unifiedToast(summary);
+    if(failures.length)alert(summary+'\n\n'+failures.slice(0,8).join('\n')+
+      (failures.length>8?'\n其余 '+(failures.length-8)+' 项失败':'')+'\n\n失败项仍保留选中，可重试。');
+  }finally{jfBatchAudioRunning=false;syncUnifiedControls();syncUnifiedTiles();}
+}
 function syncUnifiedTiles() {
   document.querySelectorAll('#grid [data-media-key]').forEach(el=>{
     const key=el.dataset.mediaKey;
@@ -372,6 +403,7 @@ document.querySelector('#unifiedExport').onclick=()=>{
 };
 document.querySelector('#unifiedDelete').onclick=()=>deleteUnifiedMedia([...mediaSelectedKeys]);
 document.querySelector('#unifiedMove').onclick=()=>openUnifiedMove([...mediaSelectedKeys]);
+document.querySelector('#unifiedExtractAudio').onclick=()=>jfBatchExtractAudio([...mediaSelectedKeys]);
 document.querySelector('#unifiedRenameCancel').onclick=hideUnifiedRename;
 document.querySelector('#unifiedRenameBack').addEventListener('click',event=>{
   if(event.target.id==='unifiedRenameBack')hideUnifiedRename();

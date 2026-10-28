@@ -423,7 +423,7 @@ function startServer() {
           if (url.pathname === '/api/extract-audio' && req.method === 'POST') {
             const body = await parseBody(req);
             beginMediaProgress(body.jobId,'提取音轨');
-            try {const item=await extractAudio(body.key,body.jobId);finishMediaProgress(body.jobId);sendJson(res,{ok:true,key:item.key});}
+            try {const result=await extractAudio(body.key,body.jobId);finishMediaProgress(body.jobId);sendJson(res,{ok:true,key:result.item.key,method:result.method,codec:result.codec,outputCodec:result.outputCodec});}
             catch(error) {finishMediaProgress(body.jobId,error);sendJson(res,{ok:false,error:error.message},400);}
             return;
           }

@@ -390,9 +390,10 @@ async function performVideoAction(action) {
   button.setAttribute('aria-busy','true');
   if (label) label.textContent = '处理中';
   try {
-    await jfTrackedMediaPost('/api/extract-audio', {key:item.key}, '提取音轨');
+    const result=await jfTrackedMediaPost('/api/extract-audio', {key:item.key}, '提取音轨');
     await load();
-    alert('音轨已保存到音频 → 提取的音轨（包含原视频中的所有声音）。');
+    alert(result.method==='copy'?'音轨已原样提取到「音频 → 提取的音轨」（无重新编码）。':
+      '音轨已以 FLAC 无损保存到「音频 → 提取的音轨」（源编码不适合直接封装）。');
   } catch (error) {
     alert(error.message);
   } finally {

@@ -28,21 +28,56 @@ async function createAudioClip(key,start,end,progressId=null) {
   }
 }
 
-async function extractAudio(key,progressId=null) {
-  const item = requiredVideo(key);
-  if (mediaJobs.has('audio:' + key)) throw new Error('正在提取音轨');
-  mediaJobs.add('audio:' + key);
-  const tmp = path.join(CACHE_DIR, '.audio-'+crypto.randomBytes(12).toString('hex')+'.m4a');
-  try {
-    await runCommand('ffmpeg', [
-      '-hide_banner','-loglevel','error','-nostdin','-y',
-      '-i',managedPath(item),'-map','0:a:0','-vn','-c:a','aac','-b:a','192k',tmp
-    ], {stdio:['ignore','ignore','pipe'],progressId,progressDuration:Number(item.duration)||0});
-    return addGeneratedMedia(tmp,'.m4a','data/'+AUDIO_SUBDIR,
-      (item.title||'视频')+' - 音轨.m4a',item,{audioSourceKey:key});
-  } finally {
-    mediaJobs.delete('audio:' + key);
-    try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); } catch {}
+// Prefer unchanged audio packets; avoid the previous unconditional 192 kbps AAC re-encode.
+// Unsupported containers use FLAC (lossless encoding of the decoded signal).
+const JF_AUDIO_COPY_FORMATS=Object.freeze({
+  aac:'.m4a',mp3:'.mp3',flac:'.flac',opus:'.opus',
+  vorbis:'.ogg',alac:'.m4a',
+  pcm_s16le:'.wav',pcm_s24le:'.wav',pcm_s32le:'.wav',
+  pcm_f32le:'.wav',pcm_f64le:'.wav',pcm_u8:'.wav'
+});
+async function jfProbeFirstAudioCodec(file){
+  if(!HAS_FFPROBE)throw new Error('原音轨无损提取需要 FFprobe');
+  return new Promise((resolve,reject)=>{
+    require('child_process').execFile('ffprobe',[
+      '-v','error','-select_streams','a:0','-show_entries','stream=codec_name',
+      '-of','default=noprint_wrappers=1:nokey=1',file
+    ],{windowsHide:true,timeout:15000,maxBuffer:8192},(error,stdout)=>{
+      if(error)return reject(new Error('音轨格式检测失败：'+(error.code||error.message)));
+      const codec=String(stdout||'').trim().toLowerCase();
+      if(!/^[a-z0-9_]{2,40}$/.test(codec))return reject(new Error('视频没有可提取的音频流'));
+      resolve(codec);
+    });
+  });
+}
+async function extractAudio(key,progressId=null){
+  const item=requiredVideo(key);
+  if(mediaJobs.has('audio:'+key))throw new Error('正在提取音轨');
+  mediaJobs.add('audio:'+key);
+  let tmp=null;
+  try{
+    const source=managedPath(item),codec=await jfProbeFirstAudioCodec(source);
+    // Fallback FLAC preserves decoded audio without adding a lossy generation.
+    // It cannot restore information removed by an earlier lossy codec.
+    const ext=JF_AUDIO_COPY_FORMATS[codec]||'.flac';
+    const method=JF_AUDIO_COPY_FORMATS[codec]?'copy':'flac';
+    tmp=path.join(CACHE_DIR,'.audio-'+crypto.randomBytes(12).toString('hex')+ext);
+    const args=['-hide_banner','-loglevel','error','-nostdin','-y',
+      '-i',source,'-map','0:a:0','-vn','-sn','-dn',
+      '-c:a',method==='copy'?'copy':'flac'];
+    if(method==='flac')args.push('-compression_level','5');
+    args.push(tmp);
+    await runCommand('ffmpeg',args,{stdio:['ignore','ignore','pipe'],progressId,
+      progressDuration:Number(item.duration)||0});
+    const outputCodec=await jfProbeFirstAudioCodec(tmp);
+    if(outputCodec!==(method==='copy'?codec:'flac'))throw new Error('音轨编码核验失败，未保存输出');
+    const result=addGeneratedMedia(tmp,ext,'data/'+AUDIO_SUBDIR,
+      (item.title||'视频')+' - 音轨'+ext,item,
+      {audioSourceKey:key,audioExtractionMethod:method,audioSourceCodec:codec});
+    return {item:result,method,codec,outputCodec};
+  }finally{
+    mediaJobs.delete('audio:'+key);
+    if(tmp)try{if(fs.existsSync(tmp))fs.unlinkSync(tmp);}catch{}
   }
 }
 

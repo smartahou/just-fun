@@ -1114,6 +1114,9 @@ function syncUnifiedControls() {
   document.querySelector('#unifiedDelete').disabled=count===0;
   document.querySelector('#unifiedFavorite').disabled=count===0;
   document.querySelector('#unifiedMove').disabled=count===0;
+  const extract=document.querySelector('#unifiedExtractAudio');
+  if(extract){extract.hidden=libraryMode!=='video';extract.disabled=libraryMode!=='video'||!count||jfBatchAudioRunning;
+    extract.textContent=jfBatchAudioRunning?'正在提取音轨…':'提取音轨';}
   const items=[...mediaSelectedKeys].map(k=>allItems.find(x=>x.key===k)).filter(Boolean);
   document.querySelector('#unifiedFavorite').textContent=items.length&&items.every(x=>x.favorite)?'★ 取消收藏':'☆ 收藏';
   document.querySelector('#unifiedSelectAll').textContent='全选当前列表';
