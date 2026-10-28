@@ -49,16 +49,68 @@ function changeMediaCategory(kind) {
   if (!Object.hasOwn(MEDIA_FOLDER_DEFAULTS, kind)) return;
   const switching = kind !== libraryMode;
   libraryMode = kind;
-  // 点击「视频」始终快速返回原媒体目录；图片和音频保持上次浏览目录。
-  const destination = kind === 'video'
-    ? 'root'
-    : (mediaFolderPositions[kind] || MEDIA_FOLDER_DEFAULTS[kind]);
-  if (switching || kind === 'video') {
+  // 切回任意媒体页都继续上次使用的目录；首次进入仍使用默认值。
+  const destination = mediaFolderPositions[kind] || MEDIA_FOLDER_DEFAULTS[kind];
+  if (switching) {
     if (!rememberMediaFolder(destination)) rememberMediaFolder(MEDIA_FOLDER_DEFAULTS[kind]);
   } else {
     ensureMediaFolderExists();
   }
 }
+// Each media tab has its own *session-only* browsing context. Do not persist
+// search terms, selections or scroll positions to disk / localStorage.
+const jfMediaTabSessions = Object.create(null);
+let jfMediaTabRestoreToken = 0;
+function jfSaveMediaTabSession(kind=libraryMode) {
+  if (!Object.hasOwn(MEDIA_FOLDER_DEFAULTS,kind)) return;
+  jfMediaTabSessions[kind] = {
+    scrollY: Math.max(0,window.scrollY),
+    search: document.getElementById('search').value,
+    folder: activeFolder,
+    favoriteOnly: unifiedFavoriteOnly,
+    sortMode, sortDirection, fileSortAscending,
+    selectedCreator, creatorOpen,
+    selecting: mediaSelectMode,
+    selectedKeys: [...mediaSelectedKeys],
+    lastSelectedKey: unifiedLastSelectedKey
+  };
+}
+function jfLoadMediaTabSession(kind) {
+  const state=jfMediaTabSessions[kind];
+  document.getElementById('search').value=state?.search || '';
+  unifiedFavoriteOnly=state?.favoriteOnly || false;
+  sortMode=state?.sortMode || 'rating';
+  sortDirection=state?.sortDirection || 'desc';
+  fileSortAscending=state?.fileSortAscending ?? true;
+  selectedCreator=state?.selectedCreator || '';
+  creatorOpen=state?.creatorOpen || false;
+  document.getElementById('creatorPanel').classList.toggle('collapsed',!creatorOpen);
+  mediaSelectMode=state?.selecting || false;
+  photoSelectMode=mediaSelectMode && kind==='image';
+  mediaSelectedKeys.clear();
+  const available=new Set(allItems.filter(item=>item.kind===kind).map(item=>item.key));
+  for(const key of state?.selectedKeys || [])if(available.has(key))mediaSelectedKeys.add(key);
+  unifiedLastSelectedKey=available.has(state?.lastSelectedKey)?state.lastSelectedKey:null;
+  // Folder selection must be validated against the currently indexed library.
+  if(state?.folder)rememberMediaFolder(state.folder);
+  ensureMediaFolderExists();
+  updateSortButtons();
+  if(kind==='video')renderCreatorTags();
+}
+function jfRestoreMediaTabScroll(kind) {
+  const token=++jfMediaTabRestoreToken;
+  const target=Math.max(0,jfMediaTabSessions[kind]?.scrollY || 0);
+  const apply=()=>{
+    if(token!==jfMediaTabRestoreToken || libraryMode!==kind || document.body.classList.contains('jfBooksMode'))return;
+    window.scrollTo(0,target);
+    if(kind==='video' && jfCoverVirtualState)jfPaintVideoWindow(true);
+  };
+  apply();
+  // A second pass follows CSS layout / virtual cover mounting; stale restores
+  // are cancelled by the token when users switch tabs again immediately.
+  requestAnimationFrame(apply);
+}
+
 let fileSortAscending = true;
 const filenameCollator = new Intl.Collator('zh-CN', {numeric:true, sensitivity:'base'});
 let imageViewerList = [];

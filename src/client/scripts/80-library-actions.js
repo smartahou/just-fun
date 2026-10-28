@@ -451,13 +451,21 @@ document.querySelectorAll('[data-media-kind]').forEach(button=>{
     if(button.dataset.mediaKind==='books'||button.dataset.mediaKind==='notes'){
       if(!jfReader.hidden && !await jfDeskCloseReader())return;
       if(document.body.classList.contains('jfNotesMode') && button.dataset.mediaKind==='books' && !await jfDeskCloseNotes())return;
-      jfOpenBooks(button.dataset.mediaKind);return;}
-    if(document.body.classList.contains('jfBooksMode') && !await jfCloseBooks())return;
+      if(!document.body.classList.contains('jfBooksMode'))jfSaveMediaTabSession();
+      jfOpenBooks(button.dataset.mediaKind);
+      ++jfMediaTabRestoreToken; // do not restore a hidden media tab after an async exit
+      window.scrollTo(0,0);
+      return;}
+    const leavingBooks=document.body.classList.contains('jfBooksMode');
+    if(leavingBooks && !await jfCloseBooks())return;
+    const switching=leavingBooks || button.dataset.mediaKind!==libraryMode;
+    if(!leavingBooks && switching)jfSaveMediaTabSession();
     changeMediaCategory(button.dataset.mediaKind);
+    if(switching)jfLoadMediaTabSession(libraryMode);
     syncAudioDockMode();
-    mediaSelectMode=false;photoSelectMode=false;photoSelectedKeys.clear();hideUnifiedContext();
-    document.querySelector('#search').value='';
+    hideUnifiedContext();
     render();
+    if(switching)jfRestoreMediaTabScroll(libraryMode);
     document.querySelector('#status').textContent=allItems.filter(x=>x.kind===libraryMode).length+' 个'+
       ({video:'视频',image:'图片',audio:'音频'}[libraryMode]||'媒体')+' · 媒体管理';
   });
