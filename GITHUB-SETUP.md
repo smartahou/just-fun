@@ -1,28 +1,28 @@
-# Just Fun v7.23 · GitHub 维护与本地部署
+# Just Fun · GitHub 工作流 / GitHub Workflow
 
-主代码库 `smartahou/just-fun`（Private，`main`）。本仓库跟踪可维护的源代码、构建器和回归测试；不包含第三方 `node_modules`、生成产物 `dist`、`.justfun-runtime`、用户媒体、Workspace、密码和密钥。**源码开发在 GitHub，用户使用本地已验证运行版。**
+当前工程版本 **v7.24**。GitHub main 是唯一正式源码基线，ChatGPT 聊天历史和旧离线 ZIP 仅用于上下文、审计和恢复，不能覆盖更新的远程源码。
 
-## Windows 用户首次部署
+## 本地部署
 
-- 安装 Git for Windows、Node.js 22.13+、FFmpeg/FFprobe（已安装无需重复）。
-- 登录私有仓库后 `git clone https://github.com/smartahou/just-fun.git`；仓库必须完整克隆至固定文件夹。
-- 双击 `更新.cmd`，第一次拉取 GitHub 并从锁定的 `pdfjs-dist@6.4.299` 构建。完成后双击 `启动.cmd` 使用。
-- 后续更新仅需双击 `更新.cmd`；需要切回上次已验证运行版可双击 `回退.cmd`。
+1. 安装 Git for Windows、Node.js 22.13+（22.x）或 24+、FFmpeg/FFprobe。
+2. 克隆仓库，首次双击 **更新.cmd**：获取 main、准备锁定 PDF.js 6.4.299、隔离构建并检查 SHA/语法/只读诊断。
+3. 双击 **启动.cmd** 使用；后续版本更新之前先关闭程序，再双击 更新.cmd。
+4. 双击 **回退.cmd** 可切回上一个已验证的运行版，不回滚媒体与笔记数据。
 
-参见 [`本地部署使用说明.md`](./本地部署使用说明.md)。
+本地部署详见 [使用说明](本地部署使用说明.md)。模块化源码通过 scripts/build.js 按 build.manifest.json 的顺序生成 dist/douyin.js；不要提交 dist/、node_modules/、凭据、媒体或私人配置。构建器对 Windows CRLF/LF 行尾具有兼容性。
 
-## 发布流程（维护者）
+## 工程协作
 
-1. 每轮开始重新读取 `main` HEAD，禁止强推覆盖。
-2. 只改模块化源码，运行新增专项及 `python tests/release-gate-v703.py --full --timeout 120` 与 `--verify`。
-3. 清洁克隆或干净工作树用固定版本 PDF.js 离线构建，核对 Git Tree/JS SHA，保持业务协议稳定。
-4. Git commit 并条件性更新远程 HEAD，重新核对 `main` 指向；再按需提供发行归档备份。
-5. 实测 Windows 安装更新前，不声称 CMD、NTFS 文件锁与 Git 凭据交互已在实机通过。
+读取远程 HEAD → 增量修改 → 隔离专项/全量回归 → 清洁重建、SHA、--doctor → Git Commit → 核实 HEAD 后非强制 Push → 再次核实远程 HEAD → Windows 真实验收。并行修改通过独立分支/PR 解决，不用强推丢弃别人的工作。
 
-## 本地部署安全边界
+ChatGPT 协助代码实现、验证、审计与提交；人类项目拥有者决定需求、体验取舍、真实验收和公开授权。GitHub 连接器与代码运行容器的网络能力不同；本地 Commit 不等于远程 Push。
 
-`更新.cmd` 由 `scripts/local-deploy-v723.js` 执行：Git fetch -> 快进检查 -> 临时 Git worktree 候选构建 -> SHA/语法/只读 doctor 校验 -> 本地 main 快进 -> `.justfun-runtime/current.js` 安装。安装前验证旧版并保存可回退版本；失败时保留可运行旧版。源码有未提交更改就拒绝覆盖。原有媒体目录提示、密码库、Hash 和 Workspace 数据原样保留。用户可根据需要关闭程序后再更新。
+详情：[真实开发模式](docs/DEVELOPMENT.md) · [安全与隐私](SECURITY.md) · [公开准备](OPEN_SOURCE_CHECKLIST.md)。
 
-PDF.js 仅为构建时锁定版本依赖。正常启动不需要 `node_modules`、联网或 GitHub 登录，运行入口不读取媒体目录之外的数据。
+---
 
-**Workspace v2 生产迁移依然未开放。** 不因升级发行方式自动迁移真实数据。
+## English
+
+The canonical development baseline is GitHub main (v7.24). On Windows, clone the repository, run 更新.cmd to fetch/build/verify, then 启动.cmd to start. 回退.cmd restores a previous verified runtime, not user data. The source is modular; the build artifact is generated and ignored by Git. Never commit local media, notes, credentials or node_modules/.
+
+Human product decisions and real Windows acceptance are complemented by ChatGPT-assisted implementation, isolated regressions, and verified GitHub commits. Always read the latest remote HEAD, avoid force pushes, and document actual test coverage. A public license and privacy-safe publication history are still pending.
