@@ -19,3 +19,10 @@ dist/
 **/private-media/
 .DS_Store
 Thumbs.db
+
+# Local binary deployment; never commit the installed executable or metadata.
+.justfun-runtime/
+package-lock.json
+
+__pycache__/
+*.pyc
