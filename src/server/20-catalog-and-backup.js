@@ -150,7 +150,6 @@ let catalog = {
   scanMessage: '',
   creatorLinks: {},
   clips: [], // A/B 片段只存时间区间，不复制源视频
-  aiUsageNotice: AI_USAGE_NOTICE,
   items: []
 };
 
@@ -252,7 +251,7 @@ try {
   }
   if (!Array.isArray(catalog.folders)) catalog.folders = [];
   if (!Array.isArray(catalog.clips)) catalog.clips = [];
-  catalog.aiUsageNotice = AI_USAGE_NOTICE;
+  delete catalog.aiUsageNotice;
 } catch (error) {
   catalogLoadError =
     error instanceof Error
@@ -317,7 +316,7 @@ function migrateLegacyItemKinds() {
 }
 
 function saveCatalog() {
-  catalog.aiUsageNotice = AI_USAGE_NOTICE;
+  delete catalog.aiUsageNotice;
   if (catalogLoadError) {
     throw new Error(
       '缓存未安全加载，拒绝写入 data.json'

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """License and private media boundary contract: offline, read-only."""
 from pathlib import Path
+import hashlib
 ROOT=Path(__file__).resolve().parents[1]
 
 def check(name,condition):
@@ -15,8 +16,8 @@ checks=[
  ('MIT requires copyright notice redistribution','The above copyright notice and this permission notice shall be included' in license),
  ('Boot source directs to license','See LICENSE' in bootstrap and 'Open-source code licensing does not license individual users' in bootstrap),
  ('No source-level AI analysis prohibition in active bootstrap','未经权利人事先明确许可' not in bootstrap),
- ('Runtime notice explicitly separates source and private media','项目源码的许可以仓库 LICENSE 为准' in security and '源码开源不代表用户私人媒体' in security),
- ('Runtime still writes compatibility notice file','AI_USAGE_NOTICE_FILE' in security and 'function ensureAiUsageNotice()' in security),
+ ('Legacy notice no longer auto-generated','const AI_USAGE_NOTICE =' not in security and 'function ensureAiUsageNotice()' not in security),
+ ('Safe legacy-notice retirement helper exists','function retireLegacyGeneratedNotice()' in security and 'LEGACY_GENERATED_NOTICE_DIGESTS' in security),
  ('Original local-first security flags preserved','const ERASE_AFTER_THREE=HASH_ENABLED && PWD_ENABLED;' in security),
  ('Logo asset remains present for compatibility',(ROOT/'assets/favicon.ico').stat().st_size>1000),
 ]

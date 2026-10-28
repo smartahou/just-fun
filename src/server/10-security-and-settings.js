@@ -28,26 +28,23 @@ const DATA_FILE = path.join(
   'data.json'
 );
 
-const AI_USAGE_NOTICE = [
-  '用户私人数据使用说明 / Private user data notice',
-  'Just Fun 项目源码的许可以仓库 LICENSE 为准。源码开源不代表用户私人媒体、书籍、笔记、缓存索引、元数据、密码或 API Key 获得公开授权。',
-  '未经数据权利人同意，请勿收集、传播或向 AI 等外部服务发送他人的私人资料。',
-  '用户自行决定是否将自己的内容用于 AI 分析；本说明并非加密或访问控制。'
-].join('\n');
-
-const AI_USAGE_NOTICE_FILE = path.join(
-  CACHE_DIR,
-  'AI_USAGE_NOTICE.txt'
-);
-
-function ensureAiUsageNotice() {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  const text = AI_USAGE_NOTICE + '\n';
-  if (!fs.existsSync(AI_USAGE_NOTICE_FILE) ||
-      fs.readFileSync(AI_USAGE_NOTICE_FILE, 'utf8') !== text) {
-    fs.writeFileSync(AI_USAGE_NOTICE_FILE, text, {
-      encoding: 'utf8', mode: 0o600
-    });
+// v7.24.2: retire only exact application-generated historical notice files.
+// Users may have edited or replaced this path; never remove unknown content or symlinks.
+const LEGACY_GENERATED_NOTICE_DIGESTS = new Set([
+  '3fb8f66118c8744e5fa1fea0387ceb3dfbd4a27f62ea43f4496a4a415e3d04ad',
+  '621554ad8513d4d3f7dde27cd1364ef2cddefce8f6a51e397806d0cd3184887d'
+]);
+function retireLegacyGeneratedNotice() {
+  const file = path.join(CACHE_DIR, 'AI_USAGE_NOTICE.txt');
+  try {
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > 1024) return;
+    const bytes = fs.readFileSync(file);
+    if (LEGACY_GENERATED_NOTICE_DIGESTS.has(crypto.createHash('sha256').update(bytes).digest('hex')))
+      fs.unlinkSync(file);
+  } catch (error) {
+    // An unrelated or protected user file must not stop library startup.
+    if (error.code !== 'ENOENT') console.warn('历史说明文件未自动移除（不会影响私人媒体数据）');
   }
 }
 

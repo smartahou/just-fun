@@ -350,7 +350,7 @@ async function main() {
 
   console.log('Just Fun：正在准备缓存与索引（不会清理原始媒体）…');
   ensureDirs();
-  ensureAiUsageNotice();
+  retireLegacyGeneratedNotice();
 
   try {
     ensureCatalogLibraryId();
