@@ -75,6 +75,17 @@ python tests/release-gate-v703.py --verify
 
 详见 [开发协作实录 / Development Workflow](docs/DEVELOPMENT.md)。
 
+## AI 模型与推理强度 / AI model disclosure
+
+| 项目 | 已确认的信息 |
+| --- | --- |
+| **本次文档协作者（2026-10-28）** | **OpenAI ChatGPT · GPT-6（推理型模型）** |
+| **当前推理强度（High / Extra High 等）** | **未获得可核验的精确档位记录**，不擅自标为「最高」或「超高」 |
+| **Just Fun 历史迭代** | 多轮、跨会话的 ChatGPT 协作；既有 Git 提交与发行记录**没有逐版本记录模型及推理强度**，不得推断整个工程始终使用 GPT-6 |
+| **Git 作者** | GitHub 上的 `smartahou` 是仓库提交身份，**不代表代码全部由人手写，也不能证明具体 AI 模型** |
+
+模型名称和推理强度属于**开发时所用 AI** 的信息，不等同于 Just Fun 运行时可选的 Qwen 语音转写模型。未来可在验收记录中逐版注明模型名称与**实际可验证**的推理档位；未记录的保持「未知」。详见 [真实开发过程](docs/DEVELOPMENT.md)。
+
 ## 安全、贡献与许可
 
 不要将私人媒体、笔记、缓存、密码、API Key、本机用户路径或实际个人内容上传到本仓库及公开 Issue。服务默认仅供本机使用，不应用于直接公网部署。这里没有完整渗透测试或全媒体加密承诺。
@@ -93,7 +104,7 @@ python tests/release-gate-v703.py --verify
 
 Just Fun is a **local-first personal workspace** for video, audio, pictures, books (PDF/EPUB/TXT), and notes. It started as a small personal short-video viewer and grew through repeated real-world use. Its guiding principle is **immersion first, tools second**.
 
-**Human-led, AI-assisted development:** The owner determines product requirements, tests actual Windows behavior, and accepts changes. ChatGPT assists across conversations with engineering, testing, reviews, documentation and verified GitHub commits. GitHub — not a chat transcript — is the canonical source history. Linux/Chromium synthetic tests supplement, but never replace, real device acceptance.
+**Human-led, AI-assisted development:** The owner determines product requirements, tests actual Windows behavior, and accepts changes. ChatGPT assists across conversations with engineering, testing, reviews, documentation and verified GitHub commits. **AI disclosure:** This documentation update (2026-10-28) was assisted by OpenAI ChatGPT **GPT-6** (reasoning model). The exact High/Extra High thinking-effort setting is not independently verifiable here, and prior project iterations have no reliable per-commit model/effort record; neither should be invented. GitHub — not a chat transcript — is the canonical source history. Linux/Chromium synthetic tests supplement, but never replace, real device acceptance.
 
 **Windows:** Clone the repository; run 更新.cmd (Update) once, then 启动.cmd (Start). 回退.cmd (Rollback) switches to a previous verified runtime without undoing user data. Git, compatible Node.js, FFmpeg/FFprobe and pinned PDF.js build assets are needed.
 

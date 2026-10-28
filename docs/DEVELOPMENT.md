@@ -13,6 +13,15 @@ Just Fun 的起点不是一份完整的软件产品设计书，而是用户想�
 | GitHub | 正式源码版本管理、Commit/分支与并行协作边界 |
 | 隔离测试环境 | Node.js、Chromium、Python、FFmpeg 和合成媒体；只验证其实际覆盖的范围 |
 
+### AI 协作模型、推理强度与归属（透明记录）
+
+- **2026-10-28，本次开源文档维护：** 通过 ChatGPT 的 **GPT-6 推理型模型**协助审阅、编写和向 GitHub 提交文档。此处的模型名称来自当前会话可确认的模型身份。
+- **具体推理档位：未核验。** ChatGPT 的 High、Extra High 等选项属于会话或产品配置；当前协作不提供可独立审计的精确档位记录，不声称本次必定是 High、Extra High、xhigh、超高或最高。
+- **历史开发：** Just Fun 已跨越多个 ChatGPT 会话，但无法确认所有会话是否使用同一个模型版本；早前有建议使用「GPT-6 高推理强度」的交接文字，但建议不等于该版本的实际调用证明。现有发行记录与 Git 提交没有保存完整的「模型 × 推理档位 × 代码版本」对应表，所以不把历史所有代码归因于同一个 GPT 型号或思考级别。
+- **作者身份：** GitHub Commit 显示仓库所有者的账号，是连接器提交身份；不能据此推断全部代码由该用户手敲，也不能用 Git 作者字段识别 AI。
+- **运行时 AI：** 项目里可选的 Qwen ASR 是应用功能的一部分；其模型及用户 API Key 与协作编程使用的 GPT-6 是两种完全不同的角色。
+- **后续记录原则：** 仅在能确认时，逐次记录 AI 服务、模型名、推理强度档位、日期、作用范围和验证环境；无法确认就标注「未记录 / Unknown」，不倒填猜测值，也不展示内部隐藏推理内容。
+
 ### 开发与发行闭环
 
 1. 从真实使用中发现问题，先限定范围，避免为优化而过度重构。
@@ -39,7 +48,9 @@ AI 没有天然可靠的记忆、完美的代码正确性或对个人硬件的�
 
 Just Fun began as a small short-video viewer for one person's media. Real use generated requirements for immersive feeds, audio, photos, PDF/EPUB/TXT reading, note-taking, and workflow polish. Features and engineering practices evolved through many small, concrete iterations instead of a predefined enterprise roadmap.
 
-**Human-led, AI-assisted:** The owner makes product decisions and tests on a real Windows machine. ChatGPT assists with source analysis, implementation, review, tests, documentation, and GitHub commits. GitHub is the source of truth; chat history is not a substitute for current repository state.
+**Human-led, AI-assisted:** The owner makes product decisions and tests on a real Windows machine. ChatGPT assists with source analysis, implementation, review, tests, documentation, and GitHub commits.
+
+**Model and reasoning-effort transparency (2026-10-28):** This documentation revision uses **OpenAI ChatGPT GPT-6**, a reasoning model. Its exact UI thinking-effort level (such as High or Extra High) is **not independently verifiable from the available session metadata** and is not asserted. Historical sessions and commits do not include an auditable model/effort-per-release record. A past recommendation to use GPT-6 with high reasoning effort is not proof of actual use. Git author identity refers to the authenticated repository account, not the AI model. The app's optional Qwen ASR is a separate runtime integration. Unknown settings remain **unknown**, never reconstructed from guesswork. GitHub is the source of truth; chat history is not a substitute for current repository state.
 
 **Typical loop:** real feedback → fetch current remote HEAD → scoped modular change → focused tests and existing regression gate → reproducible build and SHA verification → meaningful commit → safe remote push and HEAD verification → real user acceptance.
 
