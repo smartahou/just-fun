@@ -10,7 +10,7 @@ Just Fun 优先解决真实使用中的问题。欢迎可复现的 Bug 报告、
 6. 可以使用 AI 辅助编码，但提交者负责正确性、版权、隐私和对生成内容的审查。
 7. 公开 Issue、PR、日志、截图中不得出现真实媒体路径、笔记、密码或 API Key。
 
-**许可状态：项目尚未选定正式开源 LICENSE；公开前需由拥有者确认。**
+**源码许可：MIT。** 贡献者需确认自己有权按 MIT 授权所提交的代码与素材，不得上传未获授权的媒体或个人数据。
 
 ---
 
@@ -18,4 +18,4 @@ Just Fun 优先解决真实使用中的问题。欢迎可复现的 Bug 报告、
 
 Contributions should be scoped, reproducible, and grounded in real user experience. Include the commit/version, environment, reproduction steps, expected and actual results, and accurate test evidence.
 
-Branch from current main, edit modular sources instead of generated dist/, avoid committing dependencies or personal data, use disposable test fixtures, and submit focused PRs. Never force-push over shared history. AI-assisted contributions are welcome, but contributors remain responsible for correctness, provenance, copyright, privacy, and testing. The project license has not yet been finalized.
+Branch from current main, edit modular sources instead of generated dist/, avoid committing dependencies or personal data, use disposable test fixtures, and submit focused PRs. Never force-push over shared history. AI-assisted contributions are welcome, but contributors remain responsible for correctness, provenance, copyright, privacy, and testing. Project-owned source is MIT-licensed; contributors must have the rights to license their contributions accordingly.

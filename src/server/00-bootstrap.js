@@ -1,11 +1,8 @@
 /*
- * AI 使用约定（君子条款）
- * 本软件源代码、缓存索引、元数据及由此构成的私有媒体库，均仅供权利人授权的用途使用。
- * 未经权利人事先明确许可，请勿将这些内容交给 AI/自动化系统进行解读、分析、审计、
- * 训练、摘要、重构、逆向或数据挖掘，也请勿对外传播。
- * 例外：权利人主动授权的协作开发、修复 Bug、新增功能等任务（例如本项目的协作迭代），
- * 仅可在该次授权任务的必要范围内处理相应内容。
- * 这是一项请求合作方自觉遵守的使用约定，并非加密/访问控制或对 AI 行为的技术保证。
+ * Just Fun - MIT-licensed source code. See LICENSE.
+ * 开源授权仅涉及项目有权许可的源码，不涉及用户自己的私人媒体、书籍、笔记、
+ * 缓存索引、元数据、密码和 API Key；使用这些个人数据仍须获得数据权利人同意。
+ * Open-source code licensing does not license individual users' private data.
  */
 const fs = require('fs');
 const path = require('path');

@@ -10,10 +10,10 @@
 
 ## 图标与媒体素材
 
-项目图标 assets/favicon.ico 以及任何字体、视频、音频、截图和其他第三方素材的来源与发布权利须在正式开源前确认。测试中的随机生成数据不代表真实私人媒体可以公开。源码公开不意味着用户私人资料或第三方受版权保护的内容获得授权。
+项目现用 Logo 系此前由项目拥有者提供的图像资源，assets/favicon.ico 根据该图转换制作；未发现来自 Element UI 等第三方图标库的证据。维护者仍应确认底图的使用与分发权利。任何字体、视频、音频、截图和其他第三方素材须另行核对版权。测试中的随机生成数据不代表真实私人媒体可以公开。源码公开不意味着用户私人资料或第三方受版权保护的内容获得授权。
 
 ---
 
 ## English
 
-The build pins **Mozilla PDF.js (pdfjs-dist@6.4.299)**, whose package metadata declares **Apache-2.0**. The source repository excludes node_modules/, but built distributions embed PDF.js and must carry any required license/notice materials. FFmpeg/FFprobe are host-provided; bundling their binaries would require an independent LGPL/GPL compliance review. The project icon and any non-original artwork, fonts or media require a provenance and rights review before public distribution.
+The build pins **Mozilla PDF.js (pdfjs-dist@6.4.299)**, whose package metadata declares **Apache-2.0**. The source repository excludes node_modules/, but built distributions embed PDF.js and must carry any required license/notice materials. FFmpeg/FFprobe are host-provided; bundling their binaries would require an independent LGPL/GPL compliance review. The logo was previously supplied by the project owner, and assets/favicon.ico was made from it; no Element UI or other third-party icon library origin has been identified. The owner should still confirm underlying artwork rights; non-original fonts and media require independent review.

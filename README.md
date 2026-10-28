@@ -4,9 +4,9 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.24 / Current version: v7.24** · 持续迭代 / Actively evolving
+**当前版本：v7.24.1 / Current version: v7.24.1** · 持续迭代 / Actively evolving
 
-**公开状态：准备中。** 本仓库仍为 Private，尚未选定正式 LICENSE。可查看源码不等于获得修改或再分发授权，正式开源须先完成历史隐私与许可审查。
+**源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
 
 ## 它是什么
 
@@ -85,7 +85,7 @@ python tests/release-gate-v703.py --verify
 - [开源前检查 / Public release checklist](OPEN_SOURCE_CHECKLIST.md)
 - [架构沿革](ARCHITECTURE.md) · [测试说明](tests/README.md)
 
-**当前尚未发布正式开源许可证。** 公开时间、版权和许可条款由项目拥有者决定。
+**许可：MIT。** 第三方组件仍适用各自的许可证；用户私人媒体与个人数据不在源码许可范围内。
 
 ---
 
@@ -99,4 +99,4 @@ Just Fun is a **local-first personal workspace** for video, audio, pictures, boo
 
 **Privacy:** Do not submit personal media, credentials, notes, cache databases, or real user paths. Optional AI features can send data to the third-party services you choose. This is not an Internet-hardened multi-user server.
 
-**License/publication:** The repository remains private pending privacy, provenance, and licensing review. No open-source license has yet been granted. See the linked documents above.
+**License/publication:** Project-owned code is MIT-licensed (see LICENSE). The owner controls GitHub visibility separately. This does not grant rights over users' personal content or third-party components.

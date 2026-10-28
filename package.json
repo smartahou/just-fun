@@ -1,12 +1,13 @@
 {
   "name": "just-fun",
-  "version": "7.24.0",
+  "version": "7.24.1",
   "private": true,
-  "description": "Just Fun private modular source (builds a single-file distribution)",
+  "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
     "pdfjs-dist": "6.4.299"
   },
   "scripts": {
     "build": "node scripts/build.js"
-  }
+  },
+  "license": "MIT"
 }
