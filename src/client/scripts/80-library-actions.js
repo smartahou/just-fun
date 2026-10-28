@@ -470,6 +470,38 @@ document.querySelectorAll('[data-media-kind]').forEach(button=>{
       ({video:'视频',image:'图片',audio:'音频'}[libraryMode]||'媒体')+' · 媒体管理';
   });
 });
+// v7.24 · Explicit media-tab shortcuts only. Alt+1…5 avoids Chrome's Ctrl+1…9
+// tab navigation and leaves unmodified video/reader keys untouched.
+// Delegate to the same click handlers as the visible rail: restores each
+// media tab's directory, search/filter, selection and scroll session.
+const jfMediaKeyboardKinds = ['video','image','audio','books','notes'];
+for(let i=0;i<jfMediaKeyboardKinds.length;i++){
+  const tab=document.querySelector('[data-media-kind="'+jfMediaKeyboardKinds[i]+'"]');
+  if(tab){
+    tab.title=(tab.title?tab.title+' · ':'')+'Alt+'+(i+1);
+    tab.setAttribute('aria-keyshortcuts','Alt+'+(i+1));
+  }
+}
+document.addEventListener('keydown',event=>{
+  if(event.defaultPrevented || event.repeat || event.isComposing || event.keyCode===229 ||
+     !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+     event.getModifierState?.('AltGraph'))return;
+  const index=/^Digit[1-5]$/.test(event.code)?Number(event.code.slice(5))-1:-1;
+  if(index<0)return;
+  const target=event.target;
+  if(target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]'))return;
+  if(document.fullscreenElement || document.webkitFullscreenElement ||
+     !jfReader.hidden ||
+     document.querySelector('#feedOverlay.open, #assetView.open, #jfPhotoCropDialog:not([hidden]), .shotStudioBack:not([hidden]), .portraitDialogBack:not([hidden]), #clipShelfBack:not([hidden]), .unifiedRenameBack:not([hidden]), .unifiedMoveBack:not([hidden]), .unifiedAlbumBack:not([hidden])'))return;
+  const tab=document.querySelector('[data-media-kind="'+jfMediaKeyboardKinds[index]+'"]');
+  if(!tab || tab.disabled)return;
+  event.preventDefault();
+  // Repeating the active shortcut must not reset the current page or search.
+  if(tab.getAttribute('aria-selected')==='true')return;
+  // A tab's click handler owns unsaved-note checks and page transitions.
+  tab.click();
+});
+
 function showUnifiedFolderContext(dir,x,y){
   const folder=allFolders.find(f=>f.relativeDir===dir);
   if(!folder || folder.readOnly)return;

@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.23.2",
+  "version": "7.24.0",
   "private": true,
   "description": "Just Fun private modular source (builds a single-file distribution)",
   "devDependencies": {
