@@ -431,6 +431,9 @@ body.studioHideVideoNames[data-studio-mode="video"] #grid .jfCoverTile .titleTex
 #jfMediaJobHUD .jfJobPercent{font-variant-numeric:tabular-nums;color:#e1f0ff}
 #jfMediaJobHUD .jfJobTrack{height:2px;margin-top:6px;border-radius:6px;background:#8da8c041;overflow:hidden}
 #jfMediaJobHUD .jfJobTrack i{display:block;width:0;height:100%;border-radius:inherit;background:#a7cff7;transition:width .25s linear}
+#jfMediaJobHUD .jfJobCancel:not([hidden]){display:block;pointer-events:auto;cursor:pointer;margin:8px 0 0 auto;padding:4px 9px;color:#d8ebf9;border:1px solid rgba(180,225,245,.36);border-radius:7px;background:rgba(115,159,182,.15);font:inherit}
+#jfMediaJobHUD .jfJobCancel:disabled{opacity:.55;cursor:wait}
+#jfMediaJobHUD .jfJobCancel:focus-visible{outline:2px solid #a7cff7;outline-offset:2px}
 /* v6.21: video text cards and audio cards share a strict row-first fixed grid. */
 #grid.videoTextGrid{display:grid!important;columns:auto!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,255px),1fr))!important;grid-auto-flow:row!important;gap:9px!important;align-content:start!important;align-items:stretch!important;padding:17px 21px 90px!important}
 #grid.videoTextGrid .videoTextTile{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;width:100%!important;height:149px!important;min-height:149px!important;max-height:149px!important;margin:0!important;padding:13px 14px 12px!important;break-inside:auto!important;overflow:hidden!important}

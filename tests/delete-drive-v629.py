@@ -29,7 +29,10 @@ def main():
             check('Non-media document excluded',note.name not in byname)
             check('Root video is protected from implicit mutation',byname[root.name]['readOnly'])
             check('Source rename still blocked',post(port,'/api/media-rename',{'key':byname[video.name]['key'],'name':'新名字'})[0]==403)
-            check('Source move still blocked',post(port,'/api/media-move',{'keys':[byname[audio.name]['key']],'target':'data'})[0]==403)
+            check('Source-to-root move remains blocked',post(port,'/api/media-move',{'keys':[byname[audio.name]['key']],'target':'root'})[0]==403)
+            moved,response=post(port,'/api/media-move',{'keys':[byname[audio.name]['key']],'target':'data'})
+            check('Explicit source-to-managed move permitted',moved==200 and response.get('moved')==1)
+            check('Moving audio removes original only on success',not audio.exists())
             # Force index stale before deletion; no refresh is allowed to race this subcase.
             old_mtime=video.stat().st_mtime
             os.utime(video,(old_mtime+5,old_mtime+5))

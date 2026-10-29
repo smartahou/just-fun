@@ -242,6 +242,7 @@ async function convertVideoCompatibility(key,mode='auto',progressId=null) {
   const item=requiredVideo(key);
   if(mode!=='auto'&&mode!=='encode')throw new Error('未知转码模式');
   if(videoCompatibilityLocks.size>0)throw new Error('已有视频正在转码，请等待完成');
+  assertMediaNotCancelled(progressId);
   videoCompatibilityLocks.add(key);
   let temp='';
   try {
@@ -252,7 +253,7 @@ async function convertVideoCompatibility(key,mode='auto',progressId=null) {
       '-i',managedPath(item),'-map','0:v:0','-map','0:a?',
       '-map_metadata','0','-map_chapters','0','-sn','-dn'];
     if(method==='copy')args.push('-c:v','copy','-c:a','copy');
-    else args.push('-c:v','libx264','-preset','slow','-crf','18','-pix_fmt','yuv420p',
+    else args.push('-c:v','libx264','-preset','medium','-crf','18','-pix_fmt','yuv420p',
       '-c:a','aac','-b:a','256k');
     args.push('-movflags','+faststart','-f','mp4',temp);
     await runCommand('ffmpeg',args,{stdio:['ignore','ignore','pipe'],progressId,
@@ -264,6 +265,7 @@ async function convertVideoCompatibility(key,mode='auto',progressId=null) {
       {encoding:'utf8',timeout:20000,windowsHide:true});
     let video={};try{video=JSON.parse(test.stdout).streams?.[0]||{};}catch{}
     if(test.status!==0||video.codec_name!=='h264'||video.pix_fmt!=='yuv420p')throw new Error('输出不符合 H.264 8-bit 兼容格式');
+    assertMediaNotCancelled(progressId);
     const base=path.basename(item.originalName||item.title||'视频',item.originalExt||'');
     const created=addGeneratedMedia(temp,'.mp4','data',base+(method==='copy'?' - 兼容封装.mp4':' - 兼容转码.mp4'),item,
       {conversionSourceKey:item.key,conversionMode:method});

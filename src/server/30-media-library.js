@@ -775,11 +775,9 @@ function syncFileModificationTimes() {
     }
 
     try {
-      const stat =
-        fs.statSync(
-          managedPath(item)
-        );
-
+      const file=managedPath(item);
+      const stat=fs.lstatSync(file);
+      if(!stat.isFile()||stat.isSymbolicLink())continue;
       const modifiedTimeMs =
         Number(stat.mtimeMs) || 0;
 
@@ -800,6 +798,18 @@ function syncFileModificationTimes() {
         item.modifiedAt =
           modifiedAt;
         changed = true;
+      }
+      // An external editor can update an indexed work/study media file.
+      // Refresh its deletion guard on the normal scan so explicit deletion
+      // does not permanently fail on an old size/mtime fingerprint.
+      if(item.readOnly===true && MEDIA_EXTENSIONS.has(path.extname(file).toLowerCase())){
+        const fingerprint=`${stat.size}-${Math.floor(stat.mtimeMs)}`;
+        if(item.fingerprint!==fingerprint){
+          item.fingerprint=fingerprint;
+          item.size=stat.size;
+          item.sizeText=formatBytes(stat.size);
+          changed=true;
+        }
       }
     } catch {}
   }

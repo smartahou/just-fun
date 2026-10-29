@@ -720,7 +720,7 @@ function jfStartMediaProgress(label){
   if(!panel){
     panel=document.createElement('div');panel.id='jfMediaJobHUD';
     panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');
-    panel.innerHTML='<div class="jfJobLine"><span class="jfJobName"></span><span class="jfJobPercent">处理中…</span></div><div class="jfJobTrack"><i></i></div>';
+    panel.innerHTML='<div class="jfJobLine"><span class="jfJobName"></span><span class="jfJobPercent">处理中…</span></div><div class="jfJobTrack"><i></i></div><button type="button" class="jfJobCancel" hidden>取消转码</button>';
     document.body.appendChild(panel);
   }
   panel.hidden=false;
@@ -728,7 +728,16 @@ function jfStartMediaProgress(label){
   const percent=panel.querySelector('.jfJobPercent');
   const bar=panel.querySelector('.jfJobTrack i');
   percent.textContent='准备中…';bar.style.width='0%';
-  let closed=false;
+  const cancel=panel.querySelector('.jfJobCancel');
+  const cancellable=label==='优化视频兼容性';
+  cancel.hidden=!cancellable;cancel.disabled=false;cancel.textContent='取消转码';
+  cancel.onclick=cancellable?async()=>{
+    if(closed||cancel.disabled)return;
+    cancel.disabled=true;cancel.textContent='正在取消…';
+    try{await mediaPost('/api/media-progress/cancel',{id:raw});cancelled=true;percent.textContent='取消中…';}
+    catch(error){cancel.disabled=false;cancel.textContent='取消转码';percent.textContent='取消失败：'+(error.message||error);}
+  }:null;
+  let closed=false,cancelled=false;
   jfRunningJobs.set(raw,true);
   let polling=false;
   const timer=setInterval(async()=>{
@@ -738,15 +747,18 @@ function jfStartMediaProgress(label){
       const response=await fetch('/api/media-progress?id='+encodeURIComponent(raw),{cache:'no-store'});
       const data=await response.json();
       if(!response.ok || !data.ok)return;
-      if(data.percent===null){percent.textContent='处理中…';}
+      if(data.status==='cancelling'||data.status==='cancelled')percent.textContent=data.status==='cancelling'?'取消中…':'已取消';
+      else if(data.percent===null){percent.textContent='处理中…';}
       else{percent.textContent=data.status==='done'?'100%':data.percent+'%';bar.style.width=data.percent+'%';}
     }catch(_){/* A running conversion must not fail because its progress view timed out. */}
     finally{polling=false;}
   },450);
   return {id:raw,done(success){
     closed=true;clearInterval(timer);jfRunningJobs.delete(raw);
+    if(cancel.onclick)cancel.onclick=null;cancel.hidden=true;
     if(!jfRunningJobs.size){
-      if(success){percent.textContent='已完成';bar.style.width='100%';}
+      if(cancelled){percent.textContent='已取消';}
+      else if(success){percent.textContent='已完成';bar.style.width='100%';}
       else{percent.textContent='已结束';}
       setTimeout(()=>{if(!jfRunningJobs.size)panel.hidden=true;},1250);
     }

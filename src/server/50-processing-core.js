@@ -27,15 +27,32 @@ function validProgressId(id){return typeof id === 'string' && /^[a-f0-9]{32}$/.t
 function beginMediaProgress(id,label){
   if(!validProgressId(id))return;
   for(const [key,job] of mediaProgressJobs){
-    if(Date.now()-job.updated>120000 || mediaProgressJobs.size>48)mediaProgressJobs.delete(key);
+    if(!['running','cancelling'].includes(job.status) && (Date.now()-job.updated>120000 || mediaProgressJobs.size>48))mediaProgressJobs.delete(key);
   }
-  mediaProgressJobs.set(id,{label,status:'running',percent:null,updated:Date.now()});
+  mediaProgressJobs.set(id,{label,status:'running',percent:null,updated:Date.now(),cancellable:label==='兼容转码',cancelRequested:false,child:null});
 }
 function finishMediaProgress(id,error){
   const job=mediaProgressJobs.get(id);
   if(!job)return;
-  job.status=error?'error':'done';job.percent=error?job.percent:100;
+  job.status=job.cancelRequested?'cancelled':error?'error':'done';job.percent=error||job.cancelRequested?job.percent:100;
   job.updated=Date.now();
+}
+function cancelMediaProgress(id){
+  const job=mediaProgressJobs.get(id);
+  if(!job||!job.cancellable||job.status!=='running')return false;
+  job.cancelRequested=true;job.status='cancelling';job.updated=Date.now();
+  const child=job.child;
+  if(child){
+    try{child.kill('SIGTERM');}catch{}
+    const timer=setTimeout(()=>{
+      if(activeMediaChildren.has(child))try{child.kill('SIGKILL');}catch{}
+    },1500);
+    timer.unref?.();
+  }
+  return true;
+}
+function assertMediaNotCancelled(id){
+  if(id&&mediaProgressJobs.get(id)?.cancelRequested)throw new Error('用户已取消转码');
 }
 function updateMediaProgress(id,duration,seconds){
   const job=mediaProgressJobs.get(id);
@@ -63,6 +80,7 @@ function runCommand(
     ) => {
       const {progressId,progressDuration,progressBase=0,progressTotal=0,timeoutMs=0,...spawnOptions}=options;
       // out_time is a processed presentation timestamp, not bytes written.
+      assertMediaNotCancelled(progressId);
       const ffmpegArgs=progressId && mediaProgressJobs.has(progressId) && command==='ffmpeg'
         ? [...args.slice(0,-1),'-progress','pipe:2','-nostats',args[args.length-1]]
         : args;
@@ -70,6 +88,8 @@ function runCommand(
       try { child = spawn(command,ffmpegArgs,{windowsHide:true,...spawnOptions}); }
       catch (error) { reject(error); return; }
       activeMediaChildren.add(child);
+      const progressJob=progressId&&mediaProgressJobs.get(progressId);
+      if(progressJob)progressJob.child=child;
       let settled=false;
       let timedOut=false;
       const timer=timeoutMs>0?setTimeout(()=>{
@@ -82,7 +102,9 @@ function runCommand(
         settled=true;
         if (timer) clearTimeout(timer);
         activeMediaChildren.delete(child);
-        if (error) reject(error); else resolve(result);
+        if(progressJob?.child===child)progressJob.child=null;
+        if(progressJob?.cancelRequested)reject(new Error('用户已取消转码'));
+        else if (error) reject(error); else resolve(result);
       };
       let progressBuffer='';
 

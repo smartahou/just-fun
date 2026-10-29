@@ -988,7 +988,7 @@ function managedPath(item) {
 
 // Explicit user deletion is allowed in every indexed media directory. Source
 // folders remain protected against implicit rename/move or non-media cleanup.
-function deleteIndexedMediaFile(item) {
+function verifyIndexedMediaSource(item) {
   const file = managedPath(item);
   if (item.readOnly === true) {
     // A stale index must never delete a newly-replaced document, directory,
@@ -1004,6 +1004,10 @@ function deleteIndexedMediaFile(item) {
       throw new Error('源文件已在外部发生变化，请刷新后重新删除');
     }
   }
+  return file;
+}
+function deleteIndexedMediaFile(item) {
+  const file=verifyIndexedMediaSource(item);
   // Existing managed-library semantics: an already-removed file can have its
   // stale catalog entry cleaned up by deletion as before.
   if (item.readOnly === true || fs.existsSync(file)) fs.unlinkSync(file);

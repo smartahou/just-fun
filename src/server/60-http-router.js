@@ -221,6 +221,12 @@ function startServer() {
             } catch(error){sendJson(res,{ok:false,error:error.message},400);}
             return;
           }
+          if(url.pathname==='/api/media-progress/cancel' && req.method==='POST'){
+            const body=await parseBody(req),id=body&&body.id;
+            if(!validProgressId(id)){sendJson(res,{ok:false,error:'任务编号无效'},400);return;}
+            if(!cancelMediaProgress(id)){sendJson(res,{ok:false,error:'此任务不存在、已结束或不可取消'},409);return;}
+            sendJson(res,{ok:true,status:'cancelling'});return;
+          }
           if(url.pathname==='/api/video-transcode' && req.method==='POST'){
             const body=await parseBody(req);
             if(!/^[a-f0-9]{16}$/.test(String(body.key||'')) || !['auto','encode'].includes(body.mode)){
@@ -239,7 +245,7 @@ function startServer() {
             if(!validProgressId(id)){sendJson(res,{ok:false,error:'任务编号无效'},400);return;}
             const job=mediaProgressJobs.get(id);
             if(!job){sendJson(res,{ok:false,error:'任务不存在'},404);return;}
-            sendJson(res,{ok:true,status:job.status,percent:job.percent,label:job.label});
+            sendJson(res,{ok:true,status:job.status,percent:job.percent,label:job.label,cancellable:job.cancellable===true&&!job.cancelRequested});
             return;
           }
           if(url.pathname.startsWith('/api/image-thumb/') && req.method==='GET') {
@@ -502,25 +508,43 @@ function startServer() {
             }
             const items=keys.map(k=>catalog.items.find(x=>x.key===k && x.state==='ready'));
             if(items.some(x=>!x)){sendJson(res,{ok:false,error:'存在无效素材，刷新后重试'},409);return;}
-            if(items.some(x=>x.readOnly)){sendJson(res,{ok:false,error:'工作目录只读，不能移动源文件'},403);return;}
+            if(items.some(x=>x.readOnly && target==='root')){sendJson(res,{ok:false,error:'来源文件请移动到 data 管理目录，不能直接移动到原媒体根目录'},403);return;}
             let changes=[];
             try {
               const targetRelative=target==='root'?'':target;
               const destDir=path.join(targetDir,safeMediaRelativeDir(targetRelative));
-              if(!fs.lstatSync(destDir).isDirectory()||fs.lstatSync(destDir).isSymbolicLink())throw new Error('目标不是受管理的普通文件夹');
+               const occupied=file=>{try{fs.lstatSync(file);return true;}catch(error){if(error.code==='ENOENT')return false;throw error;}};
+
+              let cursor=targetDir;
+               for(const part of path.relative(targetDir,destDir).split(path.sep).filter(Boolean)){
+                 cursor=path.join(cursor,part);
+                 const entry=fs.lstatSync(cursor);
+                 if(entry.isSymbolicLink()||!entry.isDirectory())throw new Error('目标目录包含符号链接或非文件夹，拒绝移动');
+               }
+               if(!fs.lstatSync(destDir).isDirectory())throw new Error('目标不是受管理的普通文件夹');
               const toMove=items.filter(x=>(x.relativeDir||'')!==targetRelative);
               for(const item of toMove){
-                const from=managedPath(item), to=path.join(destDir,item.managedName);
-                if(!fs.statSync(from).isFile()||fs.existsSync(to))throw new Error('源文件不存在或目标文件已存在');
-                changes.push({item,from,to,oldDir:item.relativeDir||''});
+                const from=item.readOnly?verifyIndexedMediaSource(item):managedPath(item);
+                const stat=fs.lstatSync(from);
+                if(!stat.isFile()||stat.isSymbolicLink())throw new Error('源文件已变化或不是普通媒体文件');
+                let newName=item.managedName;
+                if(item.readOnly && HASH_ENABLED){
+                  // Moving from a work/study directory into data adopts its hash naming policy.
+                  do{newName=makeManagedName(item.originalName||item.managedName,stat);}
+                  while(occupied(path.join(destDir,newName)));
+                }
+                const to=path.join(destDir,newName);
+                if(occupied(to)||changes.some(x=>x.to===to))throw new Error('目标目录存在同名文件，未覆盖任何数据');
+                changes.push({item,from,to,oldDir:item.relativeDir||'',oldName:item.managedName,
+                  oldReadOnly:item.readOnly,newName});
               }
               let moved=[];
               try {
                 for(const change of changes){fs.renameSync(change.from,change.to);moved.push(change);}
-                for(const change of changes)change.item.relativeDir=targetRelative;
+                for(const change of changes){change.item.relativeDir=targetRelative;change.item.managedName=change.newName;if(change.oldReadOnly)change.item.readOnly=false;}
                 if(changes.length)saveCatalog();
               }catch(error){
-                for(const change of changes)change.item.relativeDir=change.oldDir;
+                for(const change of changes){change.item.relativeDir=change.oldDir;change.item.managedName=change.oldName;change.item.readOnly=change.oldReadOnly;}
                 for(const change of moved.reverse())try{fs.renameSync(change.to,change.from);}catch(rollback){error.message+='；回滚失败：'+rollback.message;}
                 throw error;
               }

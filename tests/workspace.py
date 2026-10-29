@@ -68,10 +68,10 @@ def main():
       check('H264 MKV recommends lossless remux',compat['suggest']=='copy' and compat['videoCodec']=='h264')
       compat2=json.loads(urlopen(f'http://127.0.0.1:{port}/api/video-compat?key={old["key"]}')[2])
       check('Legacy MPEG4 codec recommends re-encode',compat2['suggest']=='encode')
-      for route,payload in [('/api/media-move',{'keys':[source['key']],'target':'data'}),('/api/media-rename',{'key':source['key'],'name':'changed'}),
+      for route,payload in [('/api/media-rename',{'key':source['key'],'name':'changed'}),
                             ('/api/folder-rename',{'relativeDir':'source/佛学','name':'changed'})]:
           status,response=post(port,route,payload)
-          check('Source rename/move still blocked '+route,status==403 and response['ok'] is False)
+          check('Implicit source rename still blocked '+route,status==403 and response['ok'] is False)
       st,r=post(port,'/api/video-transcode',{'key':source['key'],'mode':'auto','jobId':'a'*32})
       check('Stream copy successful',st==200 and r.get('method')=='copy',str(r.get('error','')))
       st2,r2=post(port,'/api/video-transcode',{'key':old['key'],'mode':'auto','jobId':'b'*32})
@@ -86,6 +86,15 @@ def main():
           check('Progress job finished '+id[0],progress['status']=='done' and progress['percent']==100)
       check('Media sources AND documents unchanged after conversions',all(sha(lib/p)==h for p,h in originals.items()))
       check('Non-media documents still on disk',archive.read_bytes()==b'non media - do not touch' and note.read_bytes()==b'document')
+      # Explicit user move is now allowed, unlike implicit rename/import.
+      root=byname['根目录.mp4'];root_hash=originals['根目录.mp4']
+      denied,out=post(port,'/api/media-move',{'keys':[root['key']],'target':'root'})
+      check('Source-to-root move remains blocked',denied==403 and out.get('ok') is False)
+      moved,res=post(port,'/api/media-move',{'keys':[root['key']],'target':'data'})
+      check('Explicit source-to-managed move succeeds',moved==200 and res.get('moved')==1,str(res))
+      check('Root source removed only after successful move',not root_video.exists())
+      check('Original media checksum preserved by move',any(sha(p)==root_hash for p in (lib/'data').rglob('*') if p.is_file()))
+      check('Non-media documents intact after move',archive.read_bytes()==b'non media - do not touch' and note.read_bytes()==b'document')
     finally:stop(server,log)
     # Hash+password is an explicit user choice, not an inferred "work" directory.
     # Only test startup in disposable isolated fixtures; three failures still erase.

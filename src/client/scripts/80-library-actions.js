@@ -104,7 +104,10 @@ async function jfTranscodeDialog(item){
     const result=await jfTrackedMediaPost('/api/video-transcode',{key:item.key,mode:force?'encode':'auto'},'优化视频兼容性');
     lastStamp='';await load();
     unifiedToast(result.method==='copy'?'已无损重封装为 MP4':'已生成高质量兼容 MP4');
-  }catch(error){alert('处理失败：'+(error.message||error));}
+  }catch(error){
+    if(/用户已取消转码/.test(String(error?.message||error)))unifiedToast('已取消转码，原文件保持不变');
+    else alert('处理失败：'+(error.message||error));
+  }
 }
 function hideUnifiedContext() {const menu=document.querySelector('#unifiedContext');if(menu)menu.hidden=true;}
 function showUnifiedContext(key,x,y) {
@@ -117,7 +120,7 @@ function showUnifiedContext(key,x,y) {
     ...(item.kind==='image'?[['open','查看图片','image']]:item.kind==='audio'?[['open','播放音频','volume']]:[]),
     ...(['.mp4','.mov','.m4v'].includes(String(item.originalExt||'').toLowerCase())?[[ 'livephoto',item.livePhoto?'恢复普通视频':'设为实况照片','image' ]]:[]),
     ...(item.kind==='video'?[['transcode','兼容性检测 / 转码','rotate']]:[]),
-    ...(!item.readOnly?[['rename','重命名','rename'],['move','移动到目录','move']]:[]),
+    ...(item.readOnly?[['move','移到管理目录','move']]:[['rename','重命名','rename'],['move','移动到目录','move']]),
     ['delete','永久删除文件','delete']
   ];
   menu.innerHTML='<div class="contextHeading" title="'+esc(unifiedMediaName(item))+'">'+esc(unifiedMediaName(item))+'</div>'+ 
@@ -149,14 +152,15 @@ function openUnifiedMove(keys) {
   // Moving is intentionally different from browsing: show every target, including
   // empty managed albums; display read-only work sources for context, but never
   // send unsupported source destinations to the file-moving API.
-  const targets=[...unifiedFolderOptions(),
+  const hasSource=valid.some(k=>allItems.find(x=>x.key===k)?.readOnly===true);
+  const targets=[...unifiedFolderOptions().map(x=>x.relativeDir==='root'&&hasSource?{...x,disabled:true,name:x.name+' · 来源媒体不可移动到此处'}:x),
     ...allFolders.filter(x=>x.readOnly===true&&!unifiedFolderOptions().some(y=>y.relativeDir===x.relativeDir))
       .map(x=>({relativeDir:x.relativeDir,name:folderDisplayName(x.relativeDir)+' · 只读来源',disabled:true}))];
   const select=document.querySelector('#unifiedMoveTarget');
   select.innerHTML=targets.map(x=>'<option value="'+esc(x.relativeDir)+'"'+(x.disabled?' disabled':'')+'>'+esc(x.name)+'</option>').join('');
   if(targets.some(x=>x.relativeDir===activeFolder&&!x.disabled))select.value=activeFolder;
   else select.value='data';
-  document.querySelector('#unifiedMoveSummary').textContent='移动 '+valid.length+' 个文件到指定目录。文件会移动，名称保持不变。';
+  document.querySelector('#unifiedMoveSummary').textContent='移动 '+valid.length+' 个文件到指定目录。显示名称不变；来源文件进入 Hash 管理目录时会按现有库设置改用匿名存储名。';
   document.querySelector('#unifiedMoveBack').hidden=false;
   select.focus();
 }
@@ -290,18 +294,35 @@ async function deleteUnifiedMedia(keys) {
   const list=[...new Set(keys)].filter(key=>allItems.some(x=>x.key===key));
   if(!list.length)return;
   if(!confirm('永久删除选中的 '+list.length+' 个文件？\n包括工作目录中的原始媒体文件，直接删除且不进入回收站。'))return;
+  const labels=new Map(list.map(key=>[key,unifiedMediaName(allItems.find(x=>x.key===key))]));
+  const failed=[];
+  let deleted=0;
   try{
-    let deleted=0,failures=0;
-    for(let i=0;i<list.length;i+=300){
-      const result=await mediaPost('/api/media-delete-batch',{keys:list.slice(i,i+300)});
-      deleted+=result.deleted||0;failures+=(result.failed||[]).length;
-    }
+    // Release a playing audio handle before Windows attempts to unlink it.
     if(activeAudioKey&&list.includes(activeAudioKey))closeAudioDock();
     if(libraryMode==='image'&&document.querySelector('#assetView').classList.contains('open'))hideImageViewer();
-    mediaSelectedKeys.clear();setUnifiedSelectMode(false);
+    for(let i=0;i<list.length;i+=300){
+      const result=await mediaPost('/api/media-delete-batch',{keys:list.slice(i,i+300)});
+      deleted+=result.deleted||0;
+      for(const problem of result.failed||[])failed.push({
+        key:problem.key,reason:problem.error||'系统未返回失败原因'
+      });
+    }
     lastStamp='';await load();
-    unifiedToast(deleted+' 个文件已删除'+(failures?'，'+failures+' 个失败':''));
-  }catch(error){lastStamp='';await load();alert('删除失败：'+(error.message||error));}
+    if(failed.length){
+      setUnifiedSelectMode(true);
+      for(const problem of failed)if(allItems.some(x=>x.key===problem.key))mediaSelectedKeys.add(problem.key);
+      syncUnifiedTiles();
+    }else setUnifiedSelectMode(false);
+    const summary='已删除 '+deleted+' 项'+(failed.length?'，失败 '+failed.length+' 项':'');
+    unifiedToast(summary);
+    if(failed.length)alert(summary+'\n\n'+failed.slice(0,12).map(x=>
+      (labels.get(x.key)||x.key)+'：'+x.reason).join('\n')+
+      (failed.length>12?'\n其余 '+(failed.length-12)+' 项失败':'')+
+      '\n\n失败项保持选中。若文件正在播放或被其他程序占用，请先关闭后重试。');
+  }catch(error){
+    lastStamp='';await load();alert('删除中断；此前已成功删除 '+deleted+' 项。\n原因：'+(error.message||error));
+  }
 }
 async function unifiedContextAction(action,key) {
   hideUnifiedContext();
@@ -325,7 +346,7 @@ async function unifiedContextAction(action,key) {
     return;
   }
   if(action==='transcode'){await jfTranscodeDialog(item);return;}
-  if(item.readOnly && ['rename','move'].includes(action)){unifiedToast('来源目录仅允许删除媒体，不能移动或重命名');return;}
+  if(item.readOnly && action==='rename'){unifiedToast('来源目录文件不能直接重命名，可先移入管理目录');return;}
   if(action==='rename'){openUnifiedRename(key);return;}
   if(action==='move'){openUnifiedMove([key]);return;}
   if(action==='favorite'){await updateUnifiedFavorite([key],!item.favorite);return;}
