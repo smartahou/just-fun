@@ -4,7 +4,7 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.26.0 / Current version: v7.26.0** · 持续迭代 / Actively evolving
+**当前版本：v7.27.0 / Current version: v7.27.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
 
@@ -14,6 +14,7 @@ Just Fun 最初用于个人短视频观看。真实使用中的问题推动它�
 
 - **视频**：媒体浏览、沉浸式 Feed、时间轴标记和片段、长视频体验。
 - **批量提取音轨**：在视频页多选后点击「提取音轨」。AAC/MP3/FLAC/Opus/Vorbis/ALAC/部分 PCM 格式使用 FFmpeg `-c:a copy` 保留原流；其他格式转为 FLAC 无损编码的解码音频，避免重复有损压缩。原视频不修改，失败项可重试。默认提取第一条音轨，结果在「音频 → 提取的音轨」。
+- **Hash 媒体导入**：启用 Hash 的媒体库，即使与文档、书籍或工作学习子目录混放，新添加到媒体库根目录的视频、音频和图片仍会匿名命名（32 位 Hash），并保留原始显示名。工作学习子目录继续只读索引；已经入库的原名视频不会被强制批量改名。未启用 Hash 的媒体库维持原名导入。
 - **文件管理**：允许对工作学习来源视频明确执行删除与移入受管理的 data 目录；默认不会自动整理、改名或迁移来源。失败时提示具体原因、保留失败项选中；目标冲突不覆盖任何文件。
 - **视频转码**：支持在浮动进度窗点击「取消转码」，由本地服务真实终止 FFmpeg 并清理半成品；H.264 CRF 18 采用 medium 预设以降低等待。源视频始终保留。
 - **音频**：独立 MP3/其他音频浏览与播放。
@@ -109,7 +110,7 @@ Just Fun is a **local-first personal workspace** for video, audio, pictures, boo
 
 **Human-led, AI-assisted development:** The owner determines product requirements, tests actual Windows behavior, and accepts changes. ChatGPT assists across conversations with engineering, testing, reviews, documentation and verified GitHub commits. **AI disclosure:** This documentation update (2026-10-28) was assisted by OpenAI ChatGPT **GPT-6** (reasoning model). The exact High/Extra High thinking-effort setting is not independently verifiable here, and prior project iterations have no reliable per-commit model/effort record; neither should be invented. GitHub — not a chat transcript — is the canonical source history. Linux/Chromium synthetic tests supplement, but never replace, real device acceptance.
 
-**File operations:** Explicit user-initiated deletion or moving source media into a managed data folder is supported, with validation, no overwrite, rollback, and failure details. H.264 compatibility encoding offers a real FFmpeg cancel action (medium preset, CRF 18), leaving source media unchanged. **Audio quality:** Video batch extraction preserves supported original audio packets via `-c:a copy`; other codecs are decoded and saved as FLAC without additional lossy compression. Original video files remain untouched. **Windows:** Clone the repository; run 更新.cmd (Update) once, then 启动.cmd (Start). 回退.cmd (Rollback) switches to a previous verified runtime without undoing user data. Git, compatible Node.js, FFmpeg/FFprobe and pinned PDF.js build assets are needed.
+**Hash imports:** When Hash mode is enabled, new top-level media files are stored under anonymous names even in a mixed work/study library. Existing original-name imports and nested work documents are not automatically renamed. **File operations:** Explicit user-initiated deletion or moving source media into a managed data folder is supported, with validation, no overwrite, rollback, and failure details. H.264 compatibility encoding offers a real FFmpeg cancel action (medium preset, CRF 18), leaving source media unchanged. **Audio quality:** Video batch extraction preserves supported original audio packets via `-c:a copy`; other codecs are decoded and saved as FLAC without additional lossy compression. Original video files remain untouched. **Windows:** Clone the repository; run 更新.cmd (Update) once, then 启动.cmd (Start). 回退.cmd (Rollback) switches to a previous verified runtime without undoing user data. Git, compatible Node.js, FFmpeg/FFprobe and pinned PDF.js build assets are needed.
 
 **Privacy:** Do not submit personal media, credentials, notes, cache databases, or real user paths. Optional AI features can send data to the third-party services you choose. This is not an Internet-hardened multi-user server.
 

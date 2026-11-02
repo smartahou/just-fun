@@ -508,7 +508,9 @@ function ingestNewFiles() {
   const started =
     Date.now();
   const worktree=isMixedWorkspace();
-  if(worktree){
+  // A mixed library must not disable the user's explicit Hash setting.
+  // Mark old root originals read-only only in the non-Hash import mode.
+  if(worktree && !HASH_ENABLED){
     let changed=false;
     for(const item of catalog.items){
       if(!item.relativeDir && item.state==='ready' && !item.readOnly){item.readOnly=true;changed=true;}
@@ -552,9 +554,10 @@ function ingestNewFiles() {
   // Original-name imports do not mutate source files. Index each filename at
   // most once, then atomically persist the catalog once after the scan.
   // Hash imports must retain their per-file journal-before-rename semantics.
-  const existingRootNames=(!HASH_ENABLED || worktree)
-    ? new Set(catalog.items.filter(x=>(x.relativeDir||'')==='').map(x=>x.managedName))
-    : null;
+  // Legacy mixed-workspace imports may already be indexed under original names.
+  // Never silently re-import, rename or duplicate those existing source files.
+  const existingRootNames=new Set(catalog.items
+    .filter(x=>(x.relativeDir||'')==='').map(x=>x.managedName));
 
   for (
     const entry of candidates
@@ -571,10 +574,10 @@ function ingestNewFiles() {
           originalPath
         );
       if(isPaxHeaderPayload(originalPath,stat))continue;
+      if(existingRootNames.has(entry.name))continue;
 
-      if (!HASH_ENABLED || worktree) {
-        // Mixed workspaces always keep the original name even if the user
-        // initialized an otherwise managed library with Hash enabled.
+      if (!HASH_ENABLED) {
+        // In non-Hash mode, mixed workspaces keep their original source names.
         if (!existingRootNames.has(entry.name)) {
           const ext=path.extname(entry.name).toLowerCase();
           const parsed=parseOriginalName(entry.name);
@@ -710,7 +713,7 @@ function ingestNewFiles() {
 
   // A failed commit is a hard failure: never report in-memory only entries
   // as imported, and do not change the original files. Retrying is safe.
-  if(existingRootNames && added)saveCatalog();
+  if(!HASH_ENABLED && added)saveCatalog();
 
   logStep(
     `新增视频处理完成：成功 ${added}，失败 ${failed}，耗时 ${elapsedText(started)}`
