@@ -55,8 +55,8 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-hash-mixed-v727-')
         byname={x['originalName']:x for x in data['items']}
         check('Root media retains friendly original name',byname['fresh.mp4']['relativeDir']=='')
         check('New Hash media is managed, not read-only',byname['fresh.mp4'].get('readOnly') is not True)
-        check('Nested source remains read-only and original filename unchanged',byname['nested.mp4'].get('readOnly') is True and nested.exists())
-        check('Document and nested media bytes unchanged',doc.read_bytes()==b'private study document' and sha(nested)==nested_sha)
+        check('Nested media shares the library Hash rule',byname['nested.mp4'].get('readOnly') is not True and not nested.exists() and len(managed(docs))==1 and sha(managed(docs)[0])==nested_sha)
+        check('Document and nested media bytes unchanged',doc.read_bytes()==b'private study document' and sha(managed(docs)[0])==nested_sha)
         # Live fs.watch/safety rescan while the application remains running.
         live=lib/'live-added.mp4';video(live);live_sha=sha(live)
         for _ in range(100):
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-hash-mixed-v727-')
         check('Newly added video exact content preserved',second_hash in [sha(x) for x in managed(lib)])
         check('No duplicate catalogue entries on next scan',len([x for x in data['items'] if x['originalName']=='fresh.mp4'])==1)
     finally:stop(proc,log)
-    # B. Old v7.26 mixed Hash import kept root original. Do not retroactively rename it.
+    # B. Old v7.26 original-name imports now adopt Hash safely with stable keys.
     legacy=base/'legacy';legacy.mkdir(); (legacy/'documents').mkdir()
     (legacy/'documents'/'study.txt').write_text('keep it',encoding='utf8')
     previous=legacy/'old-original.mp4';video(previous);old_sha=sha(previous)
@@ -105,9 +105,12 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-hash-mixed-v727-')
     proc,log,port,data=start(NEW,legacy,base/'home-legacy',count=2)
     try:
         byname={x['originalName']:x for x in data['items']}
-        check('Legacy original name not silently renamed',previous.exists() and sha(previous)==old_sha)
+        for _ in range(100):
+            if not previous.exists() and len(managed(legacy))==2:break
+            time.sleep(.2)
+        check('Legacy original name converted to Hash',not previous.exists() and any(sha(x)==old_sha for x in managed(legacy)))
         check('Legacy catalogue key preserved',byname['old-original.mp4']['key']==previous_key)
-        check('Only new incoming media is hashed',not newcomer.exists() and len(managed(legacy))==1 and sha(managed(legacy)[0])==new_sha)
+        check('Both old and new media hashed',not newcomer.exists() and len(managed(legacy))==2 and any(sha(x)==new_sha for x in managed(legacy)))
         check('No duplicated original catalogue entry',len(data['items'])==2)
         check('Legacy document intact',(legacy/'documents'/'study.txt').read_text()=='keep it')
     finally:stop(proc,log)
@@ -131,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-hash-mixed-v727-')
     proc,log,port,data=start(NEW,plain,base/'home-plain',count=1)
     try:
         check('Default non-Hash mixed import retains original',one.exists() and sha(one)==one_sha and not managed(plain))
-        check('Default non-Hash remains read-only source',data['items'][0].get('readOnly') is True)
+        check('Default non-Hash is ordinary managed media',data['items'][0].get('readOnly') is not True)
     finally:stop(proc,log)
     # E. Hash + password is independently persisted and still hashes root media.
     protected=base/'mixed-protected';protected.mkdir();(protected/'课件').mkdir()

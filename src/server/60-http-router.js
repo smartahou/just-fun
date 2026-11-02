@@ -466,7 +466,7 @@ function startServer() {
             const name=body&&typeof body.name==='string'?cleanText(body.name):'';
             const folder=catalog.folders.find(f=>f.relativeDir===dir&&f.state==='ready');
             if(!folder){sendJson(res,{ok:false,error:'文件夹不存在或不支持改名'},404);return;}
-            if(folder.readOnly || dir==='source' || String(dir).startsWith('source/')){sendJson(res,{ok:false,error:'工作目录只读，不允许重命名原目录'},403);return;}
+            if(folder.readOnly || dir==='source' || String(dir).startsWith('source/')){sendJson(res,{ok:false,error:'原有子目录的物理文件夹暂不支持直接重命名'},403);return;}
             if(!name||Array.from(name).length>100||/[\\/<>:"|?*]/.test(name)||name==='.'||name==='..'){
               sendJson(res,{ok:false,error:'目录名称不合法'},400);return;
             }
@@ -503,7 +503,7 @@ function startServer() {
             const keys=body.keys,target=body.target;
             if(!Array.isArray(keys)||keys.length<1||keys.length>300||
                keys.some(k=>typeof k!=='string'||!/^[a-f0-9]{16}$/.test(k))||new Set(keys).size!==keys.length||
-               typeof target!=='string'||!(target==='root'||target==='data'||catalog.folders.some(f=>f.relativeDir===target&&f.state==='ready'&&!f.readOnly&&f.relativeDir.startsWith('data/')))){
+               typeof target!=='string'||!(target==='root'||target==='data'||catalog.folders.some(f=>f.relativeDir===target&&f.state==='ready'&&(f.relativeDir.startsWith('data/')||f.relativeDir.startsWith('source/'))))){
               sendJson(res,{ok:false,error:'目标目录或选中文件无效'},400);return;
             }
             const items=keys.map(k=>catalog.items.find(x=>x.key===k && x.state==='ready'));
@@ -524,12 +524,13 @@ function startServer() {
                if(!fs.lstatSync(destDir).isDirectory())throw new Error('目标不是受管理的普通文件夹');
               const toMove=items.filter(x=>(x.relativeDir||'')!==targetRelative);
               for(const item of toMove){
-                const from=item.readOnly?verifyIndexedMediaSource(item):managedPath(item);
+                const isSource=String(item.relativeDir||'')==='source'||String(item.relativeDir||'').startsWith('source/');
+                const from=item.readOnly||isSource?verifyIndexedMediaSource(item):managedPath(item);
                 const stat=fs.lstatSync(from);
                 if(!stat.isFile()||stat.isSymbolicLink())throw new Error('源文件已变化或不是普通媒体文件');
                 let newName=item.managedName;
                 if(item.readOnly && HASH_ENABLED){
-                  // Moving from a work/study directory into data adopts its hash naming policy.
+                  // Legacy source items may still require their first anonymous name on explicit move.
                   do{newName=makeManagedName(item.originalName||item.managedName,stat);}
                   while(occupied(path.join(destDir,newName)));
                 }
@@ -576,7 +577,7 @@ function startServer() {
             const body = await parseBody(req);
             const item = catalog.items.find(x => x.key === body.key && x.state === 'ready');
             if (!item) {sendJson(res,{ok:false,error:'媒体不存在'},404);return;}
-            if (item.readOnly) {sendJson(res,{ok:false,error:'工作目录只读，不能重命名源文件'},403);return;}
+            if (item.readOnly) {sendJson(res,{ok:false,error:'媒体仍处于旧版只读索引，请在扫描完成后刷新重试'},403);return;}
             if (typeof body.name !== 'string') {sendJson(res,{ok:false,error:'名称必须是文本'},400);return;}
             const name = cleanText(body.name);
             if (!name || Array.from(name).length > 180 || /[\\/<>:"|?*]/.test(name) || name==='.' || name==='..') {
@@ -654,7 +655,7 @@ function startServer() {
               sendJson(res,{ok:false,error:'音频不存在'},404);
               return;
             }
-            if(item.readOnly){sendJson(res,{ok:false,error:'工作目录只读，不能重命名源音频'},403);return;}
+            if(item.readOnly){sendJson(res,{ok:false,error:'音频仍处于旧版只读索引，请在扫描完成后刷新重试'},403);return;}
             if (typeof body.name !== 'string') {
               sendJson(res,{ok:false,error:'名称格式无效'},400);
               return;

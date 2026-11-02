@@ -218,6 +218,7 @@ function recoverPendingImports() {
     ) {
       item.state =
         'ready';
+      if(item.pendingOriginalName){delete item.pendingOriginalName;item.readOnly=false;}
 
       changed =
         true;
@@ -239,6 +240,7 @@ function recoverPendingImports() {
 
         item.state =
           'ready';
+        if(item.pendingOriginalName){delete item.pendingOriginalName;item.readOnly=false;}
 
         changed =
           true;
@@ -407,117 +409,167 @@ function ingestDataTree() {
   walk('data', 0);
 }
 
-// Recursively catalogue ordinary work/study folders, without moving or renaming sources.
-// Prefix source/ is virtual; physical files remain exactly where the user put them.
-function ingestSourceTree() {
-  const entries=new Map(catalog.items.filter(x=>x.readOnly===true && (x.relativeDir==='source'||String(x.relativeDir||'').startsWith('source/')))
-    .map(x=>[x.relativeDir+'/'+x.managedName,x]));
+// The library has ONE global Hash setting. `source/` is a legacy virtual path
+// prefix for existing nested folders, never a second "work-directory mode".
+// Neither folders nor media acquire a different Hash policy from their location.
+function jfLstatExists(full){
+  try{fs.lstatSync(full);return true;}
+  catch(error){if(error.code==='ENOENT')return false;throw error;}
+}
+function jfCheckOrdinaryMediaFile(file,stat,ext){
+  if(!MEDIA_EXTENSIONS.has(ext) || !stat.isFile() || stat.isSymbolicLink())
+    throw new Error('不是可管理的普通媒体文件');
+  // No symlinks/reparse points in source-folder ancestors. Preserve all documents.
+  let current=targetDir;
+  const relative=path.relative(targetDir,path.dirname(file));
+  if(relative.startsWith('..')||path.isAbsolute(relative))throw new Error('媒体文件超出库目录');
+  for(const part of relative.split(path.sep).filter(Boolean)){
+    current=path.join(current,part);
+    const info=fs.lstatSync(current);
+    if(!info.isDirectory()||info.isSymbolicLink())throw new Error('目录包含符号链接，拒绝导入');
+  }
+}
+// Rename an already-indexed original-name media file without changing its key,
+// caption, notes, clips, playback metadata, or the containing folder.
+// Persist the target + pending source name before touching any media bytes.
+function jfHashAdoptIndexedMedia(item,oldFull,stat){
+  if(!HASH_ENABLED || item.state!=='ready' || safeManagedName(item.managedName))return false;
+  const ext=path.extname(item.managedName).toLowerCase();
+  jfCheckOrdinaryMediaFile(oldFull,stat,ext);
+  if(ext!==String(item.originalExt||'').toLowerCase())throw new Error('原媒体扩展名已改变，拒绝匿名改名');
+  const current=fs.lstatSync(oldFull);
+  if(!current.isFile()||current.isSymbolicLink()||current.size!==stat.size||
+     Math.floor(current.mtimeMs)!==Math.floor(stat.mtimeMs)||
+     current.dev!==stat.dev||current.ino!==stat.ino)
+    throw new Error('媒体文件正在外部变化，稍后重新扫描');
+  const oldName=item.managedName,oldReadOnly=item.readOnly;
+  let newName,newFull;
+  do{
+    newName=makeManagedName(oldName,stat);
+    newFull=path.join(path.dirname(oldFull),newName);
+  }while(jfLstatExists(newFull));
+  item.managedName=newName;
+  item.pendingOriginalName=oldName;
+  item.state='pending';
+  try{saveCatalog();}
+  catch(error){item.managedName=oldName;delete item.pendingOriginalName;item.state='ready';throw error;}
+  try{fs.renameSync(oldFull,newFull);}
+  catch(error){
+    item.managedName=oldName;delete item.pendingOriginalName;
+    item.state='ready';item.readOnly=oldReadOnly;
+    saveCatalog();throw error;
+  }
+  item.state='ready';item.readOnly=false;
+  delete item.pendingOriginalName;
+  saveCatalog();
+  return true;
+}
+
+function ingestSourceTree(){
+  const isSource=x=>x.relativeDir==='source'||String(x.relativeDir||'').startsWith('source/');
+  const indexed=new Map(catalog.items.filter(isSource).map(x=>[x.relativeDir+'/'+x.managedName,x]));
   const folders=new Map(catalog.folders.filter(x=>x.relativeDir==='source'||x.relativeDir.startsWith('source/'))
     .map(x=>[x.relativeDir,x]));
   let changed=false;
-  const discovered=new Set(), seenDirs=new Set(['source']);
+  const discovered=new Set(),seenDirs=new Set(['source']);
   const walk=(absolute,virtual,depth)=>{
     if(depth>32)return;
     let children;
-    try {children=fs.readdirSync(absolute,{withFileTypes:true});} catch{return;}
+    try{children=fs.readdirSync(absolute,{withFileTypes:true});}catch{return;}
     for(const entry of children){
-      if(entry.isSymbolicLink() || isArchiveSidecar(entry.name) || entry.name.startsWith('.') || entry.name==='node_modules')continue;
-      if(depth===0 && entry.name==='data')continue;
+      if(entry.isSymbolicLink()||isArchiveSidecar(entry.name)||entry.name.startsWith('.')||
+         entry.name==='node_modules'||entry.name==='.git')continue;
+      if(depth===0&&entry.name==='data')continue;
       const physical=path.join(absolute,entry.name);
       if(entry.isDirectory()){
-        if(depth>=32)continue;
-        const rel=virtual+'/'+entry.name;
-        // Only directories with at least one media descendant are exposed.
-        walk(physical,rel,depth+1);
-      }else if(entry.isFile()){
-        // Root-level media already belongs to the original root importer.
-        if(depth===0)continue;
-        const ext=path.extname(entry.name).toLowerCase();
-        if(!MEDIA_EXTENSIONS.has(ext))continue;
-        let stat;
-        try{stat=fs.lstatSync(physical);}catch{continue;}
-        if(!stat.isFile() || isPaxHeaderPayload(physical,stat))continue;
-        const id=virtual+'/'+entry.name;
-        discovered.add(id);
-        let parent=virtual;
-        while(parent && parent!=='source'){
-          seenDirs.add(parent);
-          parent=parent.slice(0,parent.lastIndexOf('/'));
-        }
-        const old=entries.get(id);
-        const fp=`${stat.size}-${Math.floor(stat.mtimeMs)}`;
-        if(old){
-          if(old.fingerprint!==fp){
-            old.fingerprint=fp;old.size=stat.size;old.sizeText=formatBytes(stat.size);
-            old.modifiedTimeMs=Number(stat.mtimeMs)||0;old.modifiedAt=new Date(stat.mtimeMs).toISOString();
-            old.duration=0;old.durationText='';old.resolution='';old.width=0;old.height=0;old.codec='';
-            old.cover='';old.coverTime=0;old.probeAttemptFingerprint='';old.coverAttemptFingerprint='';changed=true;
-          }
-        }else{
-          const parsed=parseOriginalName(entry.name);
-          catalog.items.push({key:hashKey('source/'+id),managedName:entry.name,originalName:entry.name,
-            relativeDir:virtual,readOnly:true,originalExt:ext,kind:mediaKindFromExt(ext),
-            mime:MIME_BY_EXT[ext]||'application/octet-stream',creator:parsed.creator,title:parsed.title,
-            rating:0,rotation:0,cover:'',coverTime:0,duration:0,durationText:'',width:0,height:0,
-            resolution:'',codec:'',size:stat.size,sizeText:formatBytes(stat.size),
-            importedAt:new Date().toISOString(),modifiedTimeMs:Number(stat.mtimeMs)||0,
-            modifiedAt:new Date(stat.mtimeMs).toISOString(),fingerprint:fp,state:'ready'});
-          changed=true;
-        }
+        if(depth<32)walk(physical,virtual+'/'+entry.name,depth+1);
+        continue;
       }
+      if(!entry.isFile())continue;
+      // Root media belong exclusively to ingestNewFiles(), never to the
+      // backward-compatible nested-folder virtual index.
+      if(depth===0)continue;
+      const id=virtual+'/'+entry.name;
+      let item=indexed.get(id);
+      const ext=path.extname(entry.name).toLowerCase();
+      // Anonymous files have no extension, but are recognized through the
+      // persisted catalog rather than guessed from their contents.
+      if(!item&&!MEDIA_EXTENSIONS.has(ext))continue;
+      let stat;
+      try{stat=fs.lstatSync(physical);if(!stat.isFile()||stat.isSymbolicLink())continue;}
+      catch{continue;}
+      if(!item&&isPaxHeaderPayload(physical,stat))continue;
+      let parent=virtual;
+      while(parent&&parent!=='source'){
+        seenDirs.add(parent);parent=parent.slice(0,parent.lastIndexOf('/'));
+      }
+      const fp=`${stat.size}-${Math.floor(stat.mtimeMs)}`;
+      if(item){
+        if(item.state==='pending'){
+          discovered.add(id);continue;
+        }
+        if(item.fingerprint!==fp){
+          item.fingerprint=fp;item.size=stat.size;item.sizeText=formatBytes(stat.size);
+          item.modifiedTimeMs=Number(stat.mtimeMs)||0;
+          item.modifiedAt=new Date(stat.mtimeMs).toISOString();
+          item.duration=0;item.durationText='';item.resolution='';
+          item.width=0;item.height=0;item.codec='';item.cover='';item.coverTime=0;
+          item.probeAttemptFingerprint='';item.coverAttemptFingerprint='';changed=true;
+        }
+      }else{
+        const parsed=parseOriginalName(entry.name);
+        item={key:hashKey('source/'+id),managedName:entry.name,originalName:entry.name,
+          relativeDir:virtual,readOnly:false,originalExt:ext,kind:mediaKindFromExt(ext),
+          mime:MIME_BY_EXT[ext]||'application/octet-stream',creator:parsed.creator,title:parsed.title,
+          rating:0,rotation:0,cover:'',coverTime:0,duration:0,durationText:'',width:0,height:0,
+          resolution:'',codec:'',size:stat.size,sizeText:formatBytes(stat.size),
+          importedAt:new Date().toISOString(),modifiedTimeMs:Number(stat.mtimeMs)||0,
+          modifiedAt:new Date(stat.mtimeMs).toISOString(),fingerprint:fp,state:'ready'};
+        catalog.items.push(item);indexed.set(id,item);changed=true;
+        // For Hash mode, persist the original identity first, then the pending
+        // rename journal; a crash between these writes is still recoverable.
+        if(HASH_ENABLED)saveCatalog();
+      }
+      if(HASH_ENABLED&&!safeManagedName(item.managedName)){
+        try{jfHashAdoptIndexedMedia(item,physical,stat);changed=true;}
+        catch(error){logStep('子目录媒体匿名命名失败：'+entry.name+' · '+error.message);}
+      }
+      if(!HASH_ENABLED&&item.readOnly){item.readOnly=false;changed=true;}
+      discovered.add(item.relativeDir+'/'+item.managedName);
     }
   };
-  // Do not crawl generated material or hidden caches, even when they contain media.
   walk(targetDir,'source',0);
-  const initialCount=catalog.items.length;
-  catalog.items=catalog.items.filter(x=>!(x.readOnly===true&&(x.relativeDir==='source'||String(x.relativeDir||'').startsWith('source/'))) || discovered.has(x.relativeDir+'/'+x.managedName));
-  if(initialCount!==catalog.items.length)changed=true;
+  const before=catalog.items.length;
+  // Never discard a write-ahead pending record during an interrupted rename.
+  catalog.items=catalog.items.filter(x=>x.state==='pending'||!isSource(x)||discovered.has(x.relativeDir+'/'+x.managedName));
+  if(before!==catalog.items.length)changed=true;
   const beforeFolders=catalog.folders.length;
-  catalog.folders=catalog.folders.filter(x=>!(x.relativeDir==='source'||x.relativeDir.startsWith('source/')) || seenDirs.has(x.relativeDir));
+  catalog.folders=catalog.folders.filter(x=>!(x.relativeDir==='source'||x.relativeDir.startsWith('source/'))||seenDirs.has(x.relativeDir));
   if(beforeFolders!==catalog.folders.length)changed=true;
-  // Reconstruct just the media-bearing ancestor chain, preserving names.
   for(const dir of seenDirs){
     if(dir==='source'||folders.has(dir))continue;
     const i=dir.lastIndexOf('/');
-    const folder={relativeDir:dir,parentDir:dir.slice(0,i),originalName:dir.slice(i+1),state:'ready',readOnly:true};
-    catalog.folders.push(folder);changed=true;
+    catalog.folders.push({relativeDir:dir,parentDir:dir.slice(0,i),originalName:dir.slice(i+1),state:'ready',readOnly:true});
+    changed=true;
   }
-  // A virtual source root appears only when there is source content to navigate.
   const hasSource=discovered.size>0;
   const sourceRoot=catalog.folders.find(x=>x.relativeDir==='source');
-  if(hasSource && !sourceRoot){catalog.folders.push({relativeDir:'source',parentDir:'root',originalName:'工作学习目录',state:'ready',readOnly:true});changed=true;}
-  if(!hasSource && sourceRoot){catalog.folders=catalog.folders.filter(x=>x!==sourceRoot);changed=true;}
+  if(hasSource&&!sourceRoot){
+    catalog.folders.push({relativeDir:'source',parentDir:'root',originalName:'子目录',state:'ready',readOnly:true});
+    changed=true;
+  }
+  if(!hasSource&&sourceRoot){catalog.folders=catalog.folders.filter(x=>x!==sourceRoot);changed=true;}
+  if(sourceRoot&&sourceRoot.originalName==='工作学习目录'){
+    sourceRoot.originalName='子目录';changed=true;
+  }
   if(changed)saveCatalog();
 }
 
-// A mixed real-world workspace is indexed, never physically renamed by the importer.
-// Pure media libraries retain their existing v6.21 Hash import behavior.
-function isMixedWorkspace() {
-  try {
-    return fs.readdirSync(targetDir,{withFileTypes:true}).some(entry=>{
-      if(entry.name.startsWith('.')||entry.name==='data'||entry.name==='node_modules'||entry.isSymbolicLink())return false;
-      if(entry.isDirectory()){
-        try{return fs.readdirSync(path.join(targetDir,entry.name)).length>0;}catch{return true;}
-      }
-      return entry.isFile() && !MEDIA_EXTENSIONS.has(path.extname(entry.name).toLowerCase()) && !safeManagedName(entry.name);
-    });
-  }catch{return false;}
-}
+// No inferred "mixed workspace" mode: hashEnabled is the library-wide switch.
 
 function ingestNewFiles() {
   const started =
     Date.now();
-  const worktree=isMixedWorkspace();
-  // A mixed library must not disable the user's explicit Hash setting.
-  // Mark old root originals read-only only in the non-Hash import mode.
-  if(worktree && !HASH_ENABLED){
-    let changed=false;
-    for(const item of catalog.items){
-      if(!item.relativeDir && item.state==='ready' && !item.readOnly){item.readOnly=true;changed=true;}
-    }
-    if(changed)saveCatalog();
-  }
-
   const entries =
     fs.readdirSync(
       targetDir,
@@ -556,8 +608,8 @@ function ingestNewFiles() {
   // Hash imports must retain their per-file journal-before-rename semantics.
   // Legacy mixed-workspace imports may already be indexed under original names.
   // Never silently re-import, rename or duplicate those existing source files.
-  const existingRootNames=new Set(catalog.items
-    .filter(x=>(x.relativeDir||'')==='').map(x=>x.managedName));
+  const existingRootNames=new Map(catalog.items
+    .filter(x=>(x.relativeDir||'')==='').map(x=>[x.managedName,x]));
 
   for (
     const entry of candidates
@@ -574,21 +626,28 @@ function ingestNewFiles() {
           originalPath
         );
       if(isPaxHeaderPayload(originalPath,stat))continue;
-      if(existingRootNames.has(entry.name))continue;
+      if(existingRootNames.has(entry.name)){
+        const old=existingRootNames.get(entry.name);
+        if(HASH_ENABLED&&old.state==='ready'&&!safeManagedName(old.managedName)){
+          try{jfHashAdoptIndexedMedia(old,originalPath,stat);added++;}
+          catch(error){failed++;logStep('旧原名媒体匿名命名失败：'+entry.name+' · '+error.message);}
+        }
+        continue;
+      }
 
       if (!HASH_ENABLED) {
-        // In non-Hash mode, mixed workspaces keep their original source names.
+        // In non-Hash mode, retain the original filename in any folder.
         if (!existingRootNames.has(entry.name)) {
           const ext=path.extname(entry.name).toLowerCase();
           const parsed=parseOriginalName(entry.name);
           catalog.items.push({key:hashKey('root/'+entry.name),managedName:entry.name,originalName:entry.name,
             originalExt:ext,kind:mediaKindFromExt(ext),mime:MIME_BY_EXT[ext]||'application/octet-stream',
-            readOnly:worktree,creator:parsed.creator,title:parsed.title,rating:0,rotation:0,cover:'',coverTime:0,
+            readOnly:false,creator:parsed.creator,title:parsed.title,rating:0,rotation:0,cover:'',coverTime:0,
             duration:0,durationText:'',width:0,height:0,resolution:'',codec:'',size:stat.size,
             sizeText:formatBytes(stat.size),importedAt:new Date().toISOString(),
             modifiedTimeMs:Number(stat.mtimeMs)||0,modifiedAt:new Date(stat.mtimeMs).toISOString(),
             fingerprint:`${stat.size}-${Math.floor(stat.mtimeMs)}`,state:'ready'});
-          existingRootNames.add(entry.name);added++;
+          existingRootNames.set(entry.name,catalog.items[catalog.items.length-1]);added++;
         }
         continue;
       }

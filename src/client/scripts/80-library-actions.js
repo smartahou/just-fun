@@ -136,31 +136,29 @@ function hideUnifiedRename() {document.querySelector('#unifiedRenameBack').hidde
 // Directory management: move existing hash-named files without rewriting their bytes.
 let unifiedMoveKeys=[];
 function unifiedFolderOptions() {
-  const folders=[{relativeDir:'root',name:'原媒体目录'},{relativeDir:'data',name:'data'},...allFolders.filter(x=>x.relativeDir.startsWith('data/') && x.state!=='pending').map(x=>({relativeDir:x.relativeDir,name:unifiedFolderPath(x.relativeDir)}))];
+  const folders=[{relativeDir:'root',name:'原媒体目录'},{relativeDir:'data',name:'data'},...allFolders.filter(x=>(x.relativeDir.startsWith('data/')||x.relativeDir.startsWith('source/')) && x.state==='ready').map(x=>({relativeDir:x.relativeDir,name:unifiedFolderPath(x.relativeDir)}))];
   return folders.sort((a,b)=>a.relativeDir==='data'?-1:b.relativeDir==='data'?1:a.name.localeCompare(b.name,'zh-CN',{numeric:true}));
 }
 function unifiedFolderPath(dir) {
   if(dir==='root')return '原媒体目录';
   const parts=String(dir).split('/');
-  return parts.map((part,index)=>index===0?'data':folderDisplayName(parts.slice(0,index+1).join('/'))).join(' / ');
+  return parts.map((part,index)=>index===0?(part==='source'?'子目录':'data'):folderDisplayName(parts.slice(0,index+1).join('/'))).join(' / ');
 }
 function openUnifiedMove(keys) {
   const valid=[...new Set(keys)].filter(k=>allItems.some(x=>x.key===k));
   if(!valid.length)return;
   if(valid.length>300){unifiedToast('一次最多移动 300 个文件，请分批选择');return;}
   hideUnifiedContext();unifiedMoveKeys=valid;
-  // Moving is intentionally different from browsing: show every target, including
-  // empty managed albums; display read-only work sources for context, but never
-  // send unsupported source destinations to the file-moving API.
-  const hasSource=valid.some(k=>allItems.find(x=>x.key===k)?.readOnly===true);
-  const targets=[...unifiedFolderOptions().map(x=>x.relativeDir==='root'&&hasSource?{...x,disabled:true,name:x.name+' · 来源媒体不可移动到此处'}:x),
-    ...allFolders.filter(x=>x.readOnly===true&&!unifiedFolderOptions().some(y=>y.relativeDir===x.relativeDir))
-      .map(x=>({relativeDir:x.relativeDir,name:folderDisplayName(x.relativeDir)+' · 只读来源',disabled:true}))];
+  // A source/ path is a backward-compatible folder address, not a special
+  // workspace mode; explicit moves into existing ordinary subfolders are allowed.
+  const hasLegacyReadonly=valid.some(k=>allItems.find(x=>x.key===k)?.readOnly===true);
+  const targets=unifiedFolderOptions().map(x=>x.relativeDir==='root'&&hasLegacyReadonly
+    ? {...x,disabled:true,name:x.name+' · 旧版只读条目请先刷新'}:x);
   const select=document.querySelector('#unifiedMoveTarget');
   select.innerHTML=targets.map(x=>'<option value="'+esc(x.relativeDir)+'"'+(x.disabled?' disabled':'')+'>'+esc(x.name)+'</option>').join('');
   if(targets.some(x=>x.relativeDir===activeFolder&&!x.disabled))select.value=activeFolder;
   else select.value='data';
-  document.querySelector('#unifiedMoveSummary').textContent='移动 '+valid.length+' 个文件到指定目录。显示名称不变；来源文件进入 Hash 管理目录时会按现有库设置改用匿名存储名。';
+  document.querySelector('#unifiedMoveSummary').textContent='移动 '+valid.length+' 个文件到指定目录。遵循当前媒体库统一命名规则，显示名称不变；不覆盖目标已有文件。';
   document.querySelector('#unifiedMoveBack').hidden=false;
   select.focus();
 }
@@ -181,7 +179,7 @@ function openUnifiedAlbum(){
   document.querySelector('#unifiedAlbumParentLabel').hidden=false;
   document.querySelector('#unifiedAlbumParent').required=true;
   document.querySelector('#unifiedAlbumSubmit').textContent='新建';
-  const options=unifiedFolderOptions().filter(x=>x.relativeDir!=='root');
+  const options=unifiedFolderOptions().filter(x=>x.relativeDir==='data'||x.relativeDir.startsWith('data/'));
   const select=document.querySelector('#unifiedAlbumParent');
   select.innerHTML=options.map(x=>'<option value="'+esc(x.relativeDir)+'">'+esc(x.name)+'</option>').join('');
   if(options.some(x=>x.relativeDir===activeFolder))select.value=activeFolder;

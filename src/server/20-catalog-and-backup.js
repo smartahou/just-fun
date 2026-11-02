@@ -971,15 +971,22 @@ async function restoreFromExternalBackup(
 function managedPath(item) {
   const relativeDir=String(item.relativeDir || '');
   if (relativeDir === 'source' || relativeDir.startsWith('source/')) {
-    if (item.readOnly !== true) throw new Error('来源目录条目必须是只读索引');
     const result=path.join(targetDir,safeMediaRelativeDir(relativeDir),safeOriginalFilename(item.managedName));
     // Do not follow symlink/reparse-point chains introduced after indexing.
     const relative=path.relative(targetDir,result).split(path.sep);
     let cursor=targetDir;
-    for (const part of relative) {
-      cursor=path.join(cursor,part);
-      const stat=fs.lstatSync(cursor);
-      if (stat.isSymbolicLink()) throw new Error('不允许访问符号链接');
+    for (let i=0;i<relative.length;i++) {
+      cursor=path.join(cursor,relative[i]);
+      let stat;
+      try{stat=fs.lstatSync(cursor);}
+      catch(error){
+        // The write-ahead record can refer to the not-yet-created Hash leaf.
+        // Only that final leaf may be absent; all ancestors must be real dirs.
+        if(error.code==='ENOENT' && i===relative.length-1 && item.state==='pending')break;
+        throw error;
+      }
+      if(stat.isSymbolicLink())throw new Error('不允许访问符号链接');
+      if(i<relative.length-1 && !stat.isDirectory())throw new Error('媒体目录已被替换');
     }
     return result;
   }
@@ -990,19 +997,23 @@ function managedPath(item) {
 // folders remain protected against implicit rename/move or non-media cleanup.
 function verifyIndexedMediaSource(item) {
   const file = managedPath(item);
-  if (item.readOnly === true) {
-    // A stale index must never delete a newly-replaced document, directory,
-    // symbolic link or another file at the old path. Ask the user to refresh.
-    const stat = fs.lstatSync(file);
-    const ext = path.extname(file).toLowerCase();
-    if (!stat.isFile() || stat.isSymbolicLink() || !MEDIA_EXTENSIONS.has(ext) ||
-        ext !== String(item.originalExt || '').toLowerCase()) {
-      throw new Error('源媒体文件类型已改变，请刷新媒体库');
+  // A nested source file remains an indexed media file after Hash adoption.
+  // Identity checks cannot depend on the historical readOnly/workspace label.
+  const sourceRelative=String(item.relativeDir||'');
+  if(item.readOnly===true || sourceRelative==='source' ||
+     sourceRelative.startsWith('source/')){
+    const stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.isSymbolicLink())throw new Error('源媒体文件类型已改变，请刷新媒体库');
+    // Hash files intentionally have no extension. Only non-Hash filenames are
+    // validated against the original media extension.
+    if(!safeManagedName(item.managedName)){
+      const ext=path.extname(file).toLowerCase();
+      if(!MEDIA_EXTENSIONS.has(ext)||ext!==String(item.originalExt||'').toLowerCase())
+        throw new Error('源媒体扩展名已改变，请刷新媒体库');
     }
-    const fingerprint = `${stat.size}-${Math.floor(stat.mtimeMs)}`;
-    if (item.fingerprint && fingerprint !== item.fingerprint) {
-      throw new Error('源文件已在外部发生变化，请刷新后重新删除');
-    }
+    const fingerprint=`${stat.size}-${Math.floor(stat.mtimeMs)}`;
+    if(item.fingerprint && fingerprint!==item.fingerprint)
+      throw new Error('源文件已在外部发生变化，请刷新后重试');
   }
   return file;
 }
@@ -1048,7 +1059,7 @@ function originalPendingPath(item) {
   return path.join(
     targetDir,
     safeMediaRelativeDir(item.relativeDir || ''),
-    item.originalName || ''
+    item.pendingOriginalName || item.originalName || ''
   );
 }
 

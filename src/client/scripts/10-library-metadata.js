@@ -350,7 +350,7 @@ function renderCreatorTags() {
 function folderDisplayName(relativeDir) {
   if (relativeDir === 'root') return '原媒体目录';
   if (relativeDir === 'data') return 'data';
-  if (relativeDir === 'source') return '工作学习目录';
+  if (relativeDir === 'source') return '子目录';
   if (relativeDir === 'data/1001') return '截图与精选帧';
   if (relativeDir === 'data/1002') return '提取的音轨';
   const folder = allFolders.find(x=>x.relativeDir===relativeDir);

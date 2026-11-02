@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix='jf-ui-v632-') as d:
   # Content-filtered directories. Empty folders stay available to move picker.
   page.evaluate('''()=>{
     closeFeed();
-    allFolders=[{relativeDir:'source',parentDir:'all',readOnly:true},{relativeDir:'source/佛学',parentDir:'source',readOnly:true},{relativeDir:'source/佛学/讲座',parentDir:'source/佛学',readOnly:true},{relativeDir:'source/空目录',parentDir:'source',readOnly:true},{relativeDir:'data/1001',parentDir:'data',state:'ready'},{relativeDir:'data/1002',parentDir:'data',state:'ready'}];
+    allFolders=[{relativeDir:'source',parentDir:'all',readOnly:false,state:'ready'},{relativeDir:'source/佛学',parentDir:'source',readOnly:false,state:'ready'},{relativeDir:'source/佛学/讲座',parentDir:'source/佛学',readOnly:false,state:'ready'},{relativeDir:'source/空目录',parentDir:'source',readOnly:false,state:'ready'},{relativeDir:'data/1001',parentDir:'data',state:'ready'},{relativeDir:'data/1002',parentDir:'data',state:'ready'}];
     allItems=[{key:'v632-video',kind:'video',title:'三小时学习视频.mp4',relativeDir:'source/佛学/讲座',duration:5,mediaUrl:'test'}];
     window.__testMedia=allItems;window.__testFolders=allFolders;
     libraryMode='video';activeFolder='source';renderVideoFolders();
@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory(prefix='jf-ui-v632-') as d:
   ck('Nested media folder preserved',page.locator('#folderTiles [data-open-folder="source/佛学/讲座"]').count()==1)
   ck('Move targets still include empty managed folders',page.evaluate('unifiedFolderOptions().some(x=>x.relativeDir==="data/1002")'))
   page.evaluate('''()=>{openUnifiedMove(['v632-video']);}''')
-  ck('Move picker includes all managed and work folders',page.evaluate('''()=>{const opts=[...document.querySelector('#unifiedMoveTarget').options];return opts.some(x=>x.value==='data/1002'&&!x.disabled)&&opts.some(x=>x.value==='source/空目录'&&x.disabled)}'''))
+  ck('Move picker includes eligible managed and nested folders',page.evaluate('''()=>{const opts=[...document.querySelector('#unifiedMoveTarget').options];return opts.some(x=>x.value==='data/1002'&&!x.disabled)&&opts.some(x=>x.value==='source/空目录'&&!x.disabled)}'''))
   page.evaluate('closeUnifiedMove()')
   ck('No browser errors',not errors)
   browser.close()

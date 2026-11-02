@@ -60,18 +60,17 @@ def main():
       check('Non-media ignored',all(n not in byname for n in ['讲座文档.tar.gz','作业.docx','symlink-escape.mkv']))
       check('Accurate video/audio/image classification',{x['kind'] for x in items}=={'video','audio','image'})
       check('Deep folder hierarchy indexed',all(z in [x['relativeDir'] for x in data['folders']] for z in ['source','source/佛学','source/佛学/南怀瑾','source/佛学/南怀瑾/讲座','source/佛学/南怀瑾/录音']))
-      check('Workspace entries read-only',all(x['readOnly'] for x in items))
-      check('Mixed-workspace root video never renamed',byname['根目录.mp4']['relativeDir']=='' and byname['根目录.mp4']['readOnly'] and root_video.exists())
+      check('All nested media follow normal library rules',all(not x['readOnly'] for x in items))
+      check('Non-Hash root video stays in original name',byname['根目录.mp4']['relativeDir']=='' and not byname['根目录.mp4']['readOnly'] and root_video.exists())
       check('No source file changed by initial scan',all(sha(lib/p)==h for p,h in originals.items()))
       source=byname['第01讲 H264.mkv']; old=byname['第02讲 旧编码.avi']
       compat=json.loads(urlopen(f'http://127.0.0.1:{port}/api/video-compat?key={source["key"]}')[2])
       check('H264 MKV recommends lossless remux',compat['suggest']=='copy' and compat['videoCodec']=='h264')
       compat2=json.loads(urlopen(f'http://127.0.0.1:{port}/api/video-compat?key={old["key"]}')[2])
       check('Legacy MPEG4 codec recommends re-encode',compat2['suggest']=='encode')
-      for route,payload in [('/api/media-rename',{'key':source['key'],'name':'changed'}),
-                            ('/api/folder-rename',{'relativeDir':'source/佛学','name':'changed'})]:
+      for route,payload in [('/api/folder-rename',{'relativeDir':'source/佛学','name':'changed'})]:
           status,response=post(port,route,payload)
-          check('Implicit source rename still blocked '+route,status==403 and response['ok'] is False)
+          check('Filesystem folder safety remains '+route,status==403 and response['ok'] is False)
       st,r=post(port,'/api/video-transcode',{'key':source['key'],'mode':'auto','jobId':'a'*32})
       check('Stream copy successful',st==200 and r.get('method')=='copy',str(r.get('error','')))
       st2,r2=post(port,'/api/video-transcode',{'key':old['key'],'mode':'auto','jobId':'b'*32})
@@ -86,10 +85,14 @@ def main():
           check('Progress job finished '+id[0],progress['status']=='done' and progress['percent']==100)
       check('Media sources AND documents unchanged after conversions',all(sha(lib/p)==h for p,h in originals.items()))
       check('Non-media documents still on disk',archive.read_bytes()==b'non media - do not touch' and note.read_bytes()==b'document')
-      # Explicit user move is now allowed, unlike implicit rename/import.
+      # Source files are ordinary media entries; only physically changing
+      # directories remains an explicit operation.
+      renamed,rr=post(port,'/api/media-rename',{'key':source['key'],'name':'新的标题'})
+      check('Nested original-name media can be explicitly renamed',renamed==200 and rr.get('ok') is True)
+      check('Renamed media remains in its folder', (lecture/'新的标题.mkv').exists())
       root=byname['根目录.mp4'];root_hash=originals['根目录.mp4']
       denied,out=post(port,'/api/media-move',{'keys':[root['key']],'target':'root'})
-      check('Source-to-root move remains blocked',denied==403 and out.get('ok') is False)
+      check('Already-in-root move is a no-op',denied==200 and out.get('moved')==0)
       moved,res=post(port,'/api/media-move',{'keys':[root['key']],'target':'data'})
       check('Explicit source-to-managed move succeeds',moved==200 and res.get('moved')==1,str(res))
       check('Root source removed only after successful move',not root_video.exists())
