@@ -482,7 +482,13 @@ function ingestSourceTree(){
       if(depth===0&&entry.name==='data')continue;
       const physical=path.join(absolute,entry.name);
       if(entry.isDirectory()){
-        if(depth<32)walk(physical,virtual+'/'+entry.name,depth+1);
+        if(depth<32){
+          // A real folder is a valid move target even while empty or when it
+          // contains documents only; the index must not depend on media count.
+          const child=virtual+'/'+entry.name;
+          seenDirs.add(child);
+          walk(physical,child,depth+1);
+        }
         continue;
       }
       if(!entry.isFile())continue;
@@ -552,7 +558,7 @@ function ingestSourceTree(){
     catalog.folders.push({relativeDir:dir,parentDir:dir.slice(0,i),originalName:dir.slice(i+1),state:'ready',readOnly:true});
     changed=true;
   }
-  const hasSource=discovered.size>0;
+  const hasSource=discovered.size>0||seenDirs.size>1;
   const sourceRoot=catalog.folders.find(x=>x.relativeDir==='source');
   if(hasSource&&!sourceRoot){
     catalog.folders.push({relativeDir:'source',parentDir:'root',originalName:'子目录',state:'ready',readOnly:true});
