@@ -58,104 +58,72 @@ function captureNativeFullscreenOrigin(video) {
 }
 
 function restoreNativeFullscreenHost() {
-  const origin =
-    nativeFullscreenOrigin;
+  const origin = nativeFullscreenOrigin;
+  nativeFullscreenOrigin = null;
+  if (!origin || !origin.video || origin.video.isConnected === false) return null;
 
-  nativeFullscreenOrigin =
-    null;
+  const video = origin.video;
+  // Native fullscreen reuses this same element for another Feed item when
+  // swiping between videos. Capture the ACTIVE item's position before restoring
+  // the old host; the entry snapshot is not the playback position on exit.
+  const activeKey = video.dataset.fullscreenKey || video.dataset.itemKey || origin.sectionKey;
+  const activeSeconds = Number(video.currentTime);
+  const sameMedia = activeKey === (origin.itemKey || origin.sectionKey);
+  const wasPlaying = !video.paused;
 
-  if (
-    !origin ||
-    !origin.video ||
-    origin.video.isConnected === false
-  ) {
-    return;
+  if (!sameMedia) {
+    try { video.pause(); } catch {}
   }
+  video.dataset.itemKey = origin.itemKey || origin.sectionKey;
+  video.dataset.fullscreenKey = origin.fullscreenKey || origin.sectionKey;
+  video.dataset.rotation = String(normalizeRotation(origin.rotation || 0));
+  video.classList.remove('nativeSwitching');
+  if (origin.poster) video.setAttribute('poster',origin.poster);
+  else video.removeAttribute('poster');
 
-  const video =
-    origin.video;
-
-  try {
-    video.pause();
-  } catch {}
-
-  video.dataset.itemKey =
-    origin.itemKey ||
-    origin.sectionKey;
-
-  video.dataset.fullscreenKey =
-    origin.fullscreenKey ||
-    origin.sectionKey;
-
-  video.dataset.rotation =
-    String(
-      normalizeRotation(
-        origin.rotation || 0
-      )
-    );
-
-  video.classList.remove(
-    'nativeSwitching'
-  );
-
-  if (origin.poster) {
-    video.setAttribute(
-      'poster',
-      origin.poster
-    );
-  } else {
-    video.removeAttribute(
-      'poster'
-    );
-  }
-
-  const source =
-    video.dataset.src ||
-    '';
-
-  if (
-    origin.loaded === '1' &&
-    source
-  ) {
-    video.src =
-      source;
-
-    video.dataset.loaded =
-      '1';
-
-    try {
-      video.load();
-    } catch {}
-
-    if (
-      currentFeedKey ===
-        origin.sectionKey &&
-      Number.isFinite(
-        origin.currentTime
-      )
-    ) {
-      try {
-        video.currentTime =
-          origin.currentTime;
-      } catch {}
+  // If fullscreen stayed on the same media, the video element already has the
+  // correct currentTime, decoded buffers and play/pause state. Reloading it here
+  // silently seeks back to the time at which fullscreen was entered.
+  if (!sameMedia) {
+    const source = video.dataset.src || '';
+    if (origin.loaded === '1' && source) {
+      video.src = source;
+      video.dataset.loaded = '1';
+      try { video.load(); } catch {}
+      if (currentFeedKey === origin.sectionKey && Number.isFinite(origin.currentTime)) {
+        try { video.currentTime = origin.currentTime; } catch {}
+      }
+    } else {
+      video.removeAttribute('src');
+      video.dataset.loaded = '0';
+      try { video.load(); } catch {}
     }
-  } else {
-    video.removeAttribute(
-      'src'
-    );
-
-    video.dataset.loaded =
-      '0';
-
-    try {
-      video.load();
-    } catch {}
   }
+  applyRotationToVideo(video,origin.rotation || 0);
+  if (typeof jfTimelineUpdate === 'function') jfTimelineUpdate(video);
+  return { key:activeKey, seconds:activeSeconds, sameMedia, wasPlaying };
+}
 
-  applyRotationToVideo(
-    video,
-    origin.rotation || 0
-  );
+// After switching to a different video while native fullscreen is open, the
+// fullscreen host belongs to its original Feed item. The real target section
+// needs the final fullscreen playhead, including when metadata loads later.
+function jfRestoreFullscreenPlaybackTime(key, seconds) {
+  if (!key || !Number.isFinite(seconds) || seconds < 0) return;
+  const video = getCurrentFeedVideo();
+  if (!video || video.dataset.itemKey !== key) return;
+  const session = jfFeedSessionGeneration;
+  const apply = () => {
+    if (!video.isConnected || jfFeedSessionGeneration !== session ||
+        currentFeedKey !== key || video.dataset.itemKey !== key) return;
+    if (video.readyState < 1) return;
+    const duration = Number(video.duration);
+    const target = Number.isFinite(duration) && duration > 0
+      ? Math.min(seconds,duration) : seconds;
+    try { video.currentTime = target; } catch { return; }
+    if (typeof jfTimelineUpdate === 'function') jfTimelineUpdate(video);
+  };
+  if (video.readyState >= 1) apply();
+  else video.addEventListener('loadedmetadata',apply,{once:true});
 }
 
 function fullscreenVideoElement() {
@@ -444,25 +412,30 @@ function rememberFullscreenState() {
     fullscreenVideoElement();
 
   if (!video) {
-    restoreNativeFullscreenHost();
+    const restored = restoreNativeFullscreenHost();
+    nativeFullscreenVideo = null;
+    nativeFullscreenKey = '';
 
-    nativeFullscreenVideo =
-      null;
-
-    nativeFullscreenKey =
-      '';
-
-    if (currentFeedKey) {
-      syncFeedBehind(
-        currentFeedKey
-      );
-    }
-    // The restored old fullscreen host is paused. Activate only the video
-    // belonging to the selected new section; never revive both tracks.
+    if (currentFeedKey) syncFeedBehind(currentFeedKey);
     const currentSection=[...document.querySelectorAll('#feedScroller .feedItem')]
       .find(section=>section.dataset.key===currentFeedKey);
+    const currentVideo=currentSection?.querySelector('video.feedVideo');
+    if (restored && restored.key === currentFeedKey) {
+      if (!restored.sameMedia) {
+        jfRestoreFullscreenPlaybackTime(restored.key,restored.seconds);
+      } else if (currentVideo && typeof jfTimelineUpdate === 'function') {
+        jfTimelineUpdate(currentVideo);
+      }
+      // Preserve intentional pause/playing state instead of always restarting
+      // an already paused video after leaving browser fullscreen.
+      if (restored.sameMedia || !restored.wasPlaying) {
+        silenceOtherFeedVideos(currentVideo || null);
+        return;
+      }
+    }
+    // A switched-to video was playing fullscreen; activate the matching Feed
+    // card only after restoring the origin host and its media source.
     pauseInactiveFeedVideos(currentSection);
-
     return;
   }
 
