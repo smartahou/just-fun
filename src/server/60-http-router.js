@@ -356,7 +356,7 @@ function startServer() {
                 scanMessage:
                   catalog.scanMessage,
                 folders: catalog.folders.filter(f => f.state === 'ready').map(f => ({
-                  relativeDir:f.relativeDir, parentDir:f.parentDir, originalName:f.originalName,readOnly:f.readOnly===true
+                  relativeDir:f.relativeDir, parentDir:f.parentDir, originalName:f.originalName,readOnly:f.readOnly===true,state:'ready'
                 })),
                 items:
                   catalog.items

@@ -136,7 +136,7 @@ function hideUnifiedRename() {document.querySelector('#unifiedRenameBack').hidde
 // Directory management: move existing hash-named files without rewriting their bytes.
 let unifiedMoveKeys=[];
 function unifiedFolderOptions() {
-  const folders=[{relativeDir:'root',name:'原媒体目录'},{relativeDir:'data',name:'data'},...allFolders.filter(x=>(x.relativeDir.startsWith('data/')||x.relativeDir.startsWith('source/')) && x.state==='ready').map(x=>({relativeDir:x.relativeDir,name:unifiedFolderPath(x.relativeDir)}))];
+  const folders=[{relativeDir:'root',name:'原媒体目录'},{relativeDir:'data',name:'data'},...allFolders.filter(x=>typeof x.relativeDir==='string' && (x.relativeDir.startsWith('data/')||x.relativeDir.startsWith('source/')) && (x.state===undefined||x.state==='ready')).map(x=>({relativeDir:x.relativeDir,name:unifiedFolderPath(x.relativeDir)}))];
   return folders.sort((a,b)=>a.relativeDir==='data'?-1:b.relativeDir==='data'?1:a.name.localeCompare(b.name,'zh-CN',{numeric:true}));
 }
 function unifiedFolderPath(dir) {
