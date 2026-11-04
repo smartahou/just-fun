@@ -231,24 +231,26 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
               return {on:document.getElementById('jfReader').classList.contains('paged'),
                       oy:getComputedStyle(c).overflowY, ox:getComputedStyle(c).overflowX,
                       sl:Math.round(c.scrollLeft), step:Math.round(jfDeskPagedMetrics().step),
-                      total:jfDeskPagedTotal()};
+                      total:jfDeskPagedTotal(), page:jfDeskPageIndex};
             }""")
             ck('Paged mode stops vertical scrolling',
                paged['on'] and paged['oy'] == 'hidden', str(paged))
             ck('Paged mode has more than one page', paged['total'] > 1, str(paged['total']))
+            ck('Paged mode cannot be scrolled by hand, only turned',
+               paged['sl'] == 0 and paged['page'] == 0, str(paged))
             page.keyboard.press('ArrowRight')
             page.wait_for_timeout(800)
-            after = page.evaluate("()=>Math.round(document.getElementById('jfReadCenter').scrollLeft)")
-            ck('ArrowRight turns to the next page', after >= paged['step'], str((paged['sl'], after)))
+            after = page.evaluate("()=>jfDeskPageIndex")
+            ck('ArrowRight turns to the next page', after == paged['page'] + 1, str((paged['page'], after)))
             page.keyboard.press('ArrowLeft')
             page.wait_for_timeout(800)
-            back = page.evaluate("()=>Math.round(document.getElementById('jfReadCenter').scrollLeft)")
-            ck('ArrowLeft turns back a page', back < after, str((after, back)))
+            back = page.evaluate("()=>jfDeskPageIndex")
+            ck('ArrowLeft turns back a page', back == after - 1, str((after, back)))
             box = page.locator('#jfReadCenter').bounding_box()
             page.mouse.click(box['x'] + box['width'] * 0.85, box['y'] + box['height'] * 0.5)
             page.wait_for_timeout(800)
-            clicked = page.evaluate("()=>Math.round(document.getElementById('jfReadCenter').scrollLeft)")
-            ck('Clicking the right half turns forward', clicked > back, str((back, clicked)))
+            clicked = page.evaluate("()=>jfDeskPageIndex")
+            ck('Clicking the right half turns forward', clicked == back + 1, str((back, clicked)))
             page.locator('#jfReadPaged').click()
             page.wait_for_timeout(900)
             off = page.evaluate("""()=>({on:document.getElementById('jfReader').classList.contains('paged'),
