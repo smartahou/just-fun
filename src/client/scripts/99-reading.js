@@ -355,7 +355,7 @@ async function jfDeskOpenReader(bookId,chapter){
 // the reader scrolls like one long document instead of paging chapter by chapter.
 // Excerpt offsets stay per-chapter: the anchor is computed inside the section that
 // owns the selection, which keeps the stored format compatible with older notes.
-let jfDeskFlow=[],jfDeskFlowBusy=false;
+let jfDeskFlow=[],jfDeskFlowBusy=false,jfDeskBackfillBusy=false;
 // Cover/blank EPUB front matter stays in the archive and continuous scroll,
 // but should not be a page of the simulated paper book.
 function jfDeskPaperOmittedChapter(n){
@@ -427,7 +427,9 @@ async function jfDeskFlowPrepend(n){
   jfReadText.prepend(sec);
   jfDeskFlow.unshift({n,el:sec});
   jfReadCenter.scrollTop=top+(jfReadCenter.scrollHeight-before);
-  if(jfDeskPaged)jfDeskPagedLayout(true,'prepend');
+  // Wait until the page list has been atomically replaced before a boundary
+  // navigation uses it; the old fire-and-forget path raced the next click.
+  if(jfDeskPaged)await jfDeskPagedLayout(true,'prepend');
   return true;
 }
 function jfDeskFlowTrim(){
@@ -1530,6 +1532,10 @@ function jfDeskBlocksFor(sec){
 async function jfDeskPagedLayout(keepPage,reason){
   if(!jfDeskPaged)return;
   const gen=++jfDeskPageGen;
+  // An earlier chapter is inserted *before* the mounted window. Its newly
+  // inserted pages shift array indices, even though the visible page identity
+  // stays the same. Preserve this page reference across async measurements.
+  const beforePrepend=reason==='prepend'?jfDeskPages[jfDeskPageIndex]:null;
   const geo=jfDeskPagedGeometry();
   const view=document.getElementById('jfPageView');
   view.style.setProperty('--jf-page-w',geo.pageW+'px');
@@ -1606,7 +1612,18 @@ async function jfDeskPagedLayout(keepPage,reason){
   // the reader, which is exactly the "next page skips one" defect. Only a real
   // reflow (font, family, margin, size) may re-locate the reader.
   const appended=reason==='append'||reason==='prepend';
-  if(!appended){
+  if(reason==='prepend'&&beforePrepend){
+    const shifted=jfDeskPages.indexOf(beforePrepend);
+    if(shifted>=0)jfDeskPageIndex=shifted;
+    else if(anchor){
+      let found=-1;
+      for(let i=0;i<jfDeskPages.length;i++){
+        const p=jfDeskPages[i];
+        if(p[0]?.chapter===anchor.chapter&&(p[0].offset||0)<=anchor.offset)found=i;
+      }
+      if(found>=0)jfDeskPageIndex=found;
+    }
+  }else if(!appended){
     if(anchor){
       let found=-1;
       for(let i=0;i<jfDeskPages.length;i++){
@@ -1816,7 +1833,33 @@ function jfDeskPageTurn(delta){
   if(aligned!==jfDeskPageIndex)jfDeskPageIndex=aligned;
   const lastAligned=Math.floor((jfDeskPages.length-1)/step)*step;
   const next=Math.max(0,Math.min(lastAligned,jfDeskPageIndex+delta*step));
-  if(next===jfDeskPageIndex)return false;
+  if(next===jfDeskPageIndex){
+    if(delta>=0||jfDeskBackfillBusy||!jfDeskFlow.length)return false;
+    // Restored EPUB sessions mount the current chapter and following chapters.
+    // At index 0 this is *not* necessarily the start of the book. Fetch the
+    // nearest preceding readable chapter instead of trapping the reader.
+    let n=Math.min(...jfDeskFlow.map(x=>x.n))-1;
+    while(n>=0&&jfDeskPaperOmittedChapter(n))n--;
+    if(n<0)return false;
+    const bookId=jfDeskBook?.id,session=jfDeskSession;
+    const visible=jfDeskPages[jfDeskPageIndex];
+    jfDeskBackfillBusy=true;
+    jfDeskFlowPrepend(n).then(added=>{
+      if(!added||!jfDeskPaged||jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
+      const at=jfDeskPages.indexOf(visible);
+      if(at<0)return;
+      const currentStep=(jfDeskPagedGeometry().two&&jfDeskPages.length>1)?2:1;
+      // If the original first page became the RIGHT leaf of its spread, the
+      // preceding leaf is now visible automatically. Otherwise advance to the
+      // immediately preceding spread (never skip a spread on odd chapter ends).
+      if(at%currentStep===0&&jfDeskPageIndex>=currentStep){
+        jfDeskPageIndex-=currentStep;
+        jfDeskPagedRender('prev');
+      }
+    }).catch(error=>jfDeskMessage('上一章节加载失败：'+(error.message||error),true))
+      .finally(()=>{jfDeskBackfillBusy=false;});
+    return true;
+  }
   jfDeskPageIndex=next;
   jfDeskPagedRender(delta>0?'next':'prev');
   if(jfDeskPageIndex>=lastAligned-2)jfDeskPagedPrefetch();
