@@ -1407,18 +1407,23 @@ async function jfDeskPagedLayout(keepPage,reason){
   // Restore by block identity, not by page number: a reflow changes how many
   // pages exist, so the old index is meaningless. Fall back to the first page of
   // the same chapter when the exact block no longer starts a page.
-  if(anchor){
-    // Restore by chapter + character offset, not by block key: a reflow can split
-    // blocks differently, so keys are not stable across layouts.
-    let found=-1;
-    for(let i=0;i<jfDeskPages.length;i++){
-      const p=jfDeskPages[i];
-      if(!p.length)continue;
-      if(p[0].chapter===anchor.chapter&&(p[0].offset||0)<=anchor.offset)found=i;
-    }
-    if(found<0)found=jfDeskPages.findIndex(p=>p[0]&&p[0].chapter===anchor.chapter);
-    jfDeskPageIndex=found>=0?found:0;
-  }else jfDeskPageIndex=0;
+  // Appending a chapter only adds pages at the end: every page before it keeps its
+  // index and identity. Re-deriving the index from an anchor in that case moved
+  // the reader, which is exactly the "next page skips one" defect. Only a real
+  // reflow (font, family, margin, size) may re-locate the reader.
+  const appended=reason==='append'||reason==='prepend';
+  if(!appended){
+    if(anchor){
+      let found=-1;
+      for(let i=0;i<jfDeskPages.length;i++){
+        const p=jfDeskPages[i];
+        if(!p.length)continue;
+        if(p[0].chapter===anchor.chapter&&(p[0].offset||0)<=anchor.offset)found=i;
+      }
+      if(found<0)found=jfDeskPages.findIndex(p=>p[0]&&p[0].chapter===anchor.chapter);
+      jfDeskPageIndex=found>=0?found:0;
+    }else jfDeskPageIndex=0;
+  }
   if(twoPages&&jfDeskPageIndex%2)jfDeskPageIndex-=1;
   jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,Math.max(0,jfDeskPages.length-(twoPages?2:1))));
   jfDeskPagedRender();
@@ -1490,12 +1495,16 @@ function jfDeskPageTurn(delta){
   if(!jfDeskPaged||jfReader.hidden)return false;
   const geo=jfDeskPagedGeometry();
   const step=(geo.two&&jfDeskPages.length>1)?2:1;
-  const last=Math.max(0,jfDeskPages.length-step);
-  const next=Math.max(0,Math.min(last,jfDeskPageIndex+delta*step));
+  // The index must stay aligned to the spread grid, otherwise the last spread can
+  // start on an odd page and repeat the page already shown beside it.
+  const aligned=Math.floor(jfDeskPageIndex/step)*step;
+  if(aligned!==jfDeskPageIndex)jfDeskPageIndex=aligned;
+  const lastAligned=Math.floor((jfDeskPages.length-1)/step)*step;
+  const next=Math.max(0,Math.min(lastAligned,jfDeskPageIndex+delta*step));
   if(next===jfDeskPageIndex)return false;
   jfDeskPageIndex=next;
   jfDeskPagedRender(delta>0?'next':'prev');
-  if(jfDeskPageIndex>=last-2)jfDeskPagedPrefetch();
+  if(jfDeskPageIndex>=lastAligned-2)jfDeskPagedPrefetch();
   return true;
 }
 async function jfDeskPagedToggle(){
