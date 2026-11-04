@@ -356,6 +356,17 @@ async function jfDeskOpenReader(bookId,chapter){
 // Excerpt offsets stay per-chapter: the anchor is computed inside the section that
 // owns the selection, which keeps the stored format compatible with older notes.
 let jfDeskFlow=[],jfDeskFlowBusy=false;
+// Cover/blank EPUB front matter stays in the archive and continuous scroll,
+// but should not be a page of the simulated paper book.
+function jfDeskPaperOmittedChapter(n){
+  return !!(jfDeskPaged&&jfDeskOutline?.format==='EPUB'&&jfDeskOutline.chapters?.[n]?.paperOmit);
+}
+function jfDeskPaperFirstReadable(n){
+  if(!jfDeskPaged||jfDeskOutline?.format!=='EPUB')return n;
+  const total=jfDeskOutline.chapters.length;
+  while(n<total-1&&jfDeskPaperOmittedChapter(n))n++;
+  return n;
+}
 const JF_FLOW_PREFETCH=1400;   // px from an edge that triggers the neighbouring load
 const JF_FLOW_MAX=15;          // hard cap on simultaneously mounted chapters
 const JF_FLOW_AHEAD=2;
@@ -396,6 +407,7 @@ function jfDeskFlowFetchOnce(n){
   return task;
 }
 async function jfDeskFlowAppend(n){
+  if(jfDeskPaperOmittedChapter(n))return false;
   const html=await jfDeskFlowFetchOnce(n);
   if(html===false)return false;
   if(jfDeskFlow.some(x=>x.n===n))return false;
@@ -406,6 +418,7 @@ async function jfDeskFlowAppend(n){
   return true;
 }
 async function jfDeskFlowPrepend(n){
+  if(jfDeskPaperOmittedChapter(n))return false;
   const html=await jfDeskFlowFetchOnce(n);
   if(html===false)return false;
   if(jfDeskFlow.some(x=>x.n===n))return false;
@@ -436,6 +449,7 @@ function jfDeskFlowVisible(){
   return null;
 }
 async function jfDeskShowChapterFlow(number,ratio=0){
+  number=jfDeskPaperFirstReadable(number);
   const epoch=++jfDeskEpoch;
   jfDeskFlowReset();
   jfReadText.replaceChildren();
@@ -506,6 +520,7 @@ function jfDeskFlowOnScroll(){
 async function jfDeskShowChapter(number,ratio=0){
   if(jfDeskOutline?.nativePdf)return jfDeskShowPdfPage(number);
   if(!jfDeskBook||!jfDeskOutline||number<0||number>=jfDeskOutline.chapters.length)return;
+  number=jfDeskPaperFirstReadable(number);
   // EPUB reads as one continuous document; TXT and the mask mode keep the paged path.
   if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio);
   const epoch=++jfDeskEpoch;
@@ -1348,7 +1363,7 @@ function jfDeskRecountBookPages(){
   const totalChapters=(jfDeskOutline&&jfDeskOutline.chapters)?jfDeskOutline.chapters.length:0;
   let known=0,sum=0;
   for(let n=0;n<totalChapters;n++){
-    const count=jfDeskChapterPageCounts.get(n);
+    const count=jfDeskPaperOmittedChapter(n)?0:jfDeskChapterPageCounts.get(n);
     if(typeof count==='number'){known++;sum+=count;}
   }
   const exact=totalChapters>0&&known===totalChapters;
@@ -1363,7 +1378,7 @@ function jfDeskRecountBookPages(){
 function jfDeskPagesBefore(chapter){
   let sum=0;
   for(let n=0;n<chapter;n++){
-    const count=jfDeskChapterPageCounts.get(n);
+    const count=jfDeskPaperOmittedChapter(n)?0:jfDeskChapterPageCounts.get(n);
     if(typeof count!=='number')return null;
     sum+=count;
   }
@@ -1417,7 +1432,7 @@ async function jfDeskMeasureBook(geo){
     for(let n=0;n<totalChapters;n++){
       if(jfDeskCensusToken!==token)return;              // superseded
       if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
-      if(jfDeskChapterPageCounts.has(n))continue;
+      if(jfDeskPaperOmittedChapter(n)||jfDeskChapterPageCounts.has(n))continue;
       await jfDeskIdle();
       if(jfDeskCensusToken!==token)return;
       let html=null;
@@ -1525,6 +1540,7 @@ async function jfDeskPagedLayout(keepPage,reason){
   for(const key of Array.from(jfDeskChapterPages.keys()))if(!mounted.has(key))jfDeskChapterPages.delete(key);
 
   for(const sec of jfDeskFlow){
+    if(jfDeskPaperOmittedChapter(sec.n))continue;
     let cached=jfDeskChapterPages.get(sec.n);
     if(!cached){
       const blocks=jfDeskBlocksFor(sec);
@@ -1685,14 +1701,10 @@ function jfDeskPagedRender(direction){
   // A light transition sells the turn without touching layout. Skipped when the
   // user asked for reduced motion or when the caller only re-renders in place.
   if(direction){
+    // No forced synchronous layout or whole-sheet transform animation.
     const view=document.getElementById('jfPageView');
-    view.dataset.dir=direction;
-    view.style.setProperty('--jf-turn-from',direction==='next'?'10px':'-10px');
     view.classList.remove('jf-turning');
-    void view.offsetWidth;
-    view.classList.add('jf-turning');
     clearTimeout(jfDeskTurnTimer);
-    jfDeskTurnTimer=setTimeout(()=>view.classList.remove('jf-turning'),190);
   }
   jfDeskUpdateProgress();
 }
