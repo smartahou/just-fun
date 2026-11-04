@@ -42,6 +42,12 @@ assert.equal(l.dataset.paperSide,'left');
 assert.equal(r.dataset.paperSide,'right');
 paper.applySpread(l,r,'book-A',page(7),[],false);
 assert.equal(r.dataset.paperGroup,undefined);
+// A physical right sheet remains on the final spread even if it carries no text.
+// The texture must match the left group without creating another pagination page.
+paper.applySpread(l,r,'book-A',page(7),[],true);
+assert.equal(r.dataset.paperGroup,l.dataset.paperGroup);
+assert.equal(r.dataset.paperSide,'right');
+assert(styles[0].textContent.includes('radial-gradient('),'old-paper center correction missing');
 paper.applySpread(l,r,'book-A',[],[],true);
 assert.equal(l.dataset.paperGroup,undefined);
 (async()=>{
