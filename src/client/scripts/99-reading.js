@@ -459,7 +459,9 @@ async function jfDeskShowChapterFlow(number,ratio=0){
   jfReadRawText=first.textContent;
   jfReadVisualText=jfReadRawText;
   jfReadText.classList.add('jfReadHtml');
-  // The chapter body is only real after the fetch resolves; page it now.
+  // The section was mounted with a placeholder before the fetch resolved, so any
+  // cached pagination for it describes the placeholder, not the chapter.
+  if(typeof jfDeskChapterPages!=='undefined')jfDeskChapterPages.delete(number);
   if(jfDeskPaged)jfDeskPagedLayout(true);
   for(const id of ['jfReadPrev','jfReadNext'])document.getElementById(id).disabled=false;
   document.getElementById('jfReadChapters').value=String(number);
@@ -1325,6 +1327,27 @@ async function jfDeskPrepareImages(){
   }));
 }
 
+// Per-chapter page cache. Chapter boundaries are page boundaries in a printed
+// book, so each chapter can be paginated independently and the result reused.
+// A chapter is re-paginated only when it is new or the layout signature changed.
+const jfDeskChapterPages=new Map();
+let jfDeskPagesSig='';
+
+function jfDeskLayoutSignature(geo){
+  return [jfDeskBook?.id||'',jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
+          geo.pageW,geo.pageH,geo.innerW,geo.innerH].join('|');
+}
+function jfDeskBlocksFor(sec){
+  const blocks=[];
+  let i=0,acc=0;
+  for(const node of sec.el.children){
+    blocks.push({chapter:sec.n,node:document.importNode(node,true),
+                 key:sec.n+':'+(i++),offset:acc});
+    acc+=node.textContent.length;
+  }
+  return blocks;
+}
+
 async function jfDeskPagedLayout(keepPage,reason){
   if(!jfDeskPaged)return;
   const gen=++jfDeskPageGen;
@@ -1337,31 +1360,43 @@ async function jfDeskPagedLayout(keepPage,reason){
   await jfDeskPrepareImages();
   if(gen!==jfDeskPageGen)return;
   const host=jfDeskMeasureHost(geo);
-  const blocks=[];
   const anchor=keepPage?jfDeskCurrentAnchor():null;
-  for(const sec of jfDeskFlow){
-    let i=0,acc=0;
-    for(const node of sec.el.children){
-      blocks.push({chapter:sec.n,node:document.importNode(node,true),
-                   key:sec.n+':'+(i++),offset:acc});
-      acc+=node.textContent.length;
-    }
-  }
-  // TXT has no mounted sections: structure the plain chapter text into
-  // paragraphs so the same measured engine can lay it out.
-  if(!blocks.length && jfDeskOutline&&jfDeskOutline.format!=='EPUB'){
-    const NL=String.fromCharCode(10);
-    const paras=String(jfReadRawText||'').split(NL+NL).map(s=>s.trim()).filter(Boolean);
-    paras.forEach((text,i)=>{
-      const p=document.createElement('p');
-      p.textContent=text;
-      blocks.push({chapter:jfDeskChapter,node:p,key:'t'+jfDeskChapter+':'+i});
-    });
-  }
-  // No fudge factor: the engine measures the assembled column, so the budget is
-  // the real text box height.
+  const signature=jfDeskLayoutSignature(geo);
+  if(signature!==jfDeskPagesSig){jfDeskChapterPages.clear();jfDeskPagesSig=signature;}
   const budget=Math.max(120,geo.innerH);
-  const pages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
+  const pages=[];
+  const mounted=new Set(jfDeskFlow.map(s=>s.n));
+  // Drop cached chapters that are no longer mounted (trimmed window).
+  for(const key of Array.from(jfDeskChapterPages.keys()))if(!mounted.has(key))jfDeskChapterPages.delete(key);
+
+  for(const sec of jfDeskFlow){
+    let cached=jfDeskChapterPages.get(sec.n);
+    if(!cached){
+      const blocks=jfDeskBlocksFor(sec);
+      cached=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
+      jfDeskChapterPages.set(sec.n,cached);
+    }
+    for(const page of cached)pages.push(page);
+  }
+  // TXT has no mounted sections: structure the plain chapter text once and cache
+  // it under the current chapter number.
+  if(!jfDeskFlow.length && jfDeskOutline&&jfDeskOutline.format!=='EPUB'){
+    let cached=jfDeskChapterPages.get(jfDeskChapter);
+    if(!cached){
+      const NL=String.fromCharCode(10);
+      const blocks=[];
+      String(jfReadRawText||'').split(NL+NL).map(s=>s.trim()).filter(Boolean)
+        .forEach((text,i)=>{
+          const p=document.createElement('p');
+          p.textContent=text;
+          const offset=blocks.reduce((n,b)=>n+b.node.textContent.length,0);
+          blocks.push({chapter:jfDeskChapter,node:p,key:'t'+jfDeskChapter+':'+i,offset});
+        });
+      cached=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
+      jfDeskChapterPages.set(jfDeskChapter,cached);
+    }
+    for(const page of cached)pages.push(page);
+  }
   if(gen!==jfDeskPageGen)return;   // a newer layout already started
   jfDeskPages=pages;                // atomic swap: page turns never see a half-built list
   // Decide single vs spread only after pagination: with one page a spread would
@@ -1393,7 +1428,7 @@ function jfDeskCurrentAnchor(){
   const first=page&&page[0];
   return first?{chapter:first.chapter,offset:first.offset||0}:null;
 }
-function jfDeskPagedRender(){
+function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
   const left=document.getElementById('jfSheetLeft');
@@ -1406,8 +1441,21 @@ function jfDeskPagedRender(){
   if(first)jfDeskChapter=first.chapter;
   const sel=document.getElementById('jfReadChapters');
   if(sel)sel.value=String(jfDeskChapter);
+  // A light transition sells the turn without touching layout. Skipped when the
+  // user asked for reduced motion or when the caller only re-renders in place.
+  if(direction){
+    const view=document.getElementById('jfPageView');
+    view.dataset.dir=direction;
+    view.style.setProperty('--jf-turn-from',direction==='next'?'10px':'-10px');
+    view.classList.remove('jf-turning');
+    void view.offsetWidth;
+    view.classList.add('jf-turning');
+    clearTimeout(jfDeskTurnTimer);
+    jfDeskTurnTimer=setTimeout(()=>view.classList.remove('jf-turning'),190);
+  }
   jfDeskUpdateProgress();
 }
+let jfDeskTurnTimer=0;
 function jfDeskPagedTotal(){return jfDeskPages.length||1;}
 // Explain abnormal whitespace: chapter end, an unsplittable image, or a split
 // refused by the orphan/widow rule.
@@ -1446,10 +1494,8 @@ function jfDeskPageTurn(delta){
   const next=Math.max(0,Math.min(last,jfDeskPageIndex+delta*step));
   if(next===jfDeskPageIndex)return false;
   jfDeskPageIndex=next;
-  jfDeskPagedRender();
+  jfDeskPagedRender(delta>0?'next':'prev');
   if(jfDeskPageIndex>=last-2)jfDeskPagedPrefetch();
-  // Report short pages so an empty-looking spread is explainable, not mysterious.
-  jfDeskPagedReportFill();
   return true;
 }
 async function jfDeskPagedToggle(){

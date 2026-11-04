@@ -1295,3 +1295,13 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 /* A single page sits centred like a closed book. */
 .jfPageView.single .jfSheet[data-side='right']{display:none}
 .jfPageMeasure{font-family:'Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif}
+
+/* v7.35 · page turn transition: transform/opacity only, no relayout. */
+.jfPageView{position:relative}
+.jfPageView.jf-turning .jfSheet{animation:jfSheetTurn .16s cubic-bezier(.22,.61,.36,1) both}
+.jfPageView.jf-turning[data-dir='next'] .jfSheet[data-side='left']{}
+@keyframes jfSheetTurn{
+  from{opacity:.62;transform:translateX(var(--jf-turn-from,8px))}
+  to{opacity:1;transform:translateX(0)}
+}
+@media (prefers-reduced-motion:reduce){.jfPageView.jf-turning .jfSheet{animation:none}}
