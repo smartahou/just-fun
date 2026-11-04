@@ -1274,7 +1274,9 @@ function jfDeskMeasureHost(geo){
     document.getElementById('jfPageView').appendChild(jfMeasureHost);
   }
   jfMeasureHost.style.width=geo.innerW+'px';
-  jfMeasureHost.style.height=geo.innerH+'px';
+  // The probe must grow with its content: a fixed height makes scrollHeight
+  // report that height, so every column looks "exactly full" and overflows.
+  jfMeasureHost.style.height='auto';
   jfMeasureHost.style.padding='0';
   return jfMeasureHost;
 }
@@ -1306,9 +1308,9 @@ function jfDeskPagedLayout(keepPage){
       blocks.push({chapter:jfDeskChapter,node:p,key:'t'+jfDeskChapter+':'+i});
     });
   }
-  // Leave a few pixels of slack: line-height rounding and margin collapsing make
-  // a block measure a hair shorter than it paints, which would clip the last line.
-  const budget=Math.max(120,geo.innerH-6);
+  // No fudge factor: the engine measures the assembled column, so the budget is
+  // the real text box height.
+  const budget=Math.max(120,geo.innerH);
   jfDeskPages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
@@ -1348,6 +1350,29 @@ function jfDeskPagedRender(){
   jfDeskUpdateProgress();
 }
 function jfDeskPagedTotal(){return jfDeskPages.length||1;}
+// Explain abnormal whitespace: chapter end, an unsplittable image, or a split
+// refused by the orphan/widow rule.
+function jfDeskPagedReportFill(){
+  const geo=jfDeskPagedGeometry();
+  const two=jfDeskPages.length>1;
+  const idx=jfDeskPageIndex;
+  const pages=two?[jfDeskPages[idx],jfDeskPages[idx+1]].filter(Boolean):[jfDeskPages[idx]];
+  const reasons={end:'chapter end',scaled:'scaled figure',oversized:'unsplittable block',split:'split'};
+  const short=[];
+  for(const page of pages){
+    if(!page)continue;
+    const h=page.reduce((s,b)=>{
+      const el=b.node;const cs=getComputedStyle(el);
+      return s+el.getBoundingClientRect().height+(parseFloat(cs.marginBottom)||0);
+    },0);
+    const fill=h/geo.innerH;
+    if(fill<0.72){
+      const flags=[...new Set(page.map(b=>reasons[b.scaled?'scaled':b.oversized?'oversized':b.split?'split':'end']).filter(Boolean))];
+      short.push({fill:Math.round(fill*100),why:flags.join('/')});
+    }
+  }
+  if(short.length)console.info('[JustFun] short page',JSON.stringify(short));
+}
 function jfDeskPagedPrefetch(){
   if(!jfDeskFlow.length)return;
   const totalChapters=jfDeskOutline?.chapters.length||0;
@@ -1364,6 +1389,8 @@ function jfDeskPageTurn(delta){
   jfDeskPageIndex=next;
   jfDeskPagedRender();
   if(jfDeskPageIndex>=last-2)jfDeskPagedPrefetch();
+  // Report short pages so an empty-looking spread is explainable, not mysterious.
+  jfDeskPagedReportFill();
   return true;
 }
 async function jfDeskPagedToggle(){
