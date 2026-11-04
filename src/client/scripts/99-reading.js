@@ -336,9 +336,140 @@ async function jfDeskOpenReader(bookId,chapter){
   }catch(e){if(epoch!==jfDeskEpoch)return;jfReadText.hidden=true;document.getElementById('jfReadError').hidden=false;
     document.getElementById('jfReadError').textContent='打开失败：'+e.message;}
 }
+// ---- v7.32 continuous EPUB reading -------------------------------------------
+// Chapters are appended/prepended as <section data-chapter> inside #jfReadText so
+// the reader scrolls like one long document instead of paging chapter by chapter.
+// Excerpt offsets stay per-chapter: the anchor is computed inside the section that
+// owns the selection, which keeps the stored format compatible with older notes.
+let jfDeskFlow=[],jfDeskFlowBusy=false;
+const JF_FLOW_PREFETCH=1400;   // px from an edge that triggers the neighbouring load
+const JF_FLOW_MAX=15;          // hard cap on simultaneously mounted chapters
+const JF_FLOW_AHEAD=2;
+
+function jfDeskFlowReset(){jfDeskFlow=[];jfDeskFlowBusy=false;}
+function jfDeskFlowSection(n,html){
+  const sec=document.createElement('section');
+  sec.className='jfEpubChapter';
+  sec.dataset.chapter=String(n);
+  sec.innerHTML=html||'<p></p>';
+  return sec;
+}
+async function jfDeskFlowFetch(n){
+  const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+n);
+  return data.html||'';
+}
+async function jfDeskFlowAppend(n){
+  if(n<0||n>=jfDeskOutline.chapters.length)return false;
+  if(jfDeskFlow.some(x=>x.n===n))return false;
+  const bookId=jfDeskBook.id;
+  const html=await jfDeskFlowFetch(n);
+  if(jfDeskBook?.id!==bookId)return false;
+  const sec=jfDeskFlowSection(n,html);
+  jfReadText.append(sec);
+  jfDeskFlow.push({n,el:sec});
+  return true;
+}
+async function jfDeskFlowPrepend(n){
+  if(n<0||n>=jfDeskOutline.chapters.length)return false;
+  if(jfDeskFlow.some(x=>x.n===n))return false;
+  const bookId=jfDeskBook.id;
+  const html=await jfDeskFlowFetch(n);
+  if(jfDeskBook?.id!==bookId)return false;
+  const sec=jfDeskFlowSection(n,html);
+  const before=jfReadCenter.scrollHeight,top=jfReadCenter.scrollTop;
+  jfReadText.prepend(sec);
+  jfDeskFlow.unshift({n,el:sec});
+  // Inserting above the viewport must not move what the reader is looking at.
+  jfReadCenter.scrollTop=top+(jfReadCenter.scrollHeight-before);
+  return true;
+}
+function jfDeskFlowTrim(){
+  while(jfDeskFlow.length>JF_FLOW_MAX){
+    const box=jfReadCenter.getBoundingClientRect();
+    const first=jfDeskFlow[0],last=jfDeskFlow[jfDeskFlow.length-1];
+    const farTop=first.el.getBoundingClientRect().bottom<box.top-JF_FLOW_PREFETCH*2;
+    const farBottom=last.el.getBoundingClientRect().top>box.bottom+JF_FLOW_PREFETCH*2;
+    if(farTop&&farBottom){const item=jfDeskFlow.shift();item.el.remove();}
+    else break;
+  }
+}
+function jfDeskFlowVisible(){
+  const box=jfReadCenter.getBoundingClientRect();
+  for(const item of jfDeskFlow){
+    const r=item.el.getBoundingClientRect();
+    if(r.bottom>box.top+1)return {item,r,box};
+  }
+  return null;
+}
+async function jfDeskShowChapterFlow(number,ratio=0){
+  const epoch=++jfDeskEpoch;
+  jfDeskFlowReset();
+  jfReadText.replaceChildren();
+  jfReadText.hidden=false;
+  jfReadText.classList.remove('jfTxtProse');
+  jfDeskChapter=number;
+  jfReadRawToDisplay=null;
+  jfReadHtml='';
+  const bookId=jfDeskBook.id;
+  const first=jfDeskFlowSection(number,'<p class="jfEpubPending">正在载入…</p>');
+  jfReadText.append(first);
+  jfDeskFlow.push({n:number,el:first});
+  try{
+    const html=await jfDeskFlowFetch(number);
+    if(epoch!==jfDeskEpoch||jfDeskBook?.id!==bookId)return;
+    first.innerHTML=html||'<p></p>';
+  }catch(e){
+    if(epoch!==jfDeskEpoch)return;
+    first.innerHTML='<p class="jfEpubPending">章节无法打开：'+String(e.message||e)+'</p>';
+    return;
+  }
+  jfReadRawText=first.textContent;
+  jfReadVisualText=jfReadRawText;
+  jfReadText.classList.add('jfReadHtml');
+  for(const id of ['jfReadPrev','jfReadNext'])document.getElementById(id).disabled=false;
+  document.getElementById('jfReadChapters').value=String(number);
+  jfReadCenter.scrollTop=0;
+  requestAnimationFrame(()=>{
+    if(epoch!==jfDeskEpoch)return;
+    const box=jfReadCenter.getBoundingClientRect(),r=first.getBoundingClientRect();
+    jfReadCenter.scrollTop=Math.max(0,jfReadCenter.scrollTop+(r.top-box.top)+ratio*r.height);
+    jfDeskProgressSignature='';jfDeskUpdateProgress();
+  });
+  // Prefetch ahead sequentially: concurrent appends would interleave and leave
+  // the mounted sections out of reading order.
+  (async()=>{
+    for(let i=1;i<=JF_FLOW_AHEAD;i++){
+      const n=number+i;
+      if(n>=jfDeskOutline.chapters.length)break;
+      if(jfDeskBook?.id!==bookId)break;
+      await jfDeskFlowAppend(n);
+    }
+  })().catch(()=>{});
+}
+function jfDeskFlowOnScroll(){
+  if(jfReadMaskEnabled||!jfDeskFlow.length||jfDeskFlowBusy)return;
+  const total=jfDeskOutline?.chapters.length||0;
+  if(!total)return;
+  const c=jfReadCenter;
+  // Track the highest/lowest mounted chapter, not array ends: prefetch may still
+  // be settling and the two must never disagree about which chapter comes next.
+  let maxN=-1,minN=Infinity;
+  for(const item of jfDeskFlow){if(item.n>maxN)maxN=item.n;if(item.n<minN)minN=item.n;}
+  const nearBottom=c.scrollTop+c.clientHeight>c.scrollHeight-JF_FLOW_PREFETCH;
+  const nearTop=c.scrollTop<JF_FLOW_PREFETCH;
+  if(nearBottom&&maxN<total-1){
+    jfDeskFlowBusy=true;
+    jfDeskFlowAppend(maxN+1).catch(()=>{}).finally(()=>{jfDeskFlowBusy=false;});
+  }else if(nearTop&&minN>0){
+    jfDeskFlowBusy=true;
+    jfDeskFlowPrepend(minN-1).catch(()=>{}).finally(()=>{jfDeskFlowBusy=false;});
+  }
+}
 async function jfDeskShowChapter(number,ratio=0){
   if(jfDeskOutline?.nativePdf)return jfDeskShowPdfPage(number);
   if(!jfDeskBook||!jfDeskOutline||number<0||number>=jfDeskOutline.chapters.length)return;
+  // EPUB reads as one continuous document; TXT and the mask mode keep the paged path.
+  if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio);
   const epoch=++jfDeskEpoch;
   try{
     const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+number);
@@ -366,16 +497,27 @@ async function jfDeskShowChapter(number,ratio=0){
 }
 function jfDeskUpdateProgress(){
   if(!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf||jfReader.hidden)return;
-  const max=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight);
-  const ratio=max?Math.min(1,jfReadCenter.scrollTop/max):0;
-  const pct=Math.round((jfDeskChapter+ratio)/jfDeskOutline.chapters.length*100);
+  let chapter=jfDeskChapter,ratio=0;
+  if(jfDeskFlow.length){
+    const vis=jfDeskFlowVisible();
+    if(vis){
+      chapter=vis.item.n;
+      const h=vis.r.height||1;
+      ratio=Math.min(1,Math.max(0,(vis.box.top-vis.r.top)/h));
+      jfDeskChapter=chapter;
+    }
+  }else{
+    const max=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight);
+    ratio=max?Math.min(1,jfReadCenter.scrollTop/max):0;
+  }
+  const pct=Math.round((chapter+ratio)/jfDeskOutline.chapters.length*100);
   document.getElementById('jfReadProgress').textContent=pct+'%';
   document.getElementById('jfReadProgressFill').style.width=pct+'%';
   const sig=jfDeskBook.id+':'+jfDeskChapter+':'+Math.round(ratio*100);
   if(sig===jfDeskProgressSignature)return;
   jfDeskProgressSignature=sig;
   clearTimeout(jfDeskProgressTimer);
-  const bookId=jfDeskBook.id,chapter=jfDeskChapter,total=jfDeskOutline.chapters.length;
+  const bookId=jfDeskBook.id,total=jfDeskOutline.chapters.length;
   jfDeskProgressTimer=setTimeout(()=>{jfDeskMutate({action:'progress',bookId,chapter,ratio,total}).catch(e=>{jfDeskMessage(e.message,true);});},900);
 }
 async function jfDeskCloseReader(){
@@ -869,9 +1011,14 @@ async function jfDeskExcerpt(){
     jfDeskMessage('请先选中正文，再点击摘录',true);return;
   }
   const range=sel.getRangeAt(0),offset=document.createRange();
-  offset.selectNodeContents(jfReadText);offset.setEnd(range.startContainer,range.startOffset);
+  // Continuous mode: the anchor is computed against the section that owns the
+  // selection, so the stored offset stays chapter-local and old notes still resolve.
+  const anchorEl=(sel.anchorNode&&(sel.anchorNode.nodeType===1?sel.anchorNode:sel.anchorNode.parentElement))?.closest?.('[data-chapter]')||null;
+  const scope=anchorEl||jfReadText;
+  const chapter=anchorEl?Number(anchorEl.dataset.chapter):jfDeskChapter;
+  offset.selectNodeContents(scope);offset.setEnd(range.startContainer,range.startOffset);
   const leading=sel.toString().length-sel.toString().trimStart().length;
-  jfDeskChooseQuote({text:text.slice(0,6000),bookId:jfDeskBook.id,chapter:jfDeskChapter,anchorStart:offset.toString().length+leading});
+  jfDeskChooseQuote({text:text.slice(0,6000),bookId:jfDeskBook.id,chapter,anchorStart:offset.toString().length+leading});
 }
 async function jfDeskJumpToQuote(quote){
   if(!quote?.bookId)return;
@@ -879,7 +1026,10 @@ async function jfDeskJumpToQuote(quote){
   await jfDeskOpenReader(quote.bookId,quote.chapter);
   if(jfDeskBook?.id!==quote.bookId||!quote.text)return;
   if(jfDeskOutline?.nativePdf){jfPdfJsJumpToQuote(quote);return;}
-  const full=jfReadText.textContent;
+  const targetChapter=Number.isSafeInteger(quote.chapter)?quote.chapter:jfDeskChapter;
+  const owner=jfDeskFlow.find(x=>x.n===targetChapter)?.el||null;
+  const scope=owner||jfReadText;
+  const full=scope.textContent;
   let i=Number.isSafeInteger(quote.anchorStart)&&quote.anchorStart>=0&&full.slice(quote.anchorStart,quote.anchorStart+quote.text.length)===quote.text?quote.anchorStart:-1;
   // Legacy quotes used source-text offsets. Map those through the visual TXT
   // reflow rather than losing the link when a soft source newline disappears.
@@ -891,12 +1041,24 @@ async function jfDeskJumpToQuote(quote){
   if(i<0&&jfDeskOutline?.format==='TXT')i=full.indexOf(jfTxtSmartReflow(quote.text).text);
   if(i<0)i=full.indexOf(quote.text.slice(0,30));
   if(i<0)return;
-  // Remove the previous transient marker before mapping absolute text offsets.
-  jfReadText.textContent=full;
-  const node=jfReadText.firstChild;if(!node||node.nodeType!==Node.TEXT_NODE)return;
-  const range=document.createRange();range.setStart(node,i);range.setEnd(node,Math.min(i+Math.min(quote.text.length,80),node.textContent.length));
+  // Restore any transient marker first, then map the text offset onto real nodes.
+  // Multi-chapter sections mean the hit can span several text nodes.
+  scope.querySelectorAll('mark.jfReadCitation').forEach(m=>m.replaceWith(...m.childNodes));
+  const point=(root,at)=>{
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    let acc=0,node;
+    while((node=walker.nextNode())){
+      const len=node.nodeValue.length;
+      if(acc+len>=at)return {node,offset:Math.max(0,at-acc)};
+      acc+=len;
+    }
+    return null;
+  };
+  const start=point(scope,i),end=point(scope,i+Math.min(quote.text.length,80));
+  if(!start||!end)return;
+  const range=document.createRange();range.setStart(start.node,start.offset);range.setEnd(end.node,end.offset);
   const marker=document.createElement('mark');marker.className='jfReadCitation';marker.style.cssText='background:#8ad9bd72;color:inherit;border-radius:3px';
-  try{range.surroundContents(marker);marker.scrollIntoView({block:'center',behavior:'smooth'});}catch{}
+  try{const fragment=range.extractContents();marker.appendChild(fragment);range.insertNode(marker);marker.scrollIntoView({block:'center',behavior:'smooth'});}catch{}
 }
 document.getElementById('jfDeskNotesOpen').addEventListener('click',jfDeskOpenNotes);
 document.getElementById('jfDeskNotesClose').addEventListener('click',jfDeskCloseNotes);
@@ -1009,9 +1171,22 @@ document.getElementById('jfDeskDeleteNote').addEventListener('click',async()=>{
   catch(e){jfDeskMessage(e.message,true);}
 });
 document.getElementById('jfReadBack').addEventListener('click',jfDeskCloseReader);
-document.getElementById('jfReadPrev').addEventListener('click',()=>jfDeskShowChapter(jfDeskChapter-1));
-document.getElementById('jfReadNext').addEventListener('click',()=>jfDeskShowChapter(jfDeskChapter+1));
-document.getElementById('jfReadChapters').addEventListener('change',e=>jfDeskShowChapter(Number(e.target.value)));
+function jfDeskStepChapter(delta){
+  if(jfDeskFlow.length){
+    const vis=jfDeskFlowVisible();
+    const current=vis?vis.item.n:jfDeskChapter;
+    const target=current+delta;
+    if(target<0||target>=jfDeskOutline.chapters.length)return;
+    const mounted=jfDeskFlow.find(x=>x.n===target);
+    if(mounted){jfDeskChapter=target;mounted.el.scrollIntoView({block:'start',behavior:'smooth'});}
+    else jfDeskShowChapter(target,0);
+    return;
+  }
+  jfDeskShowChapter(jfDeskChapter+delta);
+}
+document.getElementById('jfReadPrev').addEventListener('click',()=>jfDeskStepChapter(-1));
+document.getElementById('jfReadNext').addEventListener('click',()=>jfDeskStepChapter(1));
+document.getElementById('jfReadChapters').addEventListener('change',e=>{jfDeskFlowReset();jfDeskShowChapter(Number(e.target.value));});
 document.getElementById('jfReadSmaller').addEventListener('click',()=>jfDeskSetPref({font:Math.max(13,jfDeskFont-2)}));
 document.getElementById('jfReadLarger').addEventListener('click',()=>jfDeskSetPref({font:Math.min(28,jfDeskFont+2)}));
 document.getElementById('jfReadTypographyToggle').addEventListener('click',()=>{
@@ -1031,7 +1206,11 @@ document.getElementById('jfReadTheme').addEventListener('click',()=>jfDeskSetPre
 document.getElementById('jfReadNotes').addEventListener('click',jfDeskOpenNotes);
 document.getElementById('jfReadMask').addEventListener('click',jfReadToggleMask);
 document.getElementById('jfReadExcerpt').addEventListener('click',jfDeskExcerpt);
-jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;if(jfDeskOutline?.nativePdf)jfPdfJsOnScroll();else jfDeskUpdateProgress();},{passive:true});
+let jfDeskFlowScrollAt=0;
+jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;if(jfDeskOutline?.nativePdf){jfPdfJsOnScroll();return;}
+  jfDeskUpdateProgress();
+  const now=Date.now();
+  if(now-jfDeskFlowScrollAt>150){jfDeskFlowScrollAt=now;jfDeskFlowOnScroll();}},{passive:true});
 document.addEventListener('keydown',event=>{
   if(!jfReader.hidden && jfNotesPanel.hidden && !event.altKey && !event.ctrlKey && !event.metaKey &&
     !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName) &&

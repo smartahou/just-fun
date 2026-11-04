@@ -137,6 +137,14 @@ function update({fetch=true,fetchTimeout=180000}={}) {
     console.log(`更新成功：Just Fun ${candidate.version} / ${candidate.sha256.slice(0,16)}…`);
     return candidate;
   }finally{
+    // Detach the node_modules junction FIRST. Both 'git worktree remove' and
+    // fs.rmSync recurse through a junction on Windows and would otherwise erase
+    // the real node_modules content, leaving the next build without esbuild.
+    if(stage){
+      const link=path.join(stage,'node_modules');
+      try{ if(fs.existsSync(link)) fs.rmdirSync(link); }
+      catch(e){ console.error('提示：无法断开临时 node_modules 链接：'+e.message); }
+    }
     if(attached)try{git('worktree','remove','--force',stage);}catch(e){console.error('提示：临时工作树清理失败：'+e.message);}
     if(stage && fs.existsSync(stage))try{fs.rmSync(stage,{recursive:true,force:true});}catch{}
   }

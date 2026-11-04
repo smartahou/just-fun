@@ -34,8 +34,13 @@ def build_epub(dest, png_bytes):
                    '<dc:title>EPUB Render</dc:title><dc:language>zh</dc:language></metadata>'
                    '<manifest><item id="c1" href="text/ch1.xhtml" media-type="application/xhtml+xml"/>'
                    '<item id="c2" href="text/ch2.xhtml" media-type="application/xhtml+xml"/>'
-                   '<item id="img1" href="images/pic.png" media-type="image/png"/></manifest>'
-                   '<spine><itemref idref="c1"/><itemref idref="c2"/></spine></package>')
+                   '<item id="img1" href="images/pic.png" media-type="image/png"/>'
+                   '<item id="c3" href="text/ch3.xhtml" media-type="application/xhtml+xml"/>'
+                   '<item id="c4" href="text/ch4.xhtml" media-type="application/xhtml+xml"/>'
+                   '<item id="c5" href="text/ch5.xhtml" media-type="application/xhtml+xml"/>'
+                   '<item id="c6" href="text/ch6.xhtml" media-type="application/xhtml+xml"/></manifest>'
+                   '<spine><itemref idref="c1"/><itemref idref="c2"/><itemref idref="c3"/>'
+                   '<itemref idref="c4"/><itemref idref="c5"/><itemref idref="c6"/></spine></package>')
         z.writestr('OEBPS/text/ch1.xhtml', '<?xml version="1.0" encoding="UTF-8"?>'
                    '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>one</title>'
                    '<style>body{color:red}</style></head><body><h1>Chapter One</h1>'
@@ -52,6 +57,12 @@ def build_epub(dest, png_bytes):
                    '<img src="http://evil.example/x.png" alt="remote"/>'
                    '<script>window.pwned = true;</script><p>tail</p></body></html>')
         z.writestr('OEBPS/images/pic.png', png_bytes)
+        for i in range(3, 7):
+            z.writestr('OEBPS/text/ch%d.xhtml' % i,
+                       '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml">'
+                       '<head><title>c%d</title></head><body><h1>Chapter %d</h1>'
+                       '<p>filler paragraph for continuous scrolling %d</p></body></html>' % (i, i, i))
+
 
 with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
     tmp = pathlib.Path(d)
@@ -156,6 +167,34 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
                  return getComputedStyle(t).overflowY==='visible'
                      && ['auto','scroll'].includes(getComputedStyle(c).overflowY);
                }"""))
+            # v7.32: continuous reading mounts neighbouring chapters on scroll.
+            mounted = page.evaluate("()=>document.querySelectorAll('#jfReadText [data-chapter]').length")
+            ck('Opening a book mounts the first chapters', mounted >= 2, str(mounted))
+            page.evaluate("()=>{const c=document.getElementById('jfReadCenter');c.scrollTop=c.scrollHeight;}")
+            page.wait_for_timeout(1200)
+            grown = page.evaluate("()=>document.querySelectorAll('#jfReadText [data-chapter]').length")
+            ck('Scrolling to the bottom mounts the next chapter', grown > mounted, str((mounted, grown)))
+            order = page.evaluate(
+                "()=>[...document.querySelectorAll('#jfReadText [data-chapter]')].map(s=>Number(s.dataset.chapter))")
+            ck('Mounted chapters stay in reading order', order == sorted(order), str(order))
+            excerpt = page.evaluate("""()=>{
+              const secs=[...document.querySelectorAll('#jfReadText [data-chapter]')];
+              const sec=secs.find(s=>s.textContent.trim().length>40)||secs[0];
+              const walker=document.createTreeWalker(sec,NodeFilter.SHOW_TEXT);
+              let n=null;while((n=walker.nextNode()))if(n.nodeValue.trim().length>0)break;
+              if(!n)return {err:'no text node', secLen:sec.textContent.length};
+              const r=document.createRange();r.setStart(n,0);r.setEnd(n,Math.min(6,n.nodeValue.length));
+              const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+              const selected=sel.toString();
+              jfDeskExcerpt();
+              const q=(typeof jfDeskQuotePending==='undefined')?null:jfDeskQuotePending;
+              return {selected, hasBook:!!jfDeskBook, hasPending:!!q,
+                      chapter:q?q.chapter:null, local:q?(q.anchorStart<=sec.textContent.length):null,
+                      matches:q?(sec.textContent.slice(q.anchorStart,q.anchorStart+q.text.length)===q.text):null,
+                      saveFailed:(typeof jfDeskSaveFailed==='undefined')?null:jfDeskSaveFailed};
+            }""")
+            ck('Excerpt anchor stays chapter-local in continuous mode',
+               bool(excerpt) and excerpt['local'] and excerpt['matches'], str(excerpt))
             browser.close()
     finally:
         if proc:

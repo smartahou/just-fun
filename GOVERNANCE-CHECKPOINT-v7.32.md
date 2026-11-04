@@ -129,3 +129,37 @@ ZIP 解析部分本身是可靠的（中央目录、inflateRaw、路径穿越防
 
 同轮修复：`ensureVendor()` 改为按 lockfile 全量 `npm install`。原先安装单包会让 npm 重算依赖树并删掉
 `devDependencies` 里的 esbuild，导致下一次构建报 `Missing esbuild`——本轮实际复现了两次。
+
+## v7.32 追加 · EPUB 连续滚动阅读
+
+需求：EPUB 原为一章一屏、手动翻页，与 PDF 的连续阅读体验差距明显。
+
+实现：
+
+1. 新增 flow 引擎：`#jfReadText` 内以 `<section data-chapter=N>` 拼接多个章节，整篇作为一个长文档滚动。
+2. 打开时加载当前章 + 顺序预取后 2 章；滚动到距边缘 1400px 时自动追加下一章，向上同理前插上一章，
+   前插时补偿 `scrollTop`，阅读位置不跳。
+3. 挂载章节上限 15 章，超出时移除离视口最远的章节。
+4. 摘录锚点仍为**章内偏移**：以选区所在的 section 为 scope 计算，历史笔记的 `chapter + anchorStart` 语义不变。
+5. 跳转改为按 `chapter` 找到对应 section，用 TreeWalker 把文本偏移映射到节点后 `extractContents` 包裹，
+   支持跨节点标记；不再把 `#jfReadText` 重置为纯文本（旧实现会把 EPUB 打回文字）。
+6. 进度条按当前可见 section 的章号 + 章内比例计算。
+7. 上一/下一章按钮在该章已挂载时滚动过去，否则重新加载；章节下拉选择清空后重载。
+8. 章节之间加分隔线与留白，避免两章无缝相接。
+
+调试中修复的两个真实缺陷：
+
+- 预取并发导致章节顺序变成 [0,2,1]，改为串行 await。
+- 边界判断用数组末尾章号，乱序后永远卡住，改为对已挂载章号取 min/max。
+
+验证：tests/epub-render-v732.py **28/28 PASS**（新增 4 条：首屏挂载多章、滚到底追加下一章、章号保持升序、
+摘录锚点为章内偏移且能在 section 内精确匹配原文）。真实书《崩溃的帝国》实测：从第 20 章打开，向上依次加载 19/18/17/16。
+
+### 严重缺陷修复 · 更新器删除 node_modules
+
+update() 把 node_modules 以 junction 挂进临时 worktree，清理时 git worktree remove --force 会顺着 junction 递归删除，
+把真实 node_modules 整个清空。后果：用户每次双击 JustFun.cmd 更新后 esbuild 消失，下一次构建直接失败；
+本轮实际复现三次（前两次被误判为 npm 参数问题）。
+修复：清理前先 fs.rmdirSync 断开 junction，再移除 worktree。
+
+未做：固定版式 EPUB、跨章搜索、大章节虚拟化（当前上限 15 章）。

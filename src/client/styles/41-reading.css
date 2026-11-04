@@ -824,3 +824,8 @@ body.jfNotesMode #jfDeskNotes .jfDeskEditor input[type="range"].jfNoteBulkImageR
 html:has(.jfReader:not([hidden])),
 body:has(.jfReader:not([hidden])){overflow:hidden}
 .jfReader .jfReadCenter{overflow-x:hidden;overscroll-behavior:contain}
+
+/* Continuous reading: chapters are scroll sections, so they need a seam. */
+.jfReadHtml .jfEpubChapter+.jfEpubChapter{margin-top:44px;padding-top:38px;border-top:1px solid rgba(255,255,255,.07)}
+.jfReadHtml .jfEpubChapter:first-child{padding-top:0}
+.jfReadHtml .jfEpubPending{opacity:.55;font-style:italic}
