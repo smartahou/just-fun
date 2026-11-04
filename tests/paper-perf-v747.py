@@ -58,6 +58,21 @@ def main():
                 pg.locator('#jfReadPaged').click()
                 pg.wait_for_function("()=>jfDeskPages.length>2",timeout=50000)
                 pg.wait_for_timeout(600)
+                if args.expected_static:
+                    geometry=pg.evaluate("""()=>{
+                      const page=document.querySelector('.jfSheet[data-side="left"]').getBoundingClientRect();
+                      const spine=document.querySelector('.jfSpineShade').getBoundingClientRect();
+                      return {top:Math.abs(page.top-spine.top),bottom:Math.abs(page.bottom-spine.bottom)};
+                    }""")
+                    assert geometry['top']<1.5 and geometry['bottom']<1.5, 'Spine exceeds book page: '+str(geometry)
+                    # The old-paper control is purely visual: it must not repaginate.
+                    before=pg.evaluate("()=>jfDeskPageIndex")
+                    pg.locator('#jfReadPaperAged').click()
+                    assert not pg.evaluate("()=>window.JFPaperTextures.isEnabled()")
+                    assert pg.evaluate("()=>getComputedStyle(document.querySelector('.jfSheet'),'::after').backgroundImage")=='none'
+                    pg.locator('#jfReadPaperAged').click()
+                    assert pg.evaluate("()=>window.JFPaperTextures.isEnabled()")
+                    assert before==pg.evaluate("()=>jfDeskPageIndex")
                 has_static=pg.evaluate("()=>!!window.JFPaperTextures")
                 if args.expected_static:
                     assert has_static,'Missing new paper material module'
@@ -120,6 +135,7 @@ def main():
                     'heapBytes':data['heap'],'domNodes':data['dom'],
                     'textureRules':data['styleRules'],'samePageStable':True,
                     'errors':errors}
+                if args.expected_static:pg.screenshot(path=str(ROOT/'dist'/'paper-v747-browser.png'),full_page=True)
                 if args.output:pathlib.Path(args.output).write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps(summary,ensure_ascii=False,indent=2),flush=True)
                 br.close()
