@@ -52,7 +52,15 @@ function jfApplyTextReadingPrefs(){
   document.getElementById('jfReadFamily').value=jfDeskPrefs.family;
   document.getElementById('jfReadSide').value=String(jfDeskPrefs.side);
   document.getElementById('jfReadSideValue').textContent=jfDeskPrefs.side+'px';
-  jfReader.classList.toggle('paper',jfDeskPrefs.theme==='paper');
+  jfReader.classList.toggle('paper',jfDeskPrefs.theme==='paper'||jfDeskPaged);
+  // Font, measure and family all change line breaking, so the paper-book pages
+  // must be measured again; the anchor keeps the reader where they were.
+  if(jfDeskPaged){
+    const view=document.getElementById('jfPageView');
+    view.style.setProperty('--jf-read-font',jfDeskFont+'px');
+    view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
+    if(typeof jfDeskPagedLayout==='function')jfDeskPagedLayout(true);
+  }
 }
 
 let jfDeskQuotePending=null,jfDeskQuoteTarget='new',jfDeskQuoteLast=null;
@@ -367,6 +375,9 @@ async function jfDeskFlowAppend(n){
   const sec=jfDeskFlowSection(n,html);
   jfReadText.append(sec);
   jfDeskFlow.push({n,el:sec});
+  // Paginated mode lays out only what is mounted, so a newly arrived chapter
+  // must be re-flowed too; the block anchor keeps the reader in place.
+  if(jfDeskPaged)jfDeskPagedLayout(true);
   return true;
 }
 async function jfDeskFlowPrepend(n){
@@ -381,6 +392,7 @@ async function jfDeskFlowPrepend(n){
   jfDeskFlow.unshift({n,el:sec});
   // Inserting above the viewport must not move what the reader is looking at.
   jfReadCenter.scrollTop=top+(jfReadCenter.scrollHeight-before);
+  if(jfDeskPaged)jfDeskPagedLayout(true);
   return true;
 }
 function jfDeskFlowTrim(){
@@ -426,6 +438,8 @@ async function jfDeskShowChapterFlow(number,ratio=0){
   jfReadRawText=first.textContent;
   jfReadVisualText=jfReadRawText;
   jfReadText.classList.add('jfReadHtml');
+  // The chapter body is only real after the fetch resolves; page it now.
+  if(jfDeskPaged)jfDeskPagedLayout(true);
   for(const id of ['jfReadPrev','jfReadNext'])document.getElementById(id).disabled=false;
   document.getElementById('jfReadChapters').value=String(number);
   jfReadCenter.scrollTop=0;
@@ -1274,8 +1288,23 @@ function jfDeskPagedLayout(keepPage){
   view.style.setProperty('--jf-pad-y',geo.padY+'px');
   const host=jfDeskMeasureHost(geo);
   const blocks=[];
+  const anchor=keepPage?jfDeskCurrentAnchor():null;
   for(const sec of jfDeskFlow){
-    for(const node of sec.el.children)blocks.push({chapter:sec.n,node:document.importNode(node,true)});
+    let i=0;
+    for(const node of sec.el.children){
+      blocks.push({chapter:sec.n,node:document.importNode(node,true),key:sec.n+':'+(i++)});
+    }
+  }
+  // TXT has no mounted sections: structure the plain chapter text into
+  // paragraphs so the same measured engine can lay it out.
+  if(!blocks.length && jfDeskOutline&&jfDeskOutline.format!=='EPUB'){
+    const NL=String.fromCharCode(10);
+    const paras=String(jfReadRawText||'').split(NL+NL).map(s=>s.trim()).filter(Boolean);
+    paras.forEach((text,i)=>{
+      const p=document.createElement('p');
+      p.textContent=text;
+      blocks.push({chapter:jfDeskChapter,node:p,key:'t'+jfDeskChapter+':'+i});
+    });
   }
   jfDeskPages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,geo.innerH,host):[];
   // Decide single vs spread only after pagination: with one page a spread would
@@ -1283,9 +1312,22 @@ function jfDeskPagedLayout(keepPage){
   const twoPages=geo.two&&jfDeskPages.length>1;
   view.classList.toggle('single',!twoPages);
   view.querySelector('.jfSheet[data-side="right"]').hidden=!twoPages;
-  if(!keepPage)jfDeskPageIndex=0;
-  jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,Math.max(0,jfDeskPages.length-(geo.two?2:1))));
+  // Restore by block identity, not by page number: a reflow changes how many
+  // pages exist, so the old index is meaningless. Fall back to the first page of
+  // the same chapter when the exact block no longer starts a page.
+  if(anchor){
+    let found=jfDeskPages.findIndex(p=>p.some(b=>b.key===anchor.key));
+    if(found<0)found=jfDeskPages.findIndex(p=>p[0]&&p[0].chapter===anchor.chapter);
+    jfDeskPageIndex=found>=0?found:0;
+  }else jfDeskPageIndex=0;
+  if(twoPages&&jfDeskPageIndex%2)jfDeskPageIndex-=1;
+  jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,Math.max(0,jfDeskPages.length-(twoPages?2:1))));
   jfDeskPagedRender();
+}
+function jfDeskCurrentAnchor(){
+  const page=jfDeskPages[jfDeskPageIndex];
+  const first=page&&page[0];
+  return first?{key:first.key,chapter:first.chapter}:null;
 }
 function jfDeskPagedRender(){
   const geo=jfDeskPagedGeometry();

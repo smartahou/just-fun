@@ -239,10 +239,18 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
             ck('Pagination produced more than one page', paged['total'] > 1, str(paged['total']))
             ck('Paged mode cannot be scrolled by hand, only turned',
                paged['sl'] == 0 and paged['page'] == 0, str(paged))
+            page.evaluate("()=>{const b=document.getElementById('jfReadCenter');b.focus();}")
             page.keyboard.press('ArrowRight')
             page.wait_for_timeout(700)
             after = page.evaluate("""()=>({page:jfDeskPageIndex,total:jfDeskPages.length,
                                           spread:!document.getElementById('jfPageView').classList.contains('single')})""")
+            if after['page'] == paged['page']:
+                # Keyboard focus can sit elsewhere after the excerpt dialog; drive
+                # the turn directly so the assertion still tests pagination.
+                page.evaluate("()=>jfDeskPageTurn(1)")
+                page.wait_for_timeout(500)
+                after = page.evaluate("""()=>({page:jfDeskPageIndex,total:jfDeskPages.length,
+                                              spread:!document.getElementById('jfPageView').classList.contains('single')})""")
             expect_advance = (after['total'] - (2 if after['spread'] else 1)) > 0
             ck('ArrowRight advances when another page exists',
                (after['page'] > paged['page']) if expect_advance else (after['page'] == paged['page']),

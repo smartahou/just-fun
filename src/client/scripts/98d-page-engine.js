@@ -102,15 +102,16 @@
         if(parts){
           // Emit the head on the current page, then continue with the tail.
           flush();
-          pages.push([{chapter:item.chapter,node:parts.head,split:true}]);
-          blocks.splice(i+1,0,{chapter:item.chapter,node:parts.tail,split:true});
+          var rootKey=item.key||String(i);
+          pages.push([{chapter:item.chapter,node:parts.head,key:rootKey+'#1',split:true}]);
+          blocks.splice(i+1,0,{chapter:item.chapter,node:parts.tail,key:rootKey+'#2',split:true});
           continue;
         }
         // Cannot split (e.g. an oversized image): let it own a page.
-        flush();pages.push([{chapter:item.chapter,node:el,oversized:true}]);continue;
+        flush();pages.push([{chapter:item.chapter,node:el,key:item.key,oversized:true}]);continue;
       }
       if(curH+h>pageH&&cur.length){flush();}
-      cur.push({chapter:item.chapter,node:el});
+      cur.push({chapter:item.chapter,node:el,key:item.key});
       curH+=h;
     }
     flush();
