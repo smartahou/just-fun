@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Just Fun paper-reader browser benchmark: 30 forward + 30 backward turns.
-Works on v7.46 baseline and v7.47, never reads the owner's actual library.
+Works on v7.46 baseline and v7.48, never reads the owner's actual library.
 """
 import argparse, json, pathlib, statistics, tempfile, time, urllib.request, zipfile
 from playwright.sync_api import sync_playwright
@@ -76,7 +76,7 @@ def main():
                 has_static=pg.evaluate("()=>!!window.JFPaperTextures")
                 if args.expected_static:
                     assert has_static,'Missing new paper material module'
-                    assert pg.evaluate("()=>window.JFPaperTextures.count") == 12
+                    assert pg.evaluate("()=>window.JFPaperTextures.count") == 16
                 data=pg.evaluate("""async()=>{
                   const longTasks=[];
                   try{new PerformanceObserver(list=>{
@@ -87,7 +87,10 @@ def main():
                     const a=jfDeskPages[jfDeskPageIndex]||[];
                     const item=a[0], left=document.querySelector('.jfSheet[data-side="left"]');
                     return {key:item?item.chapter+':'+(item.offset||0)+':'+(item.key||''):'',
-                      texture:left?.dataset.paperIndex||'',index:jfDeskPageIndex};
+                      texture:left?.dataset.paperGroup||left?.dataset.paperIndex||'',
+                      paired:!!left?.dataset.paperGroup,
+                      other:document.querySelector('.jfSheet[data-side="right"]')?.dataset.paperGroup||'',
+                      index:jfDeskPageIndex};
                   };
                   const start=sample(), original=start.key;
                   const times=[],frameTimes=[],forward=[],backward=[];
@@ -123,7 +126,8 @@ def main():
                         if row['key'] in keys:
                             assert keys[row['key']]==row['texture'], 'Same page changed paper texture'
                         keys[row['key']]=row['texture']
-                    assert data['styleRules']==12, 'Offline CSS bank did not contain all twelve WebPs'
+                    assert data['styleRules']==16, 'Offline CSS bank did not contain all sixteen WebPs'
+                    assert all((x['texture']==x['other']) for x in data['forward']+data['backward'] if x['paired']), 'Wrong left/right pair'
                 assert not errors,'Browser exceptions: '+str(errors[:2])
                 summary={
                     'build':str(args.build),'staticTextures':data['staticMaterial'],
@@ -135,7 +139,7 @@ def main():
                     'heapBytes':data['heap'],'domNodes':data['dom'],
                     'textureRules':data['styleRules'],'samePageStable':True,
                     'errors':errors}
-                if args.expected_static:pg.screenshot(path=str(ROOT/'dist'/'paper-v747-browser.png'),full_page=True)
+                if args.expected_static:pg.screenshot(path=str(ROOT/'dist'/'paper-v748-browser.png'),full_page=True)
                 if args.output:pathlib.Path(args.output).write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps(summary,ensure_ascii=False,indent=2),flush=True)
                 br.close()
