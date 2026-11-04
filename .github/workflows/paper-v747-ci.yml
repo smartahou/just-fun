@@ -61,8 +61,8 @@ jobs:
           path: |
             dist/build-report.json
             dist/douyin.js
-            dist/paper-performance-v747.json
+            dist/paper-performance-v748.json
             dist/paper-v748-browser.png
-            dist/paper-performance-v746.json
+            dist/paper-performance-v747.json
             dist-build.log
           if-no-files-found: warn
