@@ -4,6 +4,10 @@
   const textures=__JUSTFUN_PAPER_SPREAD_ASSETS__;
   if(!Array.isArray(textures)||textures.length!==16)throw Error('Expected 8 paired WebP sets');
   const KEY='jf-reader-aged-paper';
+  const WEAR_KEY='jf-reader-paper-wear-v752';
+  const WEAR_LEVELS=new Set(['light','medium','heavy']);
+  let wearLevel='medium';
+  try{const saved=localStorage.getItem(WEAR_KEY);if(WEAR_LEVELS.has(saved))wearLevel=saved;}catch{}
   const CAP=12; // 6 spreads max; bounded decoded image handles
   const cache=new Map();
   let enabled=true;
@@ -91,11 +95,13 @@
   }
   function syncButton(){
     const reader=document.getElementById('jfReader');
-    if(reader)reader.classList.toggle('jf-aged-paper',enabled);
+    if(reader){reader.classList.toggle('jf-aged-paper',enabled);reader.dataset.paperWear=wearLevel;}
     const button=document.getElementById('jfReadPaperAged');
     if(button){button.setAttribute('aria-pressed',String(enabled));
       button.title=enabled?'关闭旧纸做旧':'开启旧纸做旧';
       button.setAttribute('aria-label',button.title);}
+    const select=document.getElementById('jfReadPaperWear');
+    if(select){select.value=wearLevel;select.title='旧纸做旧程度：'+({light:'轻',medium:'中',heavy:'重'}[wearLevel]);}
   }
   function toggle(){
     enabled=!enabled;
@@ -108,10 +114,19 @@
       }
     }
   }
+  function setWearLevel(level){
+    if(!WEAR_LEVELS.has(level))return false;
+    wearLevel=level;
+    try{localStorage.setItem(WEAR_KEY,level);}catch{}
+    syncButton();
+    return true;
+  }
   injectRules();syncButton();
   document.getElementById('jfReadPaperAged')?.addEventListener('click',toggle);
+  document.getElementById('jfReadPaperWear')?.addEventListener('change',function(){setWearLevel(this.value);});
   window.JFPaperTextures={
     indexFor,keyFor,pageKey,warm,applySpread,syncButton,toggle,isEnabled:()=>enabled,
+    getWearLevel:()=>wearLevel,setWearLevel,
     count:16,groups:8,cacheLimit:CAP,cacheSize:()=>cache.size
   };
 })();
