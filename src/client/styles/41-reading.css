@@ -2061,3 +2061,43 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   pointer-events:none!important;
   box-shadow:inset 0 1px 0 rgba(158,119,76,.045),inset 0 -1px 0 rgba(155,112,67,.065);
 }
+
+
+/* ===== v7.51 · 保存良好的旧书 / patient, restrained aging ============
+   The spread WebP stays original; center lightening and 1–3px edge blemishes
+   live in its existing single pseudo-element. No new layout or paint widgets.
+   No repeating stripes, blur, animated textures or page geometry changes. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left'],
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  background-color:#f4f0e7;
+}
+/* Oxidized page block: depth/color, NOT regularly spaced horizontal lines. */
+.jfReader.paged #jfPageView .jfBookPile{
+  background-color:#d4c4aa!important;
+  background-image:
+    linear-gradient(90deg,rgba(246,237,219,.77) 0%,rgba(208,189,161,.41) 46%,rgba(153,126,92,.20) 100%),
+    radial-gradient(ellipse 80% 7% at 26% 14%,rgba(157,124,80,.07),transparent),
+    radial-gradient(ellipse 55% 10% at 63% 68%,rgba(136,109,77,.09),transparent),
+    radial-gradient(ellipse 65% 5% at 28% 88%,rgba(247,236,212,.18),transparent)!important;
+  background-size:100% 100%,100% 100%,100% 100%,100% 100%!important;
+  background-repeat:no-repeat!important;
+  background-blend-mode:normal!important;
+  box-shadow:0 2px 4px rgba(69,53,32,.11)!important;
+  filter:none!important;
+}
+.jfReader.paged #jfPageView .jfBookPile[data-side='left']{
+  clip-path:polygon(100% 0,18% .45%,5% 1.6%,0 3.6%,2% 19%,0 45%,2% 78%,0 96%,8% 98.8%,100% 100%);
+}
+.jfReader.paged #jfPageView .jfBookPile[data-side='right']{
+  clip-path:polygon(0 0,82% .45%,95% 1.6%,100% 3.6%,98% 19%,100% 45%,98% 78%,100% 96%,92% 98.8%,0 100%);
+}
+/* Existing ::after receives its single immutable SVG patina + WebP.
+   Folios and page text are in other layers, unaffected by the wear. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{
+  opacity:1!important;
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  mix-blend-mode:normal!important;
+  pointer-events:none!important;
+}
+/* Do not modify the plain-paper mode when old-paper is disabled. */
