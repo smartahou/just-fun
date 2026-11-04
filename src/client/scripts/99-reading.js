@@ -1243,9 +1243,14 @@ function jfDeskPagedLayout(keepPage){
   jfReadText.style.setProperty('--jf-page-gap',gap+'px');
   jfReadText.style.setProperty('--jf-page-w',Math.round(colW)+'px');
   jfDeskPageIndex=0;
-  jfReadCenter.scrollLeft=0;
+  jfDeskPagedApplyShift();
   if(keepPage)jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,jfDeskPagedTotal()-1));
+  jfDeskPagedApplyShift();
   jfDeskUpdateProgress();
+}
+function jfDeskPagedApplyShift(){
+  const {step}=jfDeskPagedMetrics();
+  jfReadText.style.setProperty('--jf-page-shift',(jfDeskPageIndex*step)+'px');
 }
 function jfDeskPagedPrefetch(){
   if(!jfDeskFlow.length)return;
@@ -1261,9 +1266,7 @@ function jfDeskPageTurn(delta){
   const next=Math.max(0,Math.min(total-1,jfDeskPageIndex+delta));
   if(next===jfDeskPageIndex)return false;
   jfDeskPageIndex=next;
-  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const maxLeft=Math.max(0,jfReadCenter.scrollWidth-jfReadCenter.clientWidth);
-  jfReadCenter.scrollTo({left:Math.min(maxLeft,jfDeskPageIndex*step),behavior:reduced?'auto':'smooth'});
+  jfDeskPagedApplyShift();
   jfDeskUpdateProgress();
   if(jfDeskPageIndex>=total-2)jfDeskPagedPrefetch();
   return true;

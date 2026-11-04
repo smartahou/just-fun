@@ -243,3 +243,19 @@ update() 把 node_modules 以 junction 挂进临时 worktree，清理时 git wor
    实测该章 6 张图片宽度 189–449px，均小于列宽 655px，不再溢出。
 
 验证：人工核对截图与计算值；`epub-render-v732` 既有 40 项断言未受影响。
+
+## v7.32 追加 · 分页错位修复（可自由横滚）
+
+现象：分页模式停在了两屏交界处——左侧内容被裁切、右侧露出第三列、书脊压在正文上。
+
+根因：`.jfReadCenter` 是 `overflow-x:auto`。章节目录是 CSS 多列，总宽远超视口，
+因此触控板、Shift+滚轮或鼠标拖动都能把容器停在任意位置，而不是一屏一屏地对齐。
+
+修复：
+
+- `.jfReader.paged .jfReadCenter` 改为 `overflow:hidden`，禁止手动横向滚动；
+- 翻页改为对 `#jfReadText` 施加 `translateX(-page * step)`，步长 = 整屏宽（列宽+列距）× 列数；
+- 保留 `scrollWidth` 仅用于计算总页数。
+
+验证：实测 `scrollLeft` 恒为 0；翻页后 `transform = matrix(1,0,0,1,-1414,0)`；
+鼠标横向拖动后页面位置不变。截图确认左右两页各自完整、书脊居中、正文不越界。

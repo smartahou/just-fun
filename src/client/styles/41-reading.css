@@ -1150,3 +1150,14 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged .jfReadText table,
 .jfReader.paged .jfReadText pre{max-width:100%!important;box-sizing:border-box}
 .jfReader.paged .jfReadText *{min-width:0}
+
+/* Paged mode must not be scrollable by hand: any free horizontal scroll lands
+   between two spreads and shows a sliver of a third column. Page turns are a
+   transform on the text block, so the viewport is always exactly one spread. */
+.jfReader.paged .jfReadCenter{overflow:hidden!important;touch-action:pan-y}
+.jfReader.paged .jfReadText{
+  transform:translateX(calc(-1 * var(--jf-page-shift,0px)));
+  transition:transform .32s cubic-bezier(.22,.61,.36,1);
+  will-change:transform;
+}
+@media (prefers-reduced-motion:reduce){.jfReader.paged .jfReadText{transition:none}}
