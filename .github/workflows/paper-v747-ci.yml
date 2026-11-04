@@ -1,0 +1,63 @@
+name: Just Fun old-paper integration validation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "assets/paper/**"
+      - "src/client/**"
+      - "scripts/build.js"
+      - "build.manifest.json"
+      - "tests/paper-*"
+      - ".github/workflows/paper-v747-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paper-reader:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
+      - name: Verify deterministic mapping and build exact binary assets
+        run: |
+          node tests/paper-texture-v747.js
+          node scripts/build.js > dist-build.log
+          node --check dist/douyin.js
+          node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==12||r.paperTextureAssetsSha256.length!==12)throw Error('bad paper assets');console.log('BUILD SHA-256:',r.sourceSha256);"
+      - name: Prepare real Chromium tests
+        run: |
+          python -m pip install -q playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Current paper-rendering regressions
+        run: |
+          python tests/paged-correctness-v736.py
+          python tests/paged-no-skip-v737.py
+          python tests/paper-perf-v747.py --expected-static --output dist/paper-performance-v747.json
+      - name: Baseline comparison against prior v7.46
+        continue-on-error: true
+        run: |
+          git worktree add --detach /tmp/justfun-paper-baseline c059d1b716c412e206b894a53718727dbf3f6b0a
+          ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/justfun-paper-baseline/node_modules
+          (cd /tmp/justfun-paper-baseline && node scripts/build.js)
+          python tests/paper-perf-v747.py --build /tmp/justfun-paper-baseline/dist/douyin.js --output dist/paper-performance-v746.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: paper-v747-validation
+          path: |
+            dist/build-report.json
+            dist/paper-performance-v747.json
+            dist/paper-performance-v746.json
+            dist-build.log
+          if-no-files-found: warn
