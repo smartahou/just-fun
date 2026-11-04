@@ -84,7 +84,7 @@
         const side=n?'right':'left';
         rules+='.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="'
           +String(i+1).padStart(2,'0')+'"][data-paper-side="'+side+'"]::after'
-          +'{background-image:radial-gradient(ellipse 83% 77% at 50% 46%,rgba(247,248,244,.75) 0%,rgba(247,247,243,.66) 42%,rgba(244,239,227,.14) 78%,rgba(244,239,227,0) 100%),url("'+textures[i*2+n]+'")!important;}';
+          +'{background-image:radial-gradient(ellipse 90% 84% at 50% 48%,rgba(246,246,242,.94) 0%,rgba(245,245,240,.88) 45%,rgba(246,242,231,.36) 80%,rgba(246,242,231,.03) 100%),url("'+textures[i*2+n]+'")!important;}';
       }
     }
     el.textContent=rules;document.head.appendChild(el);
