@@ -1479,6 +1479,10 @@ async function jfDeskMeasureBook(geo){
     if(jfDeskCensusToken===token){
       jfDeskRecountBookPages();
       if(jfDeskPaged)jfDeskPagedLayout(true,'census');
+    }else if(jfDeskPaged && jfDeskBook && !jfDeskBookPages.exact){
+      // The old census was invalidated by a new font/viewport/book session.
+      // It must not block a fresh census at the current page geometry.
+      setTimeout(()=>{if(!jfDeskCensusRunning)jfDeskMeasureBook(jfDeskPagedGeometry());},950);
     }
   }
 }
