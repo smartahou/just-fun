@@ -1931,3 +1931,63 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   box-shadow:0 2px 4px rgba(34,25,14,.12);
   filter:none!important;transition:none!important;
 }
+
+
+/* ===== v7.48 · true paired old-paper spreads / paired folios ===== */
+/* The actual image dominates: CSS supplies only the quiet binding crease. */
+.jfReader.paged .jfPageView .jfSheet::after{
+  background-image:none!important;background-size:100% 100%!important;
+  background-position:center center!important;background-repeat:no-repeat!important;
+  mix-blend-mode:normal!important;opacity:1!important;
+  pointer-events:none!important;
+}
+.jfReader.paged:not(.jf-aged-paper) .jfPageView .jfSheet::after,
+.jfReader.paged .jfPageView .jfSheet:not([data-paper-group])::after{
+  background-image:none!important;opacity:0!important;
+}
+/* Darker aged fore-edge: warm umber, never a saturated gilded stripe. */
+.jfReader.paged .jfPageView .jfBookPile{
+  background-color:#b58a50!important;
+  background-image:
+    linear-gradient(90deg,rgba(230,204,155,.38),rgba(166,120,63,.22) 62%,rgba(88,56,29,.24)),
+    repeating-linear-gradient(180deg,#c9a56e 0px,#c9a56e 5px,#b58a50 5.5px,#b58a50 10px,#9e7541 10.6px,#b58a50 13px)!important;
+  background-repeat:no-repeat,repeat!important;
+  background-size:100% 100%,100% 13px!important;
+  background-blend-mode:normal!important;
+  box-shadow:0 2px 4px rgba(51,32,15,.13)!important;
+  filter:none!important;
+}
+/* Real folios belong to the print area, not the screen's outer corner.
+   The 7.37 page geometry reserves a stable footer; CSS here never affects it. */
+.jfReader.paged #jfPageView .jfSheet::before{
+  left:auto;right:auto;bottom:30px!important;
+  z-index:3!important;
+  font-family:'Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif!important;
+  color:#746044!important;
+  font-size:clamp(12px,calc(var(--jf-read-font,18px) * .74),14px)!important;
+  font-weight:400!important;
+  letter-spacing:.015em!important;
+  line-height:1.15!important;
+  font-variant-numeric:lining-nums tabular-nums!important;
+  opacity:1!important;text-shadow:none!important;
+  pointer-events:none!important;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='left']::before{
+  left:var(--jf-pad-x,52px)!important;right:auto!important;text-align:left!important;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']::before{
+  right:var(--jf-pad-x,52px)!important;left:auto!important;text-align:right!important;
+}
+/* Clip the slender crease exactly to the sheet height, including 1px caps. */
+.jfReader.paged #jfPageView .jfSpineShade{
+  top:calc(50% - var(--jf-page-h) / 2 + 1px)!important;
+  height:calc(var(--jf-page-h) - 2px)!important;
+  bottom:auto!important;
+  background:linear-gradient(90deg,transparent,rgba(49,35,20,.08) 41%,rgba(47,32,20,.16) 50%,rgba(49,35,20,.07) 59%,transparent)!important;
+  filter:none!important;mix-blend-mode:normal!important;
+}
+@media (max-width:780px){
+  .jfReader.paged #jfPageView .jfSheet::before{bottom:20px!important}
+  .jfReader.paged #jfPageView .jfSheet[data-side='left']::before{left:var(--jf-pad-x,28px)!important}
+  .jfReader.paged #jfPageView .jfSheet[data-side='right']::before{right:var(--jf-pad-x,28px)!important}
+}
