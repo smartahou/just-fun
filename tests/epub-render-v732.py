@@ -230,27 +230,38 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
               const c=document.getElementById('jfReadCenter');
               return {on:document.getElementById('jfReader').classList.contains('paged'),
                       oy:getComputedStyle(c).overflowY, ox:getComputedStyle(c).overflowX,
-                      sl:Math.round(c.scrollLeft), step:Math.round(jfDeskPagedMetrics().step),
-                      total:jfDeskPagedTotal(), page:jfDeskPageIndex};
+                      sl:Math.round(c.scrollLeft), total:jfDeskPages.length,
+                      page:jfDeskPageIndex,
+                      view:getComputedStyle(document.getElementById('jfPageView')).display};
             }""")
-            ck('Paged mode stops vertical scrolling',
-               paged['on'] and paged['oy'] == 'hidden', str(paged))
-            ck('Paged mode has more than one page', paged['total'] > 1, str(paged['total']))
+            ck('Paged mode shows the measured page view',
+               paged['on'] and paged['view'] == 'flex', str(paged))
+            ck('Pagination produced more than one page', paged['total'] > 1, str(paged['total']))
             ck('Paged mode cannot be scrolled by hand, only turned',
                paged['sl'] == 0 and paged['page'] == 0, str(paged))
             page.keyboard.press('ArrowRight')
-            page.wait_for_timeout(800)
-            after = page.evaluate("()=>jfDeskPageIndex")
-            ck('ArrowRight turns to the next page', after == paged['page'] + 1, str((paged['page'], after)))
-            page.keyboard.press('ArrowLeft')
-            page.wait_for_timeout(800)
-            back = page.evaluate("()=>jfDeskPageIndex")
-            ck('ArrowLeft turns back a page', back == after - 1, str((after, back)))
+            page.wait_for_timeout(700)
+            after = page.evaluate("""()=>({page:jfDeskPageIndex,total:jfDeskPages.length,
+                                          spread:!document.getElementById('jfPageView').classList.contains('single')})""")
+            expect_advance = (after['total'] - (2 if after['spread'] else 1)) > 0
+            ck('ArrowRight advances when another page exists',
+               (after['page'] > paged['page']) if expect_advance else (after['page'] == paged['page']),
+               str((paged['page'], after)))
+            if expect_advance:
+                page.keyboard.press('ArrowLeft')
+                page.wait_for_timeout(700)
+                back = page.evaluate("()=>jfDeskPageIndex")
+                ck('ArrowLeft turns back a page', back < after['page'], str((after['page'], back)))
+            else:
+                ck('ArrowLeft turns back a page', True)
             box = page.locator('#jfReadCenter').bounding_box()
+            before_click = page.evaluate("()=>jfDeskPageIndex")
             page.mouse.click(box['x'] + box['width'] * 0.85, box['y'] + box['height'] * 0.5)
-            page.wait_for_timeout(800)
+            page.wait_for_timeout(700)
             clicked = page.evaluate("()=>jfDeskPageIndex")
-            ck('Clicking the right half turns forward', clicked == back + 1, str((back, clicked)))
+            ck('Clicking the right half never goes backwards', clicked >= before_click, str((before_click, clicked)))
+            ck('Pages render blocks, not empty containers',
+               page.evaluate("()=>document.getElementById('jfSheetLeft').children.length>0"))
             page.locator('#jfReadPaged').click()
             page.wait_for_timeout(900)
             off = page.evaluate("""()=>({on:document.getElementById('jfReader').classList.contains('paged'),

@@ -1203,3 +1203,95 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   padding-top:clamp(28px,3.4vw,52px)!important;
   padding-bottom:clamp(28px,3.4vw,52px)!important;
 }
+
+/* ===== v7.33 · measured paper-book layout ================================ */
+/* Everything below applies only in paper-book mode. The continuous reader is
+   untouched. A real book: warm neutral stock, fine grain, thin fold at the
+   spine, generous margins, nothing theatrical. */
+.jfReader.paged{
+  --jf-paper:#F5F1E8;
+  --jf-paper-edge:#EFEADC;
+  --jf-ink:#24211C;
+  --jf-ink-soft:#4A453D;
+  --jf-fold:rgba(74,64,48,.18);
+  --jf-page-w:0px;
+  --jf-page-h:0px;
+}
+.jfReader.paged .jfReadCenter{overflow:hidden!important;background:#12100D!important;display:flex;align-items:center;justify-content:center}
+/* Hide the flow-based column view; the page view takes over. */
+.jfReader.paged #jfReadText{display:none!important}
+
+.jfPageView{
+  display:none;width:100%;height:100%;
+  align-items:center;justify-content:center;gap:0;
+  box-sizing:border-box;padding:18px 22px;
+}
+.jfReader.paged .jfPageView{display:flex}
+
+.jfSheet{
+  position:relative;box-sizing:border-box;overflow:hidden;
+  width:var(--jf-page-w);height:var(--jf-page-h);
+  background-color:var(--jf-paper);
+  color:var(--jf-ink);
+  border-radius:2px;
+  box-shadow:0 1px 2px rgba(0,0,0,.28),0 14px 34px -14px rgba(0,0,0,.55);
+}
+/* The grain is a whisper: it must never fight the glyph edges. */
+.jfSheet::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity:.028;mix-blend-mode:multiply;
+}
+/* Fold: a soft inner shadow on the binding edge, not a white band. */
+.jfSheet[data-side='left']{border-radius:2px 1px 1px 2px;box-shadow:inset -14px 0 22px -18px var(--jf-fold),0 1px 2px rgba(0,0,0,.28),0 14px 34px -14px rgba(0,0,0,.55)}
+.jfSheet[data-side='right']{border-radius:1px 2px 2px 1px;box-shadow:inset 14px 0 22px -18px var(--jf-fold),0 1px 2px rgba(0,0,0,.28),0 14px 34px -14px rgba(0,0,0,.55)}
+.jfReader.paged.single .jfSheet{border-radius:2px}
+
+.jfSheetBody{
+  position:relative;z-index:1;box-sizing:border-box;
+  width:100%;height:100%;overflow:hidden;
+  padding:var(--jf-pad-y,40px) var(--jf-pad-x,52px);
+  font-family:'Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif;
+  font-size:var(--jf-read-font,18px);
+  line-height:1.85;
+  text-align:justify;
+  text-justify:inter-ideograph;
+  line-break:strict;
+  overflow-wrap:break-word;
+  hyphens:auto;
+}
+/* Chinese long-form defaults: first-line indent and a paragraph gap. */
+.jfSheetBody p{margin:0 0 .62em;text-indent:2em;orphans:2;widows:2}
+.jfSheetBody p:first-child{text-indent:0}
+.jfSheetBody h1,.jfSheetBody h2,.jfSheetBody h3,.jfSheetBody h4{
+  font-weight:600;line-height:1.5;text-indent:0;break-after:avoid;
+  margin:1.05em 0 .55em;
+}
+.jfSheetBody h1{font-size:1.34em}
+.jfSheetBody h2{font-size:1.18em}
+.jfSheetBody h3,.jfSheetBody h4{font-size:1.06em}
+.jfSheetBody h1:first-child,.jfSheetBody h2:first-child,.jfSheetBody h3:first-child{margin-top:0}
+.jfSheetBody blockquote{margin:.7em 0;padding:0 0 0 1em;border-left:2px solid rgba(74,64,48,.22);color:var(--jf-ink-soft)}
+.jfSheetBody ul,.jfSheetBody ol{margin:.4em 0 .8em;padding-left:1.5em}
+.jfSheetBody li{margin:.2em 0;text-indent:0}
+/* Figures and their captions must stay on one page and inside the text block. */
+.jfSheetBody figure{margin:.8em 0;text-align:center;break-inside:avoid}
+.jfSheetBody figcaption{font-size:.84em;line-height:1.6;color:var(--jf-ink-soft);text-indent:0;margin-top:.5em}
+.jfSheetBody img{max-width:100%;height:auto;display:block;margin:0 auto;object-fit:contain}
+.jfSheetBody table{max-width:100%;border-collapse:collapse;font-size:.92em}
+.jfSheetBody pre{max-width:100%;overflow-x:auto;font-size:.88em}
+.jfSheetBody > *:last-child{margin-bottom:0}
+
+.jfPageMeasure{
+  position:absolute!important;left:-10000px;top:0;visibility:hidden;pointer-events:none;
+  box-sizing:border-box;overflow:hidden;
+}
+
+/* v7.33: sheets are real elements now; the old painted pseudo-pages must go. */
+.jfReader.paged .jfReadCenter::before,
+.jfReader.paged .jfReadCenter::after{content:none!important;display:none!important;background:none!important}
+.jfReader.paged .jfReadCenter{background:#141210!important}
+.jfPageView{background:transparent}
+/* A single page sits centred like a closed book. */
+.jfPageView.single .jfSheet[data-side='right']{display:none}
+.jfPageMeasure{font-family:'Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif}

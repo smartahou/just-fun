@@ -498,9 +498,10 @@ async function jfDeskShowChapter(number,ratio=0){
 function jfDeskUpdateProgress(){
   if(!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf||jfReader.hidden)return;
   if(jfDeskPaged){
-    const total=jfDeskPagedTotal();
-    const base=jfDeskFlow.length?Math.min(...jfDeskFlow.map(x=>x.n)):jfDeskChapter;
-    const pct=Math.min(100,Math.round(((base+(jfDeskPageIndex+1)/total)/Math.max(1,jfDeskOutline.chapters.length))*100));
+    const page=jfDeskPages[jfDeskPageIndex];
+    const chapter=(page&&page[0]?page[0].chapter:jfDeskChapter);
+    const frac=page&&page.length?Math.min(.99,(jfDeskPageIndex/Math.max(1,jfDeskPages.length))):0;
+    const pct=Math.min(100,Math.round(((chapter+frac)/Math.max(1,jfDeskOutline.chapters.length))*100));
     document.getElementById('jfReadProgress').textContent=pct+'%';
     document.getElementById('jfReadProgressFill').style.width=pct+'%';
     return;
@@ -1236,32 +1237,72 @@ function jfDeskPagedTotal(){
   if(!step)return 1;
   return Math.max(1,Math.ceil(jfReadCenter.scrollWidth/step-0.02));
 }
+// ---- v7.33 measured paper book --------------------------------------------
+// Pages are real containers sized by the viewport; the engine places blocks by
+// their rendered height. There is no CSS-column stepping, so a page can never
+// end mid-line and content can never straddle the fold.
+let jfDeskPages=[],jfMeasureHost=null;
+
+function jfDeskPagedGeometry(){
+  const cw=jfReadCenter.clientWidth||800,ch=jfReadCenter.clientHeight||600;
+  const two=cw>=1000;
+  const side=34,gap=20;
+  const pageW=Math.max(260,Math.floor(two?(cw-side*2-gap)/2:Math.min(780,cw-side*2)));
+  const pageH=Math.max(240,ch-28);
+  const padX=Math.max(20,Math.round(pageW*(pageW>520?0.085:0.062)));
+  const padY=Math.max(18,Math.round(pageH*0.055));
+  return {two,pageW,pageH,padX,padY,innerW:pageW-padX*2,innerH:pageH-padY*2};
+}
+function jfDeskMeasureHost(geo){
+  if(!jfMeasureHost){
+    jfMeasureHost=document.createElement('div');
+    jfMeasureHost.className='jfPageMeasure jfSheetBody';
+    document.getElementById('jfPageView').appendChild(jfMeasureHost);
+  }
+  jfMeasureHost.style.width=geo.innerW+'px';
+  jfMeasureHost.style.height=geo.innerH+'px';
+  jfMeasureHost.style.padding='0';
+  return jfMeasureHost;
+}
 function jfDeskPagedLayout(keepPage){
   if(!jfDeskPaged)return;
-  const cw=jfReadCenter.clientWidth||800;
-  const cols=jfDeskPagedCols();
-  // Every number below derives from one geometry: sheet = (cw - gutter) / 2,
-  // text column = sheet - 2*pad, column gap = 2*pad + gutter. Because the sheets
-  // start at x=0 the text box is exactly (cw - 2*pad), so column-count division
-  // and the page step agree by construction.
-  const gutter=14;
-  const pad=Math.round(Math.min(58,Math.max(26,cw*0.04)));
-  const sheetW=(cw-gutter)/2;
-  const colW=Math.max(160,Math.floor(sheetW-2*pad));
-  const gap=2*pad+gutter;
-  jfReadText.style.setProperty('--jf-page-cols',String(cols));
-  jfReadText.style.setProperty('--jf-page-gap',gap+'px');
-  jfReadText.style.setProperty('--jf-page-w',colW+'px');
-  jfDeskPageIndex=0;
-  jfDeskPagedApplyShift();
-  if(keepPage)jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,jfDeskPagedTotal()-1));
-  jfDeskPagedApplyShift();
+  const geo=jfDeskPagedGeometry();
+  const view=document.getElementById('jfPageView');
+  view.style.setProperty('--jf-page-w',geo.pageW+'px');
+  view.style.setProperty('--jf-page-h',geo.pageH+'px');
+  view.style.setProperty('--jf-pad-x',geo.padX+'px');
+  view.style.setProperty('--jf-pad-y',geo.padY+'px');
+  const host=jfDeskMeasureHost(geo);
+  const blocks=[];
+  for(const sec of jfDeskFlow){
+    for(const node of sec.el.children)blocks.push({chapter:sec.n,node:document.importNode(node,true)});
+  }
+  jfDeskPages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,geo.innerH,host):[];
+  // Decide single vs spread only after pagination: with one page a spread would
+  // show an empty facing page.
+  const twoPages=geo.two&&jfDeskPages.length>1;
+  view.classList.toggle('single',!twoPages);
+  view.querySelector('.jfSheet[data-side="right"]').hidden=!twoPages;
+  if(!keepPage)jfDeskPageIndex=0;
+  jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,Math.max(0,jfDeskPages.length-(geo.two?2:1))));
+  jfDeskPagedRender();
+}
+function jfDeskPagedRender(){
+  const geo=jfDeskPagedGeometry();
+  const twoPages=geo.two&&jfDeskPages.length>1;
+  const left=document.getElementById('jfSheetLeft');
+  const right=document.getElementById('jfSheetRight');
+  const pageA=jfDeskPages[jfDeskPageIndex]||[];
+  const pageB=twoPages?(jfDeskPages[jfDeskPageIndex+1]||[]):[];
+  left.replaceChildren(...pageA.map(x=>x.node));
+  right.replaceChildren(...pageB.map(x=>x.node));
+  const first=pageA[0]||pageB[0];
+  if(first)jfDeskChapter=first.chapter;
+  const sel=document.getElementById('jfReadChapters');
+  if(sel)sel.value=String(jfDeskChapter);
   jfDeskUpdateProgress();
 }
-function jfDeskPagedApplyShift(){
-  const {step}=jfDeskPagedMetrics();
-  jfReadText.style.setProperty('--jf-page-shift',(jfDeskPageIndex*step)+'px');
-}
+function jfDeskPagedTotal(){return jfDeskPages.length||1;}
 function jfDeskPagedPrefetch(){
   if(!jfDeskFlow.length)return;
   const totalChapters=jfDeskOutline?.chapters.length||0;
@@ -1270,15 +1311,14 @@ function jfDeskPagedPrefetch(){
 }
 function jfDeskPageTurn(delta){
   if(!jfDeskPaged||jfReader.hidden)return false;
-  const {step}=jfDeskPagedMetrics();
-  if(!step)return false;
-  const total=jfDeskPagedTotal();
-  const next=Math.max(0,Math.min(total-1,jfDeskPageIndex+delta));
+  const geo=jfDeskPagedGeometry();
+  const step=(geo.two&&jfDeskPages.length>1)?2:1;
+  const last=Math.max(0,jfDeskPages.length-step);
+  const next=Math.max(0,Math.min(last,jfDeskPageIndex+delta*step));
   if(next===jfDeskPageIndex)return false;
   jfDeskPageIndex=next;
-  jfDeskPagedApplyShift();
-  jfDeskUpdateProgress();
-  if(jfDeskPageIndex>=total-2)jfDeskPagedPrefetch();
+  jfDeskPagedRender();
+  if(jfDeskPageIndex>=last-2)jfDeskPagedPrefetch();
   return true;
 }
 async function jfDeskPagedToggle(){
@@ -1297,7 +1337,6 @@ async function jfDeskPagedToggle(){
   }
   await jfDeskShowChapter(Math.max(0,jfDeskChapter),0);
   if(jfDeskPaged)jfDeskPagedLayout(false);
-  else jfReadText.style.removeProperty('--jf-page-w');
   jfDeskMessage(jfDeskPaged?'纸书翻页：← → 或点击页面左右两侧':'已返回连续滚动');
 }
 
@@ -1331,11 +1370,7 @@ let jfDeskFlowScrollAt=0;
 jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;
   jfDeskImmersiveOnScroll();
   if(jfDeskOutline?.nativePdf){jfPdfJsOnScroll();return;}
-  if(jfDeskPaged){
-    const {step}=jfDeskPagedMetrics();
-    if(step)jfDeskPageIndex=Math.round(jfReadCenter.scrollLeft/step);
-    jfDeskUpdateProgress();return;
-  }
+  if(jfDeskPaged){jfDeskUpdateProgress();return;}
   jfDeskUpdateProgress();
   const now=Date.now();
   if(now-jfDeskFlowScrollAt>150){jfDeskFlowScrollAt=now;jfDeskFlowOnScroll();}},{passive:true});
