@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.48.0",
+  "version": "7.49.0",
   "private": true,
   "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
