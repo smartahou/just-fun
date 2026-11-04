@@ -1689,3 +1689,30 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   content:'';display:block;position:absolute;top:0;bottom:0;right:0;width:1px;
   background:rgba(96,78,50,.42);
 }
+
+/* ===== v7.42 · zero sheets, honest folio =============================== */
+/* An empty edge is not a thin edge: if there are no sheets before/after this
+   spread, the stack layer must not paint at all (width AND shadow). */
+.jfSheetStack[data-empty='true']{display:none}
+/* Thickness changes when a chapter finishes paginating; it must not jump. */
+.jfSheetStack{transition:width .28s ease}
+@media (prefers-reduced-motion:reduce){.jfSheetStack{transition:none}}
+/* A folio computed from an extrapolated page count is dimmer than an exact one. */
+.jfSheet[data-folio-exact='false']::before{opacity:.28}
+
+/* 书口是纸页断面：每张纸是一条水平线，从上到下排列。之前用 90deg 画成了
+   竖向条纹，那是错的——竖线看起来像装饰纹理，不像一叠纸。 */
+.jfSheetStack{
+  background-image:
+    linear-gradient(90deg,
+      rgba(255,255,255,.45) 0%,
+      rgba(255,255,255,.10) 34%,
+      rgba(170,148,110,.10) 72%,
+      rgba(120,100,70,.30) 100%),
+    repeating-linear-gradient(180deg,
+      rgba(255,255,255,.62) 0 1px,
+      rgba(150,130,95,.13) 1px 2px,
+      rgba(255,255,255,.30) 2px 3px);
+  background-size:100% 100%,100% 3px;
+  background-repeat:no-repeat,repeat;
+}

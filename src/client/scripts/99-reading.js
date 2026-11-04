@@ -1334,6 +1334,130 @@ async function jfDeskPrepareImages(){
 const jfDeskChapterPages=new Map();
 let jfDeskPagesSig='';
 
+// Book-wide pagination statistics.
+//
+// jfDeskPages only contains the chapters that happen to be mounted, so its
+// length is NOT the book's page count. Thickness and folio numbers must come
+// from a book-wide model: per-chapter page counts, filled as chapters are
+// paginated, plus an explicit "exact" flag that stays false until every chapter
+// has been measured under the current layout signature.
+const jfDeskChapterPageCounts=new Map();   // chapter number -> pages in that chapter
+let jfDeskBookPages={total:0,exact:false,known:0,chapters:0};
+
+function jfDeskRecountBookPages(){
+  const totalChapters=(jfDeskOutline&&jfDeskOutline.chapters)?jfDeskOutline.chapters.length:0;
+  let known=0,sum=0;
+  for(let n=0;n<totalChapters;n++){
+    const count=jfDeskChapterPageCounts.get(n);
+    if(typeof count==='number'){known++;sum+=count;}
+  }
+  const exact=totalChapters>0&&known===totalChapters;
+  // When some chapters are unmeasured, extrapolate from the average of the ones
+  // we know. It is labelled "estimated" everywhere, never presented as exact.
+  const average=known?sum/known:0;
+  const total=exact?sum:Math.round(average*totalChapters);
+  jfDeskBookPages={total,exact,known,chapters:totalChapters};
+  return jfDeskBookPages;
+}
+// Pages that precede a chapter, or null when an earlier chapter is still unknown.
+function jfDeskPagesBefore(chapter){
+  let sum=0;
+  for(let n=0;n<chapter;n++){
+    const count=jfDeskChapterPageCounts.get(n);
+    if(typeof count!=='number')return null;
+    sum+=count;
+  }
+  return sum;
+}
+
+// Background census: paginate the chapters that are not mounted, so the book's
+// page count becomes exact. It only records counts (no DOM is kept), runs one
+// chapter at a time, and yields through requestIdleCallback so reading and page
+// turns are never blocked.
+let jfDeskCensusToken=0;
+let jfDeskCensusRunning=false;
+
+async function jfDeskWaitImages(root){
+  const imgs=Array.prototype.slice.call(root.querySelectorAll('img'));
+  if(!imgs.length)return;
+  // Force decode up front: a lazy image reports zero height, and a chapter
+  // measured that way paginates into more pages than it really needs.
+  await Promise.all(imgs.map(img=>{
+    img.loading='eager';
+    if(img.decode)img.decode().catch(()=>{});
+    if(img.complete&&img.naturalWidth>0)return null;
+    return new Promise(resolve=>{
+      let done=false;
+      const settle=()=>{if(!done){done=true;resolve();}};
+      img.addEventListener('load',settle,{once:true});
+      img.addEventListener('error',settle,{once:true});
+      setTimeout(settle,3000);
+    });
+  }));
+}
+
+function jfDeskIdle(){
+  return new Promise(resolve=>{
+    if(window.requestIdleCallback)requestIdleCallback(()=>resolve(),{timeout:180});
+    else setTimeout(resolve,16);
+  });
+}
+
+async function jfDeskMeasureBook(geo){
+  if(jfDeskCensusRunning)return;
+  if(!jfDeskBook||!jfDeskOutline)return;
+  const totalChapters=jfDeskOutline.chapters.length;
+  if(!totalChapters)return;
+  const token=++jfDeskCensusToken;
+  const bookId=jfDeskBook.id,session=jfDeskSession;
+  jfDeskCensusRunning=true;
+  try{
+    const host=jfDeskMeasureHost(geo);
+    const budget=Math.max(120,geo.innerH);
+    for(let n=0;n<totalChapters;n++){
+      if(jfDeskCensusToken!==token)return;              // superseded
+      if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
+      if(jfDeskChapterPageCounts.has(n))continue;
+      await jfDeskIdle();
+      if(jfDeskCensusToken!==token)return;
+      let html=null;
+      try{html=await jfDeskFlowFetch(n);}catch(error){continue;}
+      if(!html)continue;
+      // Measure in a real, off-screen box: images must occupy their final height
+      // or the chapter paginates shorter than it will when actually mounted, and
+      // the book total becomes a different number every time it is recomputed.
+      const holder=document.createElement('div');
+      holder.className='jfSheetBody';
+      holder.style.cssText='position:absolute;left:-99999px;top:0;width:'+geo.innerW+'px;padding:0;height:auto';
+      document.body.appendChild(holder);
+      try{
+        // Same construction path as a mounted chapter, or the census would count
+        // a different DOM (sanitiser, caption merging) and report other page counts.
+        const section=jfDeskFlowSection(n,html);
+        holder.appendChild(section);
+        await jfDeskWaitImages(holder);
+        const blocks=[];
+        let i=0,acc=0;
+        for(const node of section.children){
+          blocks.push({chapter:n,node:document.importNode(node,true),key:n+':'+(i++),offset:acc});
+          acc+=node.textContent.length;
+        }
+        const measured=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
+        jfDeskChapterPageCounts.set(n,measured.length);
+      }finally{
+        holder.remove();
+      }
+      jfDeskRecountBookPages();
+    }
+  }finally{
+    jfDeskCensusRunning=false;
+    if(jfDeskCensusToken===token){
+      jfDeskRecountBookPages();
+      if(jfDeskPaged)jfDeskPagedLayout(true,'census');
+    }
+  }
+}
+
 function jfDeskLayoutSignature(geo){
   return [jfDeskBook?.id||'',jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
           geo.pageW,geo.pageH,geo.innerW,geo.innerH].join('|');
@@ -1388,7 +1512,12 @@ async function jfDeskPagedLayout(keepPage,reason){
   const host=jfDeskMeasureHost(geo);
   const anchor=keepPage?jfDeskCurrentAnchor():null;
   const signature=jfDeskLayoutSignature(geo);
-  if(signature!==jfDeskPagesSig){jfDeskChapterPages.clear();jfDeskPagesSig=signature;}
+  if(signature!==jfDeskPagesSig){
+    jfDeskChapterPages.clear();
+    // Page counts only mean anything for the layout they were measured under.
+    jfDeskChapterPageCounts.clear();
+    jfDeskPagesSig=signature;
+  }
   const budget=Math.max(120,geo.innerH);
   const pages=[];
   const mounted=new Set(jfDeskFlow.map(s=>s.n));
@@ -1402,6 +1531,7 @@ async function jfDeskPagedLayout(keepPage,reason){
       cached=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
       jfDeskChapterPages.set(sec.n,cached);
     }
+    jfDeskChapterPageCounts.set(sec.n,cached.length);
     for(const page of cached)pages.push(page);
   }
   // TXT has no mounted sections: structure the plain chapter text once and cache
@@ -1420,11 +1550,17 @@ async function jfDeskPagedLayout(keepPage,reason){
         });
       cached=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
       jfDeskChapterPages.set(jfDeskChapter,cached);
+      jfDeskChapterPageCounts.set(jfDeskChapter,cached.length);
     }
     for(const page of cached)pages.push(page);
   }
   if(gen!==jfDeskPageGen)return;   // a newer layout already started
   jfDeskPages=pages;                // atomic swap: page turns never see a half-built list
+  jfDeskRecountBookPages();
+  if(!jfDeskBookPages.exact&&!jfDeskCensusRunning){
+    // Measure the rest of the book in the background, off the critical path.
+    setTimeout(()=>jfDeskMeasureBook(geo),1200);
+  }
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -1472,9 +1608,7 @@ function jfDeskPagedRender(direction){
   if(first)jfDeskChapter=first.chapter;
   // Folio and running head: page numbers follow the book, the head follows the chapter.
   const leftSheet=left.parentElement, rightSheet=right.parentElement;
-  const start=pageA.length?jfDeskPageIndex+1:jfDeskPageIndex+1;
-  if(leftSheet)leftSheet.dataset.page=String(start);
-  if(rightSheet)rightSheet.dataset.page=pageB.length?String(start+1):'';
+
   const title=(jfDeskOutline&&jfDeskOutline.chapters&&jfDeskOutline.chapters[jfDeskChapter])
     ?jfDeskOutline.chapters[jfDeskChapter].title:'';
   left.dataset.running=title;
@@ -1483,34 +1617,51 @@ function jfDeskPagedRender(direction){
   if(sel)sel.value=String(jfDeskChapter);
   // Reading progress drives how much paper is stacked on each outer edge: the
   // left edge thickens as pages are read, the right one thins out.
-  // Paper thickness must reflect the real page counts, not a decorative ratio.
-  //   read stack   = pages before the left page   (leftPageNumber - 1)
-  //   unread stack = pages after the right page   (totalPages - rightPageNumber)
-  // A linear page-to-pixel map is wrong: a 4-page book would show a 4px edge and
-  // a 900-page book a 300px slab. Use a saturating curve instead, so the first
-  // few pages already show a little thickness, mid-book the difference is plain,
-  // and a very long book never blows the edge out of proportion.
-  //
-  //   px(n) = BASE + (MAX - BASE) * (1 - e^(-n / K))
-  //
-  // BASE 5px (just opened), MAX 34px (fully read). K is not a constant: a 12-page
-  // document and a 900-page book must both show a readable difference, so the
-  // saturation scale follows the document — K = max(12, totalPages * 0.35). A
-  // fixed K (or a per-page linear map) made short books show a 4px edge forever.
-  const totalPages=Math.max(1,jfDeskPages.length);
-  const leftPageNumber=jfDeskPageIndex+1;
+  // Thickness is a statement about the book, not about the mounted array.
+  //   read stack   = sheets physically before this spread
+  //   unread stack = sheets physically after it
+  // The folio number must also be a book-wide number; jfDeskPageIndex is only an
+  // index into whatever chapters happen to be mounted.
+  const book=jfDeskBookPages;
+  const pageA0=jfDeskPages[jfDeskPageIndex]||[];
+  const chapterOfPage=pageA0[0]?pageA0[0].chapter:jfDeskChapter;
+  const chapterPages=jfDeskChapterPages.get(chapterOfPage)||[];
+  const inChapter=Math.max(0,chapterPages.indexOf(pageA0));
+  const pagesBefore=jfDeskPagesBefore(chapterOfPage);
+  const exactNumber=pagesBefore!=null&&book.exact;
+  // When earlier chapters have not been measured, extrapolate by chapter position
+  // and mark the folio as estimated so it is never presented as an exact one.
+  const estimatedNumber=Math.round((chapterOfPage/Math.max(1,book.chapters))*book.total)+inChapter+1;
+  const leftPageNumber=exactNumber?(pagesBefore+inChapter+1):estimatedNumber;
   const rightPageNumber=leftPageNumber+(pageB.length?1:0);
+  const totalSheets=book.total>0?book.total:0;
   const readPages=Math.max(0,leftPageNumber-1);
-  const unreadPages=Math.max(0,totalPages-rightPageNumber);
-  const stackK=Math.max(12,totalPages*0.35);
-  const stackPx=pages=>{
+  const unreadPages=Math.max(0,totalSheets-rightPageNumber);
+
+  // Zero sheets must be zero pixels: an empty edge is not a thin edge. The curve
+  // only starts once there is at least one sheet to show.
+  //   px(n) = (MAX - BASE) * (1 - e^(-(n-1)/K)), 0 when n <= 0
+  // K follows the document so a short book still shows a readable difference.
+  const stackK=Math.max(10,totalSheets*0.3);
+  const stackPx=sheets=>{
+    if(sheets<=0)return '0px';
     const BASE=5,MAX=34;
-    return (BASE+(MAX-BASE)*(1-Math.exp(-Math.max(0,pages)/stackK))).toFixed(1)+'px';
+    return (BASE+(MAX-BASE)*(1-Math.exp(-(sheets-1)/stackK))).toFixed(1)+'px';
   };
   const readWidth=stackPx(readPages);
   const unreadWidth=stackPx(unreadPages);
-  jfDeskStackState={total:totalPages,left:leftPageNumber,right:rightPageNumber,
-                    read:readPages,unread:unreadPages,readPx:readWidth,unreadPx:unreadWidth};
+  jfDeskStackState={total:totalSheets,exact:book.exact,left:leftPageNumber,right:rightPageNumber,
+                    read:readPages,unread:unreadPages,readPx:readWidth,unreadPx:unreadWidth,
+                    folio:exactNumber?'exact':'estimated'};
+  // Folio numbers are book-wide values, never the index into the mounted array.
+  if(leftSheet){
+    leftSheet.dataset.page=String(leftPageNumber);
+    leftSheet.dataset.folioExact=exactNumber?'true':'false';
+  }
+  if(rightSheet){
+    rightSheet.dataset.page=pageB.length?String(rightPageNumber):'';
+    rightSheet.dataset.folioExact=exactNumber?'true':'false';
+  }
   const leftStack=left.parentElement&&left.parentElement.querySelector('.jfSheetStack');
   const rightStack=right.parentElement&&right.parentElement.querySelector('.jfSheetStack');
   if(leftStack)leftStack.style.setProperty('--jf-stack-w',readWidth);
@@ -1518,6 +1669,9 @@ function jfDeskPagedRender(direction){
   const pageView=document.getElementById('jfPageView');
   pageView.style.setProperty('--jf-stack-read',readWidth);
   pageView.style.setProperty('--jf-stack-unread',unreadWidth);
+  // No sheets, no stack: the element is removed from paint entirely, shadow included.
+  if(leftStack){leftStack.dataset.empty=readPages<=0?'true':'false';leftStack.dataset.sheets=String(readPages);}
+  if(rightStack){rightStack.dataset.empty=unreadPages<=0?'true':'false';rightStack.dataset.sheets=String(unreadPages);}
   // A light transition sells the turn without touching layout. Skipped when the
   // user asked for reduced motion or when the caller only re-renders in place.
   if(direction){
