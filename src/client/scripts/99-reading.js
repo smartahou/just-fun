@@ -1662,7 +1662,7 @@ function jfDeskPagedRender(direction){
   const stackPx=sheets=>{
     if(sheets<=0)return '0px';
     // Visible sheet depth, restrained: even long books should not look like a comb.
-    const BASE=3,MAX=23;
+    const BASE=2,MAX=14;
     return (BASE+(MAX-BASE)*(1-Math.exp(-(sheets-1)/stackK))).toFixed(1)+'px';
   };
   const readWidth=stackPx(readPages);
