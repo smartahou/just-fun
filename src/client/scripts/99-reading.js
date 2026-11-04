@@ -1391,6 +1391,13 @@ function jfDeskPagesBefore(chapter){
 // turns are never blocked.
 let jfDeskCensusToken=0;
 let jfDeskCensusRunning=false;
+// Book-wide counting requires synchronous DOM measurement. Never start another
+// chapter while the user is actively turning pages.
+let jfDeskLastPageTurn=Date.now();
+async function jfDeskWaitReadingIdle(){
+  while(Date.now()-jfDeskLastPageTurn<2200)
+    await new Promise(resolve=>setTimeout(resolve,160));
+}
 
 async function jfDeskWaitImages(root){
   const imgs=Array.prototype.slice.call(root.querySelectorAll('img'));
@@ -1434,6 +1441,7 @@ async function jfDeskMeasureBook(geo){
       if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
       if(jfDeskPaperOmittedChapter(n)||jfDeskChapterPageCounts.has(n))continue;
       await jfDeskIdle();
+      await jfDeskWaitReadingIdle();
       if(jfDeskCensusToken!==token)return;
       let html=null;
       try{html=await jfDeskFlowFetch(n);}catch(error){continue;}
@@ -1451,12 +1459,11 @@ async function jfDeskMeasureBook(geo){
         const section=jfDeskFlowSection(n,html);
         holder.appendChild(section);
         await jfDeskWaitImages(holder);
-        const blocks=[];
-        let i=0,acc=0;
-        for(const node of section.children){
-          blocks.push({chapter:n,node:document.importNode(node,true),key:n+':'+(i++),offset:acc});
-          acc+=node.textContent.length;
-        }
+        // Identical blocks to actual reading: caption merging can change
+        // the page count, so a simplified census must never lie about folios.
+        if(jfDeskCensusToken!==token||jfDeskSession!==session||
+           jfDeskBook?.id!==bookId||jfDeskPagesSig!==jfDeskLayoutSignature(geo))return;
+        const blocks=jfDeskBlocksFor({n,el:section});
         const measured=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
         jfDeskChapterPageCounts.set(n,measured.length);
       }finally{
@@ -1528,6 +1535,8 @@ async function jfDeskPagedLayout(keepPage,reason){
   const anchor=keepPage?jfDeskCurrentAnchor():null;
   const signature=jfDeskLayoutSignature(geo);
   if(signature!==jfDeskPagesSig){
+    // Invalidate a census still using the previous font/viewport geometry.
+    jfDeskCensusToken++;
     jfDeskChapterPages.clear();
     // Page counts only mean anything for the layout they were measured under.
     jfDeskChapterPageCounts.clear();
@@ -1769,6 +1778,7 @@ function jfDeskPagedPrefetch(){
 }
 function jfDeskPageTurn(delta){
   if(!jfDeskPaged||jfReader.hidden)return false;
+  jfDeskLastPageTurn=Date.now();
   const geo=jfDeskPagedGeometry();
   const step=(geo.two&&jfDeskPages.length>1)?2:1;
   // The index must stay aligned to the spread grid, otherwise the last spread can
