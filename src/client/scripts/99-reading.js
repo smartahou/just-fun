@@ -1240,14 +1240,18 @@ function jfDeskPagedLayout(keepPage){
   if(!jfDeskPaged)return;
   const cw=jfReadCenter.clientWidth||800;
   const cols=jfDeskPagedCols();
-  // Each sheet is (cw-24)/2 wide; the gutter carries both inner margins so the
-  // columns line up with the sheets at any width.
-  const contentW=Math.max(200,cw-24);
-  const gap=cols===2?52:40;
-  const colW=Math.max(160,(contentW-gap*(cols-1))/cols);
+  // Every number below derives from one geometry: sheet = (cw - gutter) / 2,
+  // text column = sheet - 2*pad, column gap = 2*pad + gutter. Because the sheets
+  // start at x=0 the text box is exactly (cw - 2*pad), so column-count division
+  // and the page step agree by construction.
+  const gutter=14;
+  const pad=Math.round(Math.min(58,Math.max(26,cw*0.04)));
+  const sheetW=(cw-gutter)/2;
+  const colW=Math.max(160,Math.floor(sheetW-2*pad));
+  const gap=2*pad+gutter;
   jfReadText.style.setProperty('--jf-page-cols',String(cols));
   jfReadText.style.setProperty('--jf-page-gap',gap+'px');
-  jfReadText.style.setProperty('--jf-page-w',Math.round(colW)+'px');
+  jfReadText.style.setProperty('--jf-page-w',colW+'px');
   jfDeskPageIndex=0;
   jfDeskPagedApplyShift();
   if(keepPage)jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,jfDeskPagedTotal()-1));

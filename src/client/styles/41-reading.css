@@ -1168,3 +1168,38 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged:not(.jfPdfMode) .jfReadText.jfTxtProse{
   padding-left:12px!important;padding-right:12px!important;
 }
+
+/* ===== v7.32 · paged geometry rewritten from one set of variables ========= */
+/* side=0 so the sheets reach the viewport edge; the gutter is the only gap. */
+.jfReader.paged{
+  --jf-gutter:14px;
+  --jf-pad:clamp(26px,4vw,58px);
+  --jf-sheet-w:calc((100vw - var(--jf-gutter)) / 2);
+}
+/* Sheets run the full height: no dark bars above or below. */
+.jfReader.paged .jfReadCenter::before{
+  background-size:
+    100% 100%,
+    100% 100%,
+    var(--jf-sheet-w) 100vh,
+    var(--jf-sheet-w) 100vh,
+    var(--jf-sheet-w) 100vh,
+    var(--jf-sheet-w) 100vh!important;
+  background-position:
+    0 0,0 0,
+    left 0 top 0,
+    right 0 top 0,
+    left 0 top 0,
+    right 0 top 0!important;
+}
+/* A narrow gutter reads as a fold, not a black bar. */
+.jfReader.paged .jfReadCenter{background:#cfc4a8!important}
+/* Text keeps a real margin from the sheet edge. */
+.jfReader.paged:not(.jfPdfMode) .jfReadText.jfReadHtml,
+.jfReader.paged:not(.jfPdfMode) .jfReadText.jfTxtProse,
+.jfReader.paged .jfReadText{
+  padding-left:var(--jf-pad)!important;
+  padding-right:var(--jf-pad)!important;
+  padding-top:clamp(28px,3.4vw,52px)!important;
+  padding-bottom:clamp(28px,3.4vw,52px)!important;
+}
