@@ -1672,6 +1672,16 @@ function jfDeskPagedRender(direction){
   // No sheets, no stack: the element is removed from paint entirely, shadow included.
   if(leftStack){leftStack.dataset.empty=readPages<=0?'true':'false';leftStack.dataset.sheets=String(readPages);}
   if(rightStack){rightStack.dataset.empty=unreadPages<=0?'true':'false';rightStack.dataset.sheets=String(unreadPages);}
+  // The physical book shell lives OUTSIDE the paper sheets. Keep its two
+  // independent side/bottom edges in lockstep with the same book-wide census,
+  // and remove each side completely when the sheet count reaches zero.
+  for(const side of ['left','right']){
+    const empty=side==='left'?readPages<=0:unreadPages<=0;
+    for(const el of pageView.querySelectorAll(
+      '.jfBookPile[data-side="'+side+'"],.jfBookBottomEdge[data-side="'+side+'"]')){
+      el.dataset.empty=empty?'true':'false';
+    }
+  }
   // A light transition sells the turn without touching layout. Skipped when the
   // user asked for reduced motion or when the caller only re-renders in place.
   if(direction){
