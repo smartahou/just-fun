@@ -57,6 +57,7 @@ jobs:
           name: paper-v747-validation
           path: |
             dist/build-report.json
+            dist/douyin.js
             dist/paper-performance-v747.json
             dist/paper-performance-v746.json
             dist-build.log
