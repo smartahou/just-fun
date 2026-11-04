@@ -1483,12 +1483,34 @@ function jfDeskPagedRender(direction){
   if(sel)sel.value=String(jfDeskChapter);
   // Reading progress drives how much paper is stacked on each outer edge: the
   // left edge thickens as pages are read, the right one thins out.
-  const totalPages=Math.max(1,jfDeskPages.length-1);
-  const progress=Math.min(1,Math.max(0,jfDeskPageIndex/totalPages));
-  // 6px at the very start/end, 22px once a chapter's worth has accumulated:
-  // visible at 100% zoom, never crowding the type.
-  const readWidth=(10+progress*14).toFixed(1)+'px';
-  const unreadWidth=(10+(1-progress)*14).toFixed(1)+'px';
+  // Paper thickness must reflect the real page counts, not a decorative ratio.
+  //   read stack   = pages before the left page   (leftPageNumber - 1)
+  //   unread stack = pages after the right page   (totalPages - rightPageNumber)
+  // A linear page-to-pixel map is wrong: a 4-page book would show a 4px edge and
+  // a 900-page book a 300px slab. Use a saturating curve instead, so the first
+  // few pages already show a little thickness, mid-book the difference is plain,
+  // and a very long book never blows the edge out of proportion.
+  //
+  //   px(n) = BASE + (MAX - BASE) * (1 - e^(-n / K))
+  //
+  // BASE 5px (just opened), MAX 34px (fully read). K is not a constant: a 12-page
+  // document and a 900-page book must both show a readable difference, so the
+  // saturation scale follows the document — K = max(12, totalPages * 0.35). A
+  // fixed K (or a per-page linear map) made short books show a 4px edge forever.
+  const totalPages=Math.max(1,jfDeskPages.length);
+  const leftPageNumber=jfDeskPageIndex+1;
+  const rightPageNumber=leftPageNumber+(pageB.length?1:0);
+  const readPages=Math.max(0,leftPageNumber-1);
+  const unreadPages=Math.max(0,totalPages-rightPageNumber);
+  const stackK=Math.max(12,totalPages*0.35);
+  const stackPx=pages=>{
+    const BASE=5,MAX=34;
+    return (BASE+(MAX-BASE)*(1-Math.exp(-Math.max(0,pages)/stackK))).toFixed(1)+'px';
+  };
+  const readWidth=stackPx(readPages);
+  const unreadWidth=stackPx(unreadPages);
+  jfDeskStackState={total:totalPages,left:leftPageNumber,right:rightPageNumber,
+                    read:readPages,unread:unreadPages,readPx:readWidth,unreadPx:unreadWidth};
   const leftStack=left.parentElement&&left.parentElement.querySelector('.jfSheetStack');
   const rightStack=right.parentElement&&right.parentElement.querySelector('.jfSheetStack');
   if(leftStack)leftStack.style.setProperty('--jf-stack-w',readWidth);
@@ -1511,6 +1533,8 @@ function jfDeskPagedRender(direction){
   jfDeskUpdateProgress();
 }
 let jfDeskTurnTimer=0;
+// Page counts behind each stack thickness; diagnostics only.
+let jfDeskStackState=null;
 // Mode and size changes re-measure every page. Paint a busy layer first, give the
 // browser a frame to draw it, then do the expensive work after that frame.
 let jfDeskBusyTimer=0;
