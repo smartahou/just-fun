@@ -162,12 +162,12 @@
           if(withNext>pageH){
             // Move the heading to the fresh page — it must not be dropped.
             flush();
-            cur.push({chapter:item.chapter,node:el,key:item.key});
+                cur.push({chapter:item.chapter,node:el,key:item.key,offset:item.offset});
             used=measure(el,host);
             continue;
           }
         }
-        cur.push({chapter:item.chapter,node:el,key:item.key});
+        cur.push({chapter:item.chapter,node:el,key:item.key,offset:item.offset});
         used=candidateHeight;
         continue;
       }
@@ -176,11 +176,11 @@
         var scaled=fitFigure(el,pageH,host);
         if(scaled){
           flush();
-          pages.push([{chapter:item.chapter,node:scaled,key:item.key,scaled:true}]);
+          pages.push([{chapter:item.chapter,node:scaled,key:item.key,offset:item.offset,scaled:true}]);
           continue;
         }
         flush();
-        pages.push([{chapter:item.chapter,node:el,key:item.key,oversized:true}]);
+        pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,oversized:true}]);
         continue;
       }
 
@@ -189,10 +189,14 @@
       if(split){
         // Trust the assembled column, not the isolated fragment: margins collapse
         // differently once the fragment sits next to its neighbours.
-        cur.push({chapter:item.chapter,node:split.head,key:(item.key||'')+'#1',split:true});
+        // A split inherits the block's start offset; the tail resumes exactly
+        // where the head's text ended. Losing this made every anchor resolve to 0.
+        var headOffset=item.offset||0;
+        var tailOffset=headOffset+split.head.textContent.length;
+        cur.push({chapter:item.chapter,node:split.head,key:(item.key||'')+'#1',offset:headOffset,split:true});
         if(columnHeight(cur,host)<=pageH){
           flush();
-          queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',split:true});
+          queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',offset:tailOffset,split:true});
           continue;
         }
         cur.pop();
@@ -201,7 +205,7 @@
       if(cur.length){flush();queue.unshift(item);continue;}
 
       // Nothing fits on an empty page: it must be an unsplittable block.
-      pages.push([{chapter:item.chapter,node:el,key:item.key,oversized:true}]);
+      pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,oversized:true}]);
     }
     flush();
     return pages;

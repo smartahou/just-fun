@@ -109,9 +109,14 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-stability-v735-') 
               }
               return seen;
             }""")
-            keys = [s for s in seq if s]
-            ordered = all(keys[i] <= keys[i+1] for i in range(len(keys)-1)) if len(keys) > 1 else True
-            ck('50 rapid turns never move backwards', ordered, str(keys[:6]) + '...' + str(keys[-3:]))
+            # Compare numerically: chapter*1e6+offset. String ordering would call
+            # '0:484' > '0:1444' and report a false regression.
+            def to_num(k):
+                c, _, o = k.partition(':')
+                return int(c) * 1000000 + int(o or 0)
+            nums = [to_num(k) for k in seq if k]
+            ordered = all(nums[i] <= nums[i+1] for i in range(len(nums)-1)) if len(nums) > 1 else True
+            ck('50 rapid turns never move backwards', ordered, str(seq[:6]) + '...' + str(seq[-3:]))
 
             # 3) images: rendered rects inside the text block, aspect ratio kept
             imgs = pg.evaluate("""()=>{
