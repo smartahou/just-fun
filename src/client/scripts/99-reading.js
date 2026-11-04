@@ -1220,9 +1220,15 @@ let jfDeskPaged=false,jfDeskPageIndex=0,jfDeskPagedPrevTheme='dark';
 // The turn step is therefore the whole visible spread, not one column.
 function jfDeskPagedCols(){return (jfReadCenter.clientWidth||0)>=1120?2:1;}
 function jfDeskPagedMetrics(){
-  const w=parseFloat(jfReadText.style.getPropertyValue('--jf-page-w'))||0;
-  const gap=parseFloat(jfReadText.style.getPropertyValue('--jf-page-gap'))||0;
+  const gap=parseFloat(jfReadText.style.getPropertyValue('--jf-page-gap'))||52;
   const cols=jfDeskPagedCols();
+  let w=parseFloat(jfReadText.style.getPropertyValue('--jf-page-w'))||0;
+  // Measure the real column instead of trusting the estimate. Padding, borders
+  // or a changed font metric shift the column width, and a wrong step makes the
+  // view land between two spreads (a third column leaks in at the edge).
+  const probe=jfReadText.querySelector('p,div,section,h1,h2,h3,li,blockquote');
+  const rect=probe&&probe.getClientRects()[0];
+  if(rect&&rect.width>40)w=Math.round(rect.width);
   return {w,gap,cols,step:(w+gap)*cols};
 }
 function jfDeskPagedTotal(){
