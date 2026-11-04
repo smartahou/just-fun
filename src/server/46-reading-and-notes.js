@@ -456,6 +456,29 @@ function jfReadingEpub(buf){
     if(chapters.length>=500)break;
   }
   if(!chapters.length)throw jfReaderError(422,'EPUB 未找到可阅读章节');
+  // A paper book's cover is on the shelf, not inside the readable spread.
+  // EPUB spine often starts with an empty leaf and an image-only cover XHTML.
+  // Classify ONLY the leading front matter, never arbitrary illustrated chapters;
+  // the original EPUB and the continuous reader remain unchanged.
+  let coverFound=false;
+  for(let n=0;n<Math.min(3,chapters.length);n++){
+    const chapter=chapters[n];
+    let xhtml='';
+    try{xhtml=jfReadingTextDecode(zip.read(chapter.file));}catch{break;}
+    const body=xhtml.match(/<body\\b[^>]*>([\\s\\S]*?)<\\/body\\s*>/i)?.[1]||xhtml;
+    const withoutHead=body.replace(/<head\\b[^>]*>[\\s\\S]*?<\\/head\\s*>/gi,'');
+    const text=jfReadingHtmlToText(withoutHead).replace(/\\s+/g,'').trim();
+    const images=(withoutHead.match(/<img\\b/gi)||[]).length;
+    const empty=images===0&&!text;
+    const hinted=/^(?:封面|cover|front[ -_]?cover)$/i.test(chapter.title.trim())||
+      /(?:^|\\/)(?:cover|front[-_]?cover|封面)[-_0-9]*\\.x?html?$/i.test(chapter.file);
+    const singleCoverImage=images===1&&text.length<=16&&!coverFound;
+    if(empty){chapter.paperOmit='blank';continue;}
+    if(!coverFound&&(hinted||singleCoverImage)){
+      chapter.paperOmit='cover';coverFound=true;continue;
+    }
+    break;
+  }
   return {zip,chapters,base};
 }
 
@@ -515,7 +538,7 @@ async function jfReadingOutline(id){
   if(stat.size>40*1024*1024)throw jfReaderError(413,'此书超过当前离线阅读器大小上限（40MB）');
   if(info.ext==='EPUB'){
     const epub=jfReadingEpub(await fs.promises.readFile(file));
-    return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title}))};
+    return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title,...(c.paperOmit?{paperOmit:c.paperOmit}:{})}))};
   }
   if(stat.size>12*1024*1024)throw jfReaderError(413,'文本书籍超过当前 12MB 阅读限制');
   const t=jfReadingTextDecode(await fs.promises.readFile(file));
