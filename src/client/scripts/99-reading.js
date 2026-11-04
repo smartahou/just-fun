@@ -62,7 +62,8 @@ function jfApplyTextReadingPrefs(){
     const view=document.getElementById('jfPageView');
     view.style.setProperty('--jf-read-font',jfDeskFont+'px');
     view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
-    if(typeof jfDeskPagedLayout==='function')jfDeskPagedLayout(true);
+    if(typeof jfDeskPagedRelayoutWithBusy==='function')jfDeskPagedRelayoutWithBusy('prefs');
+    else if(typeof jfDeskPagedLayout==='function')jfDeskPagedLayout(true,'prefs');
   }
 }
 
@@ -1480,6 +1481,13 @@ function jfDeskPagedRender(direction){
   right.dataset.running=pageB.length?title:'';
   const sel=document.getElementById('jfReadChapters');
   if(sel)sel.value=String(jfDeskChapter);
+  // Reading progress drives how much paper is stacked on each outer edge: the
+  // left edge thickens as pages are read, the right one thins out.
+  const totalPages=Math.max(1,jfDeskPages.length-1);
+  const progress=Math.min(1,Math.max(0,jfDeskPageIndex/totalPages));
+  const pageView=document.getElementById('jfPageView');
+  pageView.style.setProperty('--jf-stack-read',(3+progress*9).toFixed(1)+'px');
+  pageView.style.setProperty('--jf-stack-unread',(3+(1-progress)*9).toFixed(1)+'px');
   // A light transition sells the turn without touching layout. Skipped when the
   // user asked for reduced motion or when the caller only re-renders in place.
   if(direction){
@@ -1495,6 +1503,30 @@ function jfDeskPagedRender(direction){
   jfDeskUpdateProgress();
 }
 let jfDeskTurnTimer=0;
+// Mode and size changes re-measure every page. Paint a busy layer first, give the
+// browser a frame to draw it, then do the expensive work after that frame.
+let jfDeskBusyTimer=0;
+// Its own token: the layout increments jfDeskPageGen internally, so that counter
+// can never identify "my" request.
+let jfDeskBusyToken=0;
+async function jfDeskPagedRelayoutWithBusy(reason){
+  if(!jfDeskPaged)return;
+  const busy=document.getElementById('jfPageBusy');
+  if(busy)busy.hidden=false;
+  const token=++jfDeskBusyToken;
+  try{
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    await Promise.race([
+      jfDeskPagedLayout(true,reason),
+      new Promise(r=>{clearTimeout(jfDeskBusyTimer);jfDeskBusyTimer=setTimeout(r,4000);})
+    ]);
+  }catch(error){
+    console.warn('[JustFun] 书页调整失败，保留当前页面',error);
+  }finally{
+    // A superseded request must not close the layer of the newest one.
+    if(token===jfDeskBusyToken&&busy)busy.hidden=true;
+  }
+}
 function jfDeskPagedTotal(){return jfDeskPages.length||1;}
 // Explain abnormal whitespace: chapter end, an unsplittable image, or a split
 // refused by the orphan/widow rule.
@@ -1567,13 +1599,15 @@ document.getElementById('jfReadImmersive').addEventListener('click',jfDeskImmers
 // Hides the header/footer chrome; scrolling down keeps it hidden, scrolling up
 // (or hovering the top strip) brings it back, matching the PDF reader habit.
 let jfDeskImmersive=false,jfDeskImmersiveLast=0;
-function jfDeskImmersiveToggle(){
+async function jfDeskImmersiveToggle(){
   jfDeskImmersive=!jfDeskImmersive;
   const btn=document.getElementById('jfReadImmersive');
   if(btn){btn.setAttribute('aria-pressed',String(jfDeskImmersive));btn.classList.toggle('active',jfDeskImmersive);}
   jfReader.classList.toggle('immersive-hidden',jfDeskImmersive);
   jfDeskImmersiveLast=jfReadCenter.scrollTop;
   jfDeskMessage(jfDeskImmersive?'沉浸阅读：向下滚动隐藏页眉页脚，向上滚动恢复':'已退出沉浸阅读');
+  // The text box changes height, so pages must be re-measured behind the busy layer.
+  await jfDeskPagedRelayoutWithBusy('immersive');
 }
 function jfDeskImmersiveOnScroll(){
   if(!jfDeskImmersive||jfReader.hidden)return;
@@ -1603,7 +1637,7 @@ jfReadCenter.addEventListener('click',event=>{
   const rect=jfReadCenter.getBoundingClientRect();
   jfDeskPageTurn(event.clientX<rect.left+rect.width/2?-1:1);
 });
-window.addEventListener('resize',()=>{if(jfDeskPaged&&!jfReader.hidden)jfDeskPagedLayout(true);});
+window.addEventListener('resize',()=>{if(jfDeskPaged&&!jfReader.hidden)jfDeskPagedRelayoutWithBusy('resize');});
 document.addEventListener('keydown',event=>{
   if(!jfReader.hidden && jfNotesPanel.hidden && !event.altKey && !event.ctrlKey && !event.metaKey &&
     !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName) &&

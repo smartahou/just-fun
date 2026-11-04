@@ -720,3 +720,62 @@ if(anchor){ /* findIndex by chapter+offset; jfDeskPageIndex = found */ }
 - 行首标点禁则仍依赖 CSS `line-break:strict`；
 - 章节仍一律另起一页；
 - Windows 实机未验收。
+
+## v7.39 · 沉浸加载与真实纸书视觉
+
+### 素材集成
+
+所有者提供的 `JustFun-纸书纹理素材包-v1.zip` 已选择性使用：
+
+| 文件 | 大小 | 用途 |
+| --- | --- | --- |
+| `paper-fiber.webp` | 16 KB | 纸面纤维，`background-size:340px`，透明度 **0.055** |
+| `spine-crease.png` | 3.5 KB | 中央折痕，宽 30px，透明度 0.5，`multiply` |
+| `page-edge-strata.png` | 2.9 KB | 左右外缘书页堆叠，宽度随进度 3–12px |
+
+三张图以 base64 内联进 `41-reading.css`（约 30 KB），源文件保留在 `assets/` 便于替换；
+构建产物仍为单文件，不依赖外部资源。
+
+### P0：沉浸切换反馈
+
+**根因**：`jfDeskImmersiveToggle()` 只切换 class，从不重排。页眉页脚隐藏后
+`jfReadCenter` 的高度已经变化，但分页仍按旧高度计算——用户看到的是「尺寸变了、排版没变」，
+随后翻页才触发一次静默重排。
+
+修复：新增 `jfDeskPagedRelayoutWithBusy(reason)`——先显示加载层，
+`requestAnimationFrame` 两次确保它**真实绘制**，再执行分页；超时 4s 兜底，
+异常时保留当前页面并打印警告。沉浸切换、字号/字体变化、窗口缩放都走这条路径。
+
+**过程中修掉一个自身缺陷**：最初用 `jfDeskPageGen` 判断「我是不是最新请求」，
+但 `jfDeskPagedLayout` 内部会自己递增该计数器，导致 `finally` 永远不成立、
+加载层永远不关（实测 `busy after: false`）。改为独立的 `jfDeskBusyToken`。
+
+### P1：纸书视觉
+
+- **已读/未读堆叠**：`.jfSheetStack` 贴在左右外缘，宽度由 `--jf-stack-read/unread`
+  驱动，公式 `3 + progress*9`，随翻页实时变化；只放在 sheet 自身 padding 内，
+  不动版心、`pointer-events:none`。
+- **书脊**：`.jfPageView::after` 叠折痕纹理 + 两侧内阴影，替换原硬线；单页模式自动隐藏。
+- **纸张**：纤维叠在 `::after`，透明度 0.055、`multiply`，不压字。
+- **页码**：移到左右外角（左页 `left:26px` 左对齐、右页 `right:26px` 右对齐），
+  **沉浸模式保留页码**，只隐藏页眉。
+
+### 验证（真实 Chromium，1386×839）
+
+- 材质状态：`--jf-stack-read:3.0px`、`--jf-stack-unread:12.0px`（进度 12%），
+  书脊/纸纤维均已加载为 data URI；
+- 加载层：切换瞬间 `hidden:false`，完成后 `hidden:true`，无残留；
+- 沉浸模式：`folio: block`（页码保留）、`head: none`（页眉隐藏）；
+- 无页面异常。
+
+### 回归
+
+`paged-correctness-v736` 10/10、`paged-no-skip-v737` 6/6、`paged-stability-v735` 8/8、
+`paged-typography-v733` 11/11、`epub-render-v732` 42/42。
+
+### 仍未完成
+
+- 加载层在极快切换时只显示一帧，肉眼近乎不可见（分页已增量缓存，耗时很短）；
+- 书页堆叠厚度是线性映射，未按实际章节页数加权；
+- 封面/版权页未做专属版式；
+- Windows 实机未验收。
