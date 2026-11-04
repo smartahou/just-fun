@@ -45,12 +45,15 @@ function recoverInterrupted() {
   return false;
 }
 function current() {return recoverInterrupted()?readMeta(metaPath):null;}
-function ensureRepo() {
+// requireClean is only meaningful when the launcher will fast-forward the branch.
+// A build always runs from a detached worktree of a committed SHA, so uncommitted
+// edits can never leak into the artifact and must not block an offline launch.
+function ensureRepo({requireClean=true}={}) {
   const actual=fs.realpathSync.native(path.resolve(git('rev-parse','--show-toplevel')));
   const expected=fs.realpathSync.native(root);
   if((process.platform==='win32'?actual.toLowerCase():actual)!==(process.platform==='win32'?expected.toLowerCase():expected))throw Error('请在 GitHub 克隆的 Just Fun 工程根目录使用更新器');
   if(git('branch','--show-current')!=='main')throw Error('更新器仅允许在 main 分支运行');
-  if(git('status','--porcelain','--untracked-files=no'))throw Error('存在未提交的源码修改；更新已停止，以防覆盖本地工作');
+  if(requireClean&&git('status','--porcelain','--untracked-files=no'))throw Error('存在未提交的源码修改；更新已停止，以防覆盖本地工作');
   if(!git('remote'))throw Error('没有配置 GitHub origin 远程仓库');
 }
 function vendorOk() {
@@ -103,10 +106,12 @@ function publish(candidate) {
   try {fs.renameSync(temp,live);} catch(e){fs.rmSync(temp,{force:true});throw e;}
   writeJsonAtomic(metaPath,{version:candidate.version,commit:candidate.commit,sha256:candidate.sha256,pdfjsVersion:candidate.pdfjsVersion,updatedAt:candidate.updatedAt});
 }
-function update({fetch=true}={}) {
-  nodeOk();ensureRepo();const existing=current();
+function update({fetch=true,fetchTimeout=180000}={}) {
+  nodeOk();ensureRepo({requireClean:Boolean(fetch)});const existing=current();
   const before=git('rev-parse','HEAD');
-  if(fetch){console.log('检查 GitHub 正式分支…');run('git',['fetch','--no-tags','origin','main'],{stdio:'inherit',timeout:180000});}
+  if(!fetch&&git('status','--porcelain','--untracked-files=no'))
+    console.log('提示：源码有未提交修改；本次按最后一次提交构建，改动不会生效。');
+  if(fetch){console.log('检查 GitHub 正式分支…');run('git',['fetch','--no-tags','origin','main'],{stdio:'inherit',timeout:fetchTimeout});}
   const target=fetch?git('rev-parse','FETCH_HEAD'):before;
   run('git',['merge-base','--is-ancestor',before,target]); // Never use reset/force or discard other commits.
   if(existing?.commit===target && isValid(live,existing)){
@@ -153,15 +158,56 @@ function rollback() {
   }else{fs.copyFileSync(backup,live);writeJsonAtomic(metaPath,prev);}
   console.log(`已切换为 ${prev.version}；仅回退程序，不修改源码或用户数据。`);
 }
+// v7.32: one entry point. Updating is best-effort; starting must always win.
+const LOCK_FILE=path.join(app,'instance.lock');
+function liveInstancePid(){
+  try{
+    const pid=Number(fs.readFileSync(LOCK_FILE,'utf8').trim());
+    if(!Number.isSafeInteger(pid)||pid<=0)return 0;
+    process.kill(pid,0); // Signal 0 only probes liveness; it never terminates the process.
+    return pid;
+  }catch{return 0;}
+}
+function startLocked(args){
+  const pid=liveInstancePid();
+  if(pid){console.log('Just Fun 已在运行（PID '+pid+'）。请在已打开的窗口继续使用。');return;}
+  fs.mkdirSync(app,{recursive:true});
+  fs.writeFileSync(LOCK_FILE,String(process.pid),'utf8');
+  try{start(args);}finally{try{fs.rmSync(LOCK_FILE,{force:true});}catch{}}
+}
+function auto(args){
+  nodeOk();
+  const pid=liveInstancePid();
+  if(pid){console.log('Just Fun 已在运行（PID '+pid+'）。请在已打开的窗口继续使用。');return;}
+  // Best effort remote alignment. Offline, a dirty worktree, or unpushed local
+  // commits must never prevent the launcher from opening the app.
+  try{
+    run('git',['fetch','--no-tags','origin','main'],{stdio:'ignore',timeout:12000});
+    const local=git('rev-parse','HEAD'),remote=git('rev-parse','FETCH_HEAD');
+    if(local!==remote){
+      const probe=cp.spawnSync('git',['merge-base','--is-ancestor',local,remote],{cwd:root,windowsHide:true});
+      if(probe.status===0&&!git('status','--porcelain','--untracked-files=no'))git('merge','--ff-only',remote);
+    }
+  }catch{console.log('未连上 GitHub，使用本地源码。');}
+  try{
+    update({fetch:false}); // Builds the checked-out HEAD; a no-op when already installed.
+  }catch(e){
+    const info=current();
+    if(!info)throw e;
+    console.log('更新未完成，继续使用 '+info.version+'：'+String(e.message||e).split('\n')[0]);
+  }
+  startLocked(args);
+}
 function main() {
   const [command,...args]=process.argv.slice(2);
-  if(command==='start')start(args);
+  if(command==='auto')auto(args);
+  else if(command==='start')start(args);
   else if(command==='update')update();
   else if(command==='prepare')update({fetch:false}); // Safe offline setup for test/first launch; only from checked-out HEAD.
   else if(command==='rollback')rollback();
   else if(command==='status'){
     const v=current();console.log(JSON.stringify({ready:!!v,...v},null,2));if(!v)process.exitCode=1;
-  } else throw Error('用法：node scripts/local-deploy-v723.js <start|update|prepare|rollback|status>');
+  } else throw Error('用法：node scripts/local-deploy-v723.js <auto|start|update|prepare|rollback|status>');
 }
 if(require.main===module){try{main();}catch(e){console.error('[Just Fun]',e.message);process.exitCode=1;}}
 module.exports={current,update,rollback,validateCandidate,hash,npmInstallCommand};
