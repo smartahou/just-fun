@@ -130,6 +130,32 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
             ck('Whitespace mode switched off pre-wrap', info['ws'] == 'normal', info['ws'])
             ck('Emphasis and list are rendered', info['strong'] >= 1 and info['li'] >= 2)
             ck('No page errors while reading', not errors)
+
+            # v7.32: the fixed-position reader used to leave the page behind it
+            # scrollable, which produced a second, meaningless scrollbar.
+            lock = page.evaluate("""()=>{
+              const r=document.getElementById('jfReader');
+              const wasHidden=r.hidden;
+              r.hidden=false;
+              const open={html:getComputedStyle(document.documentElement).overflowY,
+                          body:getComputedStyle(document.body).overflowY};
+              r.hidden=true;
+              const closed={body:getComputedStyle(document.body).overflowY};
+              r.hidden=wasHidden;
+              return {open,closed};
+            }""")
+            ck('Document is locked while the reader is open',
+               lock['open']['html'] == 'hidden' and lock['open']['body'] == 'hidden',
+               str(lock['open']))
+            ck('Document scroll is restored after the reader closes',
+               lock['closed']['body'] != 'hidden', str(lock['closed']))
+            ck('One scroll container only: the chapter column itself',
+               page.evaluate("""()=>{
+                 const t=document.getElementById('jfReadText');
+                 const c=document.getElementById('jfReadCenter');
+                 return getComputedStyle(t).overflowY==='visible'
+                     && ['auto','scroll'].includes(getComputedStyle(c).overflowY);
+               }"""))
             browser.close()
     finally:
         if proc:

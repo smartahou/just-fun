@@ -113,3 +113,19 @@ ZIP 解析部分本身是可靠的（中央目录、inflateRaw、路径穿越防
 - 未运行全量发布门禁（`release-gate-v703.py --full`）。
 - 未在 Windows 实机由用户验收 EPUB 阅读（图片滚动性能、大图加载、夜间主题属未验证项）。
 - 未覆盖固定版式 EPUB（fixed-layout）、EPUB 内嵌字体与音频视频。
+
+## v7.32 追加 · 阅读器双滚动条
+
+现象：EPUB 阅读时右侧出现两条竖滚动条，外侧那条贯穿整个视口且不承载任何内容。
+
+真实根因：`.jfReader` 是 `position:fixed`，打开时底层媒体库页面仍然留在文档流里并保持可滚。
+阅读器内部 `.jfReadCenter` 又是独立滚动容器，于是浏览器同时绘制了两条滚动条。
+此问题在 headless Chromium 下不可见（overlay 滚动条不占位），只有真实浏览器的占位式滚动条才暴露。
+
+修复：`html/body:has(.jfReader:not([hidden])){overflow:hidden}`，并给 `.jfReadCenter` 加 `overflow-x:hidden`
+与 `overscroll-behavior:contain`。阅读器关闭后自动恢复，不影响媒体库列表滚动。
+
+验证：`tests/epub-render-v732.py` 新增 3 条断言（打开锁定、关闭恢复、仅一个滚动容器），**24/24 PASS**。
+
+同轮修复：`ensureVendor()` 改为按 lockfile 全量 `npm install`。原先安装单包会让 npm 重算依赖树并删掉
+`devDependencies` 里的 esbuild，导致下一次构建报 `Missing esbuild`——本轮实际复现了两次。

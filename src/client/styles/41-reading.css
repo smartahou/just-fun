@@ -817,3 +817,10 @@ body.jfNotesMode #jfDeskNotes .jfDeskEditor input[type="range"].jfNoteBulkImageR
 .jfReadHtml code{font-family:'Sarasa Mono SC',Consolas,monospace;font-size:.92em}
 .jfReadHtml a{color:inherit;text-decoration:underline;text-underline-offset:2px;text-decoration-color:rgba(131,217,198,.5)}
 .jfReadHtml sup,.jfReadHtml sub{font-size:.72em;line-height:0}
+
+/* v7.32 · While the reader is open the page behind it must not scroll.
+   The reader is position:fixed, so body keeps its own scrollbar and the two
+   scrollbars compete visually. Lock the document, keep only .jfReadCenter live. */
+html:has(.jfReader:not([hidden])),
+body:has(.jfReader:not([hidden])){overflow:hidden}
+.jfReader .jfReadCenter{overflow-x:hidden;overscroll-behavior:contain}

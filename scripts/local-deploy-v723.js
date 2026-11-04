@@ -64,9 +64,10 @@ function vendorOk() {
   } catch {return false;}
 }
 function npmInstallCommand(platform=process.platform,comspec=process.env.ComSpec) {
-  // Never pass --omit=optional: esbuild ships its platform binary as an optional
-  // dependency, and omitting optional packages deletes it from an existing tree.
-  const args=['install','--no-save','--package-lock=false','--ignore-scripts','--include=optional','--no-audit','--no-fund','pdfjs-dist@6.4.299'];
+  // Install from package.json/lockfile only. Installing a single package name with
+  // --no-save makes npm recompute the tree and drop devDependencies (esbuild, the
+  // vendor bundler) — that silently broke the next build twice.
+  const args=['install','--no-audit','--no-fund'];
   if(platform==='win32') {
     // Node spawnSync cannot execute .cmd/.bat directly on Windows (EINVAL).
     // The command is deliberately fixed: never interpolate media paths or user input.
