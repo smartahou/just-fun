@@ -2117,3 +2117,75 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="07"][data-paper-side="right"]::after{clip-path:polygon(0% 0%,100% 0%,100% 18.301%,99.787% 18.632%,100% 18.963%,100% 59.893%,99.719% 60.209%,100% 60.524%,100% 62.458%,99.828% 62.755%,100% 63.053%,100% 68.507%,99.643% 68.782%,100% 69.058%,100% 86.776%,99.780% 87.067%,100% 87.357%,100% 100%,0% 100%);}
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="08"][data-paper-side="left"]::after{clip-path:polygon(0% 0%,100% 0%,100% 100%,0% 100%,0% 87.615%,0.285% 87.329%,0% 87.044%,0% 65.299%,0.437% 65.047%,0% 64.796%,0% 18.849%,0.279% 18.547%,0% 18.245%,0% 17.799%,0.432% 17.489%,0% 17.180%,0% 12.894%,0.208% 12.671%,0% 12.448%);}
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="08"][data-paper-side="right"]::after{clip-path:polygon(0% 0%,100% 0%,100% 10.705%,99.758% 10.985%,100% 11.264%,100% 17.580%,99.667% 17.756%,100% 17.932%,100% 24.295%,99.814% 24.653%,100% 25.012%,100% 45.224%,99.695% 45.429%,100% 45.634%,100% 94.457%,99.763% 94.664%,100% 94.872%,100% 100%,0% 100%);}
+
+
+/* ===== v7.52 · 旧书书口与边角 / clear leaves, restrained patina ======
+   Three persisted wear levels operate ONLY on existing decorative elements.
+   No new DOM in page viewport, no runtime art generation, no dynamic filters
+   and no changes to the page engine's measured typography/geometry. */
+.jfReader #jfReadPaperWear{display:none}
+.jfReader.paged.jf-aged-paper #jfReadPaperWear{
+  display:block;flex:none;width:45px;height:31px;padding:0 4px;
+  background:transparent;color:inherit;border:1px solid rgba(136,160,149,.28);
+  border-radius:8px;outline-offset:2px;cursor:pointer;
+  font:500 12px/1.1 'Songti SC','Noto Serif SC',SimSun,serif;
+}
+.jfReader.paper #jfReadPaperWear{border-color:rgba(74,80,66,.23)}
+.jfReader #jfReadPaperWear:focus-visible{outline:2px solid #86caba}
+.jfReader.paged[data-paper-wear="light"]{--jf-paper-wear-strength:.19;--jf-paper-crease-strength:.13}
+.jfReader.paged[data-paper-wear="medium"]{--jf-paper-wear-strength:.37;--jf-paper-crease-strength:.23}
+.jfReader.paged[data-paper-wear="heavy"]{--jf-paper-wear-strength:.64;--jf-paper-crease-strength:.36}
+/* The stack is crisp uncoated paper. Distinct paper boundaries are occasional
+   micron-scale marks at the OUTER end, not evenly spaced full-width bands. */
+.jfReader.paged #jfPageView .jfBookPile{
+  background-color:#d7c8b1!important;
+  background-image:linear-gradient(90deg,rgba(248,241,229,.96) 0%,rgba(224,207,177,.73) 46%,rgba(170,143,105,.32) 100%)!important;
+  background-repeat:no-repeat!important;background-size:100% 100%!important;
+  box-shadow:inset 1px 0 0 rgba(251,246,235,.62),0 1px 2px rgba(53,40,23,.10)!important;
+  filter:none!important;
+}
+.jfReader.paged #jfPageView .jfBookPile::before{
+  content:"";position:absolute;top:0;bottom:0;width:3px;
+  pointer-events:none;opacity:.72;
+  /* Seven irregular hairline seams; each is <1px in an ~800px page. */
+  background:linear-gradient(to bottom,
+    transparent 0 9.3%,rgba(98,78,54,.28) 9.37%,transparent 9.49%,
+    transparent 23.9%,rgba(117,91,64,.20) 24.01%,transparent 24.09%,
+    transparent 37.1%,rgba(95,75,50,.24) 37.20%,transparent 37.31%,
+    transparent 52.0%,rgba(116,90,64,.18) 52.10%,transparent 52.21%,
+    transparent 64.4%,rgba(96,76,53,.25) 64.48%,transparent 64.59%,
+    transparent 79.8%,rgba(104,83,56,.21) 79.89%,transparent 80.0%,
+    transparent 92.3%,rgba(96,72,49,.26) 92.38%,transparent 92.5%);
+}
+.jfReader.paged #jfPageView .jfBookPile[data-side='left']::before{left:0}
+.jfReader.paged #jfPageView .jfBookPile[data-side='right']::before{right:0}
+/* Reuse the existing (formerly hidden) sheet stack as an 11px outer-edge
+   patina strip; it never changes the sheet's box or text column. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet>.jfSheetStack{
+  display:block!important;position:absolute;top:0;bottom:0;
+  width:12px!important;height:auto;z-index:1;pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 11px 26px at 0 var(--jf-wear-y1,20%),rgba(102,79,55,.35),transparent 88%),
+    radial-gradient(ellipse 10px 20px at 100% var(--jf-wear-y2,77%),rgba(114,89,61,.25),transparent 90%),
+    linear-gradient(135deg,rgba(105,79,50,.34),transparent 22px),
+    linear-gradient(25deg,rgba(113,85,58,.28),transparent 17px);
+  background-position:center;background-size:100% 100%;background-repeat:no-repeat;
+  opacity:var(--jf-paper-wear-strength,.37)!important;
+  mix-blend-mode:normal!important;
+  clip-path:none!important;
+  transition:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-side='left']>.jfSheetStack{left:0!important;right:auto!important}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-side='right']>.jfSheetStack{right:0!important;left:auto!important}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="01"]>.jfSheetStack{--jf-wear-y1:13%;--jf-wear-y2:83%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="02"]>.jfSheetStack{--jf-wear-y1:25%;--jf-wear-y2:69%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="03"]>.jfSheetStack{--jf-wear-y1:17%;--jf-wear-y2:89%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="04"]>.jfSheetStack{--jf-wear-y1:34%;--jf-wear-y2:76%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="05"]>.jfSheetStack{--jf-wear-y1:9%;--jf-wear-y2:63%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="06"]>.jfSheetStack{--jf-wear-y1:31%;--jf-wear-y2:88%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="07"]>.jfSheetStack{--jf-wear-y1:22%;--jf-wear-y2:71%}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="08"]>.jfSheetStack{--jf-wear-y1:15%;--jf-wear-y2:94%}
+/* Light = well-preserved leaf, no clipped fibre nicks. Heavy makes the
+   STATIC existing nicks more apparent via the adjacent edge shading only. */
+.jfReader.paged.jf-aged-paper[data-paper-wear="light"] #jfPageView .jfSheet::after{clip-path:none!important}
+@media(max-width:780px){.jfReader.paged.jf-aged-paper #jfReadPaperWear{width:39px;height:30px;padding:0 1px}}
