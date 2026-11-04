@@ -38,7 +38,7 @@
 
 ## 已知的测试债
 
-- `tests/notes-rich-markdown-v679.py` 是僵尸用例：它操作的 `#jfDeskNoteBody` 自 v6.82 起被 CSS 隐藏。
-- 发布门禁 `--full` = `run-all.py` 的 `CASES`（31 项，止于 v6.48）+ `SMOKE`（约 50 项，起于 v6.82）；
-  v6.49–v6.81 的一批专项不在任何一条里。
+- `tests/notes-rich-markdown-v679.py` 与 `tests/reading-notes-v650.py` 是僵尸用例：二者都操作 `#jfDeskNoteBody`，
+  而该元素自 v6.82「单一表面」改造起被 CSS 隐藏。它们失败不代表新代码有问题，也不能当作回归依据。
+- 发布门禁 `--full` = `run-all.py` 的 `CASES` + `SMOKE`（起于 v6.82）；v6.49–v6.81 的一批专项不在任何一条里。
 - 上述两项尚未修复，修之前不要声称"全量门禁通过"。

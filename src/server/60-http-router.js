@@ -106,6 +106,8 @@ function startServer() {
                 await jfPdfPageResponse(req,res,id,Number(url.searchParams.get('page')),Number(url.searchParams.get('width')));
               else if(url.pathname==='/api/reading/pdf' && ['GET','HEAD'].includes(req.method))
                 await jfReadingPdf(req,res,id);
+              else if(url.pathname==='/api/reading/epub-asset' && req.method==='GET')
+                await jfReadingEpubAsset(res,id,url.searchParams.get('src'));
               else if(url.pathname==='/api/reading/integrity' && req.method==='GET')
                 sendJson(res,jfReadingIntegrity());
               else if(url.pathname==='/api/reading/recovery' && req.method==='GET')

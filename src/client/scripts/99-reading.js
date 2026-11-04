@@ -4,7 +4,7 @@ const jfReadCenter=document.getElementById('jfReadCenter');
 const jfReadText=document.getElementById('jfReadText');
 // Keep the source chapter untouched: only TXT presentation is reflowed.
 // This leaves EPUB layout, chapter boundaries, and on-disk source intact.
-let jfReadRawText='',jfReadRawToDisplay=null;
+let jfReadRawText='',jfReadRawToDisplay=null,jfReadHtml='';
 function jfTxtSmartReflow(raw){return jfTextPresentation.reflow(raw);}
 
 // Screenshot-safe display mask. Full-width replacement glyphs preserve
@@ -12,7 +12,14 @@ function jfTxtSmartReflow(raw){return jfTextPresentation.reflow(raw);}
 let jfReadVisualText='',jfReadMaskEnabled=false;
 function jfReadMaskString(value){return jfTextPresentation.mask(value);}
 function jfReadApplyMask(){
-  jfReadText.textContent=jfReadMaskEnabled?jfReadMaskString(jfReadVisualText):jfReadVisualText;
+  if(jfReadHtml&&!jfReadMaskEnabled){
+    // Restricted fragment from the server: no scripts, no remote resources.
+    jfReadText.innerHTML=jfReadHtml;
+    jfReadText.classList.add('jfReadHtml');
+  }else{
+    jfReadText.classList.remove('jfReadHtml');
+    jfReadText.textContent=jfReadMaskEnabled?jfReadMaskString(jfReadVisualText):jfReadVisualText;
+  }
   if(jfDeskBook)document.getElementById('jfReadTitle').textContent=jfReadMaskEnabled?jfReadMaskString(jfDeskBook.title):jfDeskBook.title;
   for(const option of document.getElementById('jfReadChapters').options){
     const original=option.dataset.jfOriginalChapter||option.textContent;
@@ -278,7 +285,7 @@ document.getElementById('jfPdfZoomIn').addEventListener('click',()=>jfDeskPdfSca
 document.getElementById('jfPdfFit').addEventListener('click',()=>jfDeskPdfScale(1));
 async function jfDeskOpenReader(bookId,chapter){
   jfDeskPdfClear();jfDeskPdfInfo=null;jfDeskPdfZoom=1;
-  jfReadRawText='';jfReadRawToDisplay=null;jfReadVisualText='';jfReadMaskEnabled=false;
+  jfReadRawText='';jfReadRawToDisplay=null;jfReadVisualText='';jfReadMaskEnabled=false;jfReadHtml='';
   document.getElementById('jfReadExcerpt').disabled=false;
   jfPdfJsMarksListClose();document.getElementById('jfPdfMarksListToggle').hidden=true;
   const epoch=++jfDeskEpoch;
@@ -338,6 +345,8 @@ async function jfDeskShowChapter(number,ratio=0){
     if(epoch!==jfDeskEpoch)return;
     jfDeskChapter=number;jfReadText.hidden=false;
     jfReadRawText=data.text;
+    // EPUB ships a sanitized fragment; text remains the anchor/progress baseline.
+    jfReadHtml=data.html||'';
     if(jfDeskOutline.format==='TXT'){
       const flowing=jfTxtSmartReflow(data.text);
       jfReadVisualText=flowing.text;jfReadRawToDisplay=flowing.rawToDisplay;

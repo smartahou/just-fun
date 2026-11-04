@@ -796,3 +796,24 @@ body.jfNotesMode #jfDeskNotes .jfDeskEditor input[type="range"].jfNoteBulkImageR
   border:1px solid #91d5c425;
   border-radius:6px;
 }
+
+/* v7.32 · EPUB renders a sanitized HTML fragment instead of flat text.
+   The pre-wrap rule above only applies to plain text and must be switched off. */
+.jfReader .jfReadText.jfReadHtml{white-space:normal;text-wrap:pretty}
+.jfReadHtml img{max-width:100%;height:auto;display:block;margin:18px auto;border-radius:8px}
+.jfReadHtml figure{margin:18px 0;text-align:center}
+.jfReadHtml figcaption{font-size:.82em;line-height:1.6;opacity:.7;margin-top:10px}
+.jfReadHtml h1,.jfReadHtml h2{font-size:1.3em;line-height:1.55;margin:1.5em 0 .7em;font-weight:600}
+.jfReadHtml h3,.jfReadHtml h4,.jfReadHtml h5,.jfReadHtml h6{font-size:1.08em;line-height:1.6;margin:1.2em 0 .55em;font-weight:600}
+.jfReadHtml p{margin:0 0 .95em}
+.jfReadHtml ul,.jfReadHtml ol{margin:.6em 0 .95em;padding-left:1.5em}
+.jfReadHtml li{margin:.25em 0}
+.jfReadHtml blockquote{margin:1em 0;padding:.1em 0 .1em 1em;border-left:2px solid rgba(131,217,198,.45);opacity:.86}
+.jfReadHtml hr{border:0;border-top:1px solid rgba(255,255,255,.16);margin:2.2em 0}
+.jfReadHtml table{border-collapse:collapse;max-width:100%;margin:1em 0;font-size:.94em}
+.jfReadHtml th,.jfReadHtml td{border:1px solid rgba(255,255,255,.22);padding:.4em .7em;text-align:left}
+.jfReadHtml th{background:rgba(255,255,255,.06);font-weight:600}
+.jfReadHtml pre{overflow-x:auto;padding:12px 14px;border-radius:8px;background:rgba(255,255,255,.06);font-size:.88em;line-height:1.6}
+.jfReadHtml code{font-family:'Sarasa Mono SC',Consolas,monospace;font-size:.92em}
+.jfReadHtml a{color:inherit;text-decoration:underline;text-underline-offset:2px;text-decoration-color:rgba(131,217,198,.5)}
+.jfReadHtml sup,.jfReadHtml sub{font-size:.72em;line-height:0}

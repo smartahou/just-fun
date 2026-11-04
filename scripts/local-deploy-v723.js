@@ -64,7 +64,9 @@ function vendorOk() {
   } catch {return false;}
 }
 function npmInstallCommand(platform=process.platform,comspec=process.env.ComSpec) {
-  const args=['install','--no-save','--package-lock=false','--ignore-scripts','--omit=optional','--no-audit','--no-fund','pdfjs-dist@6.4.299'];
+  // Never pass --omit=optional: esbuild ships its platform binary as an optional
+  // dependency, and omitting optional packages deletes it from an existing tree.
+  const args=['install','--no-save','--package-lock=false','--ignore-scripts','--include=optional','--no-audit','--no-fund','pdfjs-dist@6.4.299'];
   if(platform==='win32') {
     // Node spawnSync cannot execute .cmd/.bat directly on Windows (EINVAL).
     // The command is deliberately fixed: never interpolate media paths or user input.

@@ -456,8 +456,59 @@ function jfReadingEpub(buf){
     if(chapters.length>=500)break;
   }
   if(!chapters.length)throw jfReaderError(422,'EPUB 未找到可阅读章节');
-  return {zip,chapters};
+  return {zip,chapters,base};
 }
+
+const JF_EPUB_ASSET_EXT=new Set(['.jpg','.jpeg','.png','.gif','.webp','.svg','.bmp','.avif']);
+const JF_EPUB_MIME={'.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.gif':'image/gif',
+  '.webp':'image/webp','.svg':'image/svg+xml','.bmp':'image/bmp','.avif':'image/avif'};
+function jfReadingHtmlEscape(v){
+  return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function jfReadingEpubAssetUrl(bookId,entry){
+  return '/api/reading/epub-asset?id='+encodeURIComponent(bookId)+'&src='+encodeURIComponent(entry);
+}
+// Resolve a chapter-relative reference to a normalized ZIP entry name. Anything
+// absolute, protocol-qualified, or escaping the archive root is rejected, and the
+// caller must still prove the entry exists in the archive's own index.
+function jfReadingEpubEntryName(dir,href){
+  const posix=require('node:path').posix;
+  const raw=String(href||'').split('#')[0].split('?')[0].trim();
+  if(!raw||/^[a-z][a-z0-9+.-]*:/i.test(raw)||raw.startsWith('//')||raw.startsWith('/'))return '';
+  let decoded;
+  try{decoded=decodeURIComponent(jfReadingXmlDecode(raw));}catch{return '';}
+  if(!decoded)return '';
+  // dir is already the full archive path of the chapter's folder (e.g. "OEBPS/text").
+  const joined=posix.normalize(posix.join(dir||'',decoded));
+  if(!joined||joined.startsWith('../')||joined.startsWith('/')||joined.split('/').includes('..'))return '';
+  return joined;
+}
+// EPUB chapters are re-emitted as a restricted HTML fragment: readable structure
+// and in-archive images only. Scripts, remote resources and handlers never survive.
+function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
+  const posix=require('node:path').posix;
+  const bodyMatch=/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i.exec(xhtml);
+  let body=bodyMatch?bodyMatch[1]:xhtml.replace(/<head\b[^>]*>[\s\S]*?<\/head\s*>/i,'');
+  body=body.replace(/<(script|style|iframe|object|embed|noscript|template|svg|math|link|meta|base|form)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'');
+  body=body.replace(/<(script|style|iframe|object|embed|link|meta|base|form)\b[^>]*\/?>/gi,'');
+  body=body.replace(/<img\b[^>]*>/gi,tag=>{
+    const entry=jfReadingEpubEntryName(dir,jfReadingAttr(tag,'src'));
+    if(!entry||!zip.entries.has(entry))return '';
+    if(!JF_EPUB_ASSET_EXT.has(posix.extname(entry).toLowerCase()))return '';
+    const alt=jfReadingXmlDecode(jfReadingAttr(tag,'alt')||'');
+    return '<img src="'+jfReadingEpubAssetUrl(bookId,entry)+'" alt="'+jfReadingHtmlEscape(alt)+'" loading="lazy" decoding="async">';
+  });
+  body=body.replace(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi,(match,attrs,inner)=>{
+    const href=jfReadingAttr(attrs,'href');
+    return href&&href.startsWith('#')?match:inner;
+  });
+  body=body.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'');
+  body=body.replace(/\s+style\s*=\s*(?:"[^"]*"|'[^']*')/gi,attr=>/url\s*\(/i.test(attr)?'':attr);
+  body=body.replace(/\s+(srcset|ping|formaction|action|background)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'');
+  return body.trim();
+}
+
 async function jfReadingOutline(id){
   const {info,file,stat}=await jfBookFindById(id);
   if(info.ext==='PDF')return {ok:true,book:info,format:'PDF',chapters:[{title:'PDF 文档'}],nativePdf:true};
@@ -485,20 +536,47 @@ async function jfReadingChapter(id,index){
   const {info,file,stat}=await jfBookFindById(id);
   if(!Number.isSafeInteger(index)||index<0||index>5000)throw jfReaderError(400,'章节编号无效');
   if(info.ext==='PDF')throw jfReaderError(400,'PDF 使用浏览器内置阅读器');
-  let text,total;
+  let text,total,html;
   if(info.ext==='EPUB'){
     if(stat.size>40*1024*1024)throw jfReaderError(413,'EPUB 文件超出 40MB');
     const epub=jfReadingEpub(await fs.promises.readFile(file));
     total=epub.chapters.length;
     if(index>=total)throw jfReaderError(404,'章节不存在');
-    text=jfReadingHtmlToText(jfReadingTextDecode(epub.zip.read(epub.chapters[index].file)));
+    const entry=epub.chapters[index];
+    const xhtml=jfReadingTextDecode(epub.zip.read(entry.file));
+    // text stays the plain rendering: excerpt anchors and progress math depend on it.
+    text=jfReadingHtmlToText(xhtml);
+    html=jfReadingEpubChapterHtml(xhtml,{dir:require('node:path').posix.dirname(entry.file),bookId:info.id,zip:epub.zip});
   }else{
     if(stat.size>12*1024*1024)throw jfReaderError(413,'文本文件超出 12MB');
     const sections=jfReadingSplitText(jfReadingTextDecode(await fs.promises.readFile(file)));
     total=sections.length;if(index>=total)throw jfReaderError(404,'章节不存在');
     text=sections[index];
   }
-  return {ok:true,chapter:index,total,text,book:info};
+  return {ok:true,chapter:index,total,text,book:info,...(html===undefined?{}:{html})};
+}
+// Serve one in-archive image. The entry name must exist in the EPUB index and
+// have an image extension; the archive is re-read only when the book file changes.
+const jfEpubAssetCache=new Map();
+async function jfReadingEpubAsset(res,id,src){
+  const {file,stat,info}=await jfBookFindById(id);
+  if(info.ext!=='EPUB')throw jfReaderError(415,'只有 EPUB 包含书内资源');
+  const posix=require('node:path').posix;
+  const entry=String(src||'');
+  const mime=JF_EPUB_MIME[posix.extname(entry).toLowerCase()];
+  if(!mime)throw jfReaderError(404,'书内资源类型不支持');
+  let cached=jfEpubAssetCache.get(id);
+  if(!cached||cached.mtime!==stat.mtimeMs||cached.size!==stat.size){
+    cached={mtime:stat.mtimeMs,size:stat.size,epub:jfReadingEpub(await fs.promises.readFile(file))};
+    if(jfEpubAssetCache.size>=2)jfEpubAssetCache.delete(jfEpubAssetCache.keys().next().value);
+    jfEpubAssetCache.set(id,cached);
+  }
+  if(!cached.epub.zip.entries.has(entry))throw jfReaderError(404,'书内资源不存在');
+  const data=cached.epub.zip.read(entry);
+  const headers={'Content-Type':mime,'Content-Length':data.length,'Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff'};
+  if(mime==='image/svg+xml')headers['Content-Security-Policy']="default-src 'none'; style-src 'unsafe-inline'";
+  res.writeHead(200,headers);
+  res.end(data);
 }
 async function jfReadingPdf(req,res,id){
   const {info,file,stat}=await jfBookFindById(id);

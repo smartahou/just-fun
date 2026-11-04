@@ -71,3 +71,45 @@
 - Git 作者 `smartahou` 是仓库提交身份，不能用于识别具体 AI 模型。
 - 本文件第 3 节列出的命令输出与测试结果，是 DeepSeek Harness 接管后的第一批可审计记录。
 - 协作者披露同步更新于 `README.md`、`docs/DEVELOPMENT.md`。
+## v7.32 追加 · EPUB 真渲染
+
+### 真实缺陷
+
+`jfReadingChapter` 对 EPUB 的最后一步固定是 `jfReadingHtmlToText()`：服务端把整章 XHTML 剥成纯文本再返回。
+结果是**书内图片、标题层级、强调、列表、代码块、脚注锚点全部丢失**——用户看到的 EPUB 实际等同于 TXT。
+ZIP 解析部分本身是可靠的（中央目录、inflateRaw、路径穿越防护、EPUB3 nav / EPUB2 NCX 目录），问题只在最后一步的投影方式。
+
+### 修复
+
+1. 章节接口在保留 `text` 的同时返回 `html`：`text` 仍是摘录锚点与进度的基准，`html` 只用于显示。
+2. 新增 `jfReadingEpubChapterHtml()`：取 `<body>`、整段删除 script/style/iframe/object/embed/svg/form 等子树、
+   把 `<img>` 重写为 `/api/reading/epub-asset`、只保留页内 `#anchor` 链接（其余扁平化为文字）、
+   剥掉所有 `on*` 属性、含 `url()` 的 `style`、`srcset`/`ping`/`formaction`/`background`。
+3. 新增 `/api/reading/epub-asset`：条目必须存在于该书的 ZIP 索引且扩展名在白名单内；按书籍 mtime/size 缓存最多 2 本；
+   SVG 额外加 `Content-Security-Policy: default-src 'none'`。
+4. 客户端 `jfReadApplyMask()` 增加 HTML 分支，并在 `41-reading.css` 里关掉 `white-space:pre-wrap` 并补齐排版规则。
+5. 图文以外的行为不变：目录、进度、摘录、跳转、乱码遮罩仍走原来的纯文本路径。
+
+### 本轮实际执行的验证
+
+- 离线构建通过，`sourceSha256 = c1ddd111f42d2fc83bfe34e66326415466520593b84d9f563f16850bb24b2057`。
+- 新增 `tests/epub-render-v732.py`：**21/21 PASS**。含服务端清洗契约、资源 200 + PNG magic、三类越界/缺失拒绝，
+  以及 Chromium 中 `img.naturalWidth = 320` 的真实解码证明。
+- 回归 `tests/books-manage-v697.py`：**16/16 PASS**（书架、Hashed TXT、字体与边距偏好未受影响）。
+- 实测截图：章节标题、加粗、图注、列表、代码均可读，深色主题无冲突。
+
+### 顺带修复的部署缺陷
+
+`ensureVendor()` 的 npm 参数含 `--omit=optional`，会删掉 esbuild 的平台二进制（它是 optional dependency），
+导致下一次 `node scripts/build.js` 直接报 `Missing esbuild`。已改为 `--include=optional`。
+
+### 新发现的测试债
+
+`tests/reading-notes-v650.py` 与 v679 同病：操作 `#jfDeskNoteBody`，而该元素自 v6.82「单一表面」起被 CSS 隐藏。
+本轮未修改该测试，也未把它当作回归依据。
+
+### 未做的验证
+
+- 未运行全量发布门禁（`release-gate-v703.py --full`）。
+- 未在 Windows 实机由用户验收 EPUB 阅读（图片滚动性能、大图加载、夜间主题属未验证项）。
+- 未覆盖固定版式 EPUB（fixed-layout）、EPUB 内嵌字体与音频视频。
