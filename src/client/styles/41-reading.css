@@ -1126,3 +1126,27 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   background-repeat:no-repeat!important;
   background-blend-mode:normal,normal,normal,multiply,multiply,normal,normal!important;
 }
+
+/* ---- fix: the chrome must leave the layout, not just slide away ---------- */
+.jfReader.immersive-hidden .jfReaderHeader,
+.jfReader.immersive-hidden .jfReadFooter{
+  position:absolute!important;left:0;right:0;z-index:5;
+  height:auto!important;
+}
+.jfReader.immersive-hidden .jfReaderHeader{top:0}
+.jfReader.immersive-hidden .jfReadFooter{bottom:0}
+.jfReader.immersive-hidden .jfReadCenter{flex:1 1 auto;min-height:0}
+
+/* ---- fix: content must never widen a column in paged mode ---------------- */
+/* A replaced element with an intrinsic width forces its column wider unless it
+   is pinned; percentage max-width then resolves against that wider column. */
+.jfReader.paged .jfReadText{width:100%!important;max-width:none!important;box-sizing:border-box}
+.jfReader.paged .jfReadText img,
+.jfReader.paged .jfReadText svg,
+.jfReader.paged .jfReadText video{
+  max-width:100%!important;width:auto!important;height:auto!important;
+  display:block;margin-left:auto;margin-right:auto;
+}
+.jfReader.paged .jfReadText table,
+.jfReader.paged .jfReadText pre{max-width:100%!important;box-sizing:border-box}
+.jfReader.paged .jfReadText *{min-width:0}

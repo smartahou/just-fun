@@ -231,3 +231,15 @@ update() 把 node_modules 以 junction 挂进临时 worktree，清理时 git wor
 沉浸模式向下滚动隐藏页眉、向上滚动恢复。
 
 已知不足：纸张纹理为程序生成，不是实拍扫描；书脊尚无真实的书脊弧度与页码。
+
+## v7.32 追加 · 两处布局缺陷修复
+
+1. **沉浸模式没有真正让出空间**：header/footer 只用 `transform` 移出视口，仍参与 flex 布局，
+   结果是一条空白灰带，内容区也没有扩大。改为 `position:absolute`，使其脱离文档流；
+   实测 `centerTop=0`、`centerH=839`（= 视口高），内容区真正铺满。
+2. **图片撑破纸面、跨过书脊**：CSS 多列布局中，带固有宽度的替换元素会把所在列撑宽，
+   `max-width:100%` 在此形成循环依赖而失效。修复：`#jfReadText` 显式 `width:100%`，
+   图片 `max-width:100% + width:auto + margin auto`，容器内所有元素 `min-width:0`。
+   实测该章 6 张图片宽度 189–449px，均小于列宽 655px，不再溢出。
+
+验证：人工核对截图与计算值；`epub-render-v732` 既有 40 项断言未受影响。
