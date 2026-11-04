@@ -1645,7 +1645,8 @@ function jfDeskPagedRender(direction){
   const stackK=Math.max(10,totalSheets*0.3);
   const stackPx=sheets=>{
     if(sheets<=0)return '0px';
-    const BASE=5,MAX=34;
+    // Visible sheet depth, restrained: even long books should not look like a comb.
+    const BASE=3,MAX=23;
     return (BASE+(MAX-BASE)*(1-Math.exp(-(sheets-1)/stackK))).toFixed(1)+'px';
   };
   const readWidth=stackPx(readPages);
@@ -1677,8 +1678,7 @@ function jfDeskPagedRender(direction){
   // and remove each side completely when the sheet count reaches zero.
   for(const side of ['left','right']){
     const empty=side==='left'?readPages<=0:unreadPages<=0;
-    for(const el of pageView.querySelectorAll(
-      '.jfBookPile[data-side="'+side+'"],.jfBookBottomEdge[data-side="'+side+'"]')){
+    for(const el of pageView.querySelectorAll('.jfBookPile[data-side="'+side+'"]')){
       el.dataset.empty=empty?'true':'false';
     }
   }
