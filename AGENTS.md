@@ -1,0 +1,44 @@
+# Just Fun · 协作约定
+
+本文件是接手本项目的 AI 工程协作者的第一份必读材料。产品背景见 `README.md`，
+架构沿革见 `ARCHITECTURE.md`，最新变更见 `GOVERNANCE-CHECKPOINT-v*.md`。
+
+## 交付契约（所有者明确要求）
+
+**每个任务节点完成后直接 push 到 GitHub，不需要再询问。**
+
+1. 改真实模块化源码，不直接改 `dist/` 产物。
+2. 先跑专项，再跑相关回归；新增行为必须有可执行的回归用例。
+3. `node scripts/build.js` 必须通过，并记录 `sourceSha256`。
+4. 写 `GOVERNANCE-CHECKPOINT-vX.XX.md`：真实根因、修复、**实际执行过的**验证、未做的验证、影响面。
+5. 更新 `package.json` 版本号与 `README.md` 顶部的版本行。
+6. `git commit` → `git push origin main` → `git ls-remote origin refs/heads/main` 回查远端 HEAD。
+7. **禁止 force push。** 远端有新提交时先 fetch 并快进；冲突走分支，不覆盖历史。
+8. 拿不出执行证据的事情不要写进报告：没有跑过的测试写"未运行"，不要写"应通过"。
+
+变更记录习惯：一个版本可以有多张提交（特性、部署、文档），但同一版本号的 checkpoint 只写一份。
+
+## 本机环境事实（踩过坑，别重踩)
+
+| 事实 | 说明 |
+| --- | --- |
+| `py -3.12` | PATH 里的 `python` 是 3.7.6，会让 `release-gate-v703.py` 直接崩（`Path.unlink(missing_ok)` 需要 3.8+）。一律用 3.12。 |
+| `PYTHONUTF8=1` | Windows 默认 GBK，测试里的 `read_text()` 会 `UnicodeDecodeError`。跑任何 Python 测试前先设置。 |
+| `C:\usr\bin\chromium*` | 84 个测试硬编码 `executable_path='/usr/bin/chromium'`。当前用目录联接 + Chromium 副本假扮该路径；**这是环境补丁，不是代码修复**。 |
+| Node | 24.19.0；构建的 `node --check` 步骤需要能创建子进程，受限沙箱下会 `EPERM`。 |
+| 依赖 | `node_modules` 内已有 `pdfjs-dist@6.4.299`、`markdown-it`、`esbuild`。`package-lock.json` 已提交。 |
+
+## 禁止事项
+
+- 用真实用户媒体做任何破坏性测试；所有回归只用隔离临时目录与合成素材。
+- 恢复已废除的 `AI_USAGE_NOTICE.txt` 自动生成机制。
+- 未经审查升级 `pdfjs-dist`（版本与 `pdfjsModuleSha256` 是构建契约）。
+- 无需求地把现有共享作用域模块整体改写成 ESM/TS，或更换前端框架。
+- 把 `dist/`、`.justfun-runtime/`、`node_modules/` 提交进仓库。
+
+## 已知的测试债
+
+- `tests/notes-rich-markdown-v679.py` 是僵尸用例：它操作的 `#jfDeskNoteBody` 自 v6.82 起被 CSS 隐藏。
+- 发布门禁 `--full` = `run-all.py` 的 `CASES`（31 项，止于 v6.48）+ `SMOKE`（约 50 项，起于 v6.82）；
+  v6.49–v6.81 的一批专项不在任何一条里。
+- 上述两项尚未修复，修之前不要声称"全量门禁通过"。
