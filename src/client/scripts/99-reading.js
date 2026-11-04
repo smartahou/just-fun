@@ -1644,7 +1644,9 @@ function jfDeskPagedRender(direction){
   const chapterPages=jfDeskChapterPages.get(chapterOfPage)||[];
   const inChapter=Math.max(0,chapterPages.indexOf(pageA0));
   const pagesBefore=jfDeskPagesBefore(chapterOfPage);
-  const exactNumber=pagesBefore!=null&&book.exact;
+  // A known prefix yields an exact folio even while later chapters are not
+  // counted. The book-wide total may still be estimated; do not mix the two.
+  const exactNumber=pagesBefore!=null;
   // When earlier chapters have not been measured, extrapolate by chapter position
   // and mark the folio as estimated so it is never presented as an exact one.
   const estimatedNumber=Math.round((chapterOfPage/Math.max(1,book.chapters))*book.total)+inChapter+1;
