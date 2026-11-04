@@ -1394,9 +1394,12 @@ let jfDeskCensusRunning=false;
 // Book-wide counting requires synchronous DOM measurement. Never start another
 // chapter while the user is actively turning pages.
 let jfDeskLastPageTurn=Date.now();
-async function jfDeskWaitReadingIdle(){
-  while(Date.now()-jfDeskLastPageTurn<2200)
+async function jfDeskWaitReadingIdle(token){
+  while(Date.now()-jfDeskLastPageTurn<2200){
+    if(token!==jfDeskCensusToken)return false;
     await new Promise(resolve=>setTimeout(resolve,160));
+  }
+  return token===jfDeskCensusToken;
 }
 
 async function jfDeskWaitImages(root){
@@ -1441,8 +1444,7 @@ async function jfDeskMeasureBook(geo){
       if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
       if(jfDeskPaperOmittedChapter(n)||jfDeskChapterPageCounts.has(n))continue;
       await jfDeskIdle();
-      await jfDeskWaitReadingIdle();
-      if(jfDeskCensusToken!==token)return;
+      if(!await jfDeskWaitReadingIdle(token))return;
       let html=null;
       try{html=await jfDeskFlowFetch(n);}catch(error){continue;}
       if(!html)continue;
@@ -1459,6 +1461,7 @@ async function jfDeskMeasureBook(geo){
         const section=jfDeskFlowSection(n,html);
         holder.appendChild(section);
         await jfDeskWaitImages(holder);
+        if(!await jfDeskWaitReadingIdle(token))return;
         // Identical blocks to actual reading: caption merging can change
         // the page count, so a simplified census must never lie about folios.
         if(jfDeskCensusToken!==token||jfDeskSession!==session||
