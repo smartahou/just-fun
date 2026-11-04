@@ -1305,3 +1305,42 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   to{opacity:1;transform:translateX(0)}
 }
 @media (prefers-reduced-motion:reduce){.jfPageView.jf-turning .jfSheet{animation:none}}
+
+/* ===== v7.37 · visual refinement ======================================== */
+/* Folio and running head: present, but quiet enough to disappear while reading. */
+.jfSheet::before{
+  content:attr(data-page);
+  position:absolute;left:0;right:0;bottom:13px;z-index:2;
+  text-align:center;font-size:11px;line-height:1;letter-spacing:.08em;
+  color:var(--jf-ink-soft);opacity:.42;font-variant-numeric:tabular-nums;
+  pointer-events:none;
+}
+.jfSheetBody::before{
+  content:attr(data-running);
+  position:absolute;top:5px;left:0;right:0;z-index:2;
+  text-align:center;font-size:10px;line-height:1.2;letter-spacing:.16em;
+  color:var(--jf-ink-soft);opacity:.30;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  pointer-events:none;
+}
+.jfReader.immersive-hidden .jfSheet::before,
+.jfReader.immersive-hidden .jfSheetBody::before{display:none}
+
+/* Figures sit centred with a little air; captions recede. */
+.jfSheetBody figure{margin:1.05em 0 .95em;text-align:center}
+.jfSheetBody figure img{margin:0 auto}
+.jfSheetBody figcaption{
+  font-size:.76em;line-height:1.7;color:var(--jf-ink-soft);
+  opacity:.72;margin:.72em auto 0;max-width:34em;text-align:center;
+  text-indent:0;letter-spacing:.01em;
+}
+/* A lone image paragraph gets the same treatment as a figure. */
+.jfSheetBody p>img:only-child{display:block;margin:.2em auto}
+
+/* Softer fold: the shadow reads as curvature, not a drawn line. */
+.jfSheet[data-side='left']{box-shadow:inset -9px 0 20px -22px var(--jf-fold),0 1px 2px rgba(0,0,0,.24),0 12px 30px -16px rgba(0,0,0,.5)}
+.jfSheet[data-side='right']{box-shadow:inset 9px 0 20px -22px var(--jf-fold),0 1px 2px rgba(0,0,0,.24),0 12px 30px -16px rgba(0,0,0,.5)}
+
+/* Slightly tighter measure: 1.78 line height reads calmer than 1.85 at this size. */
+.jfSheetBody{line-height:1.78}
+.jfSheetBody p{margin-bottom:.58em}

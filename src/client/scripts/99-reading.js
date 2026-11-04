@@ -1337,10 +1337,35 @@ function jfDeskLayoutSignature(geo){
   return [jfDeskBook?.id||'',jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
           geo.pageW,geo.pageH,geo.innerW,geo.innerH].join('|');
 }
+// EPUBS often express a caption as a separate short <p> after the image rather
+// than inside a <figure>. Detect that shape and bind the two so pagination can
+// never place the caption on the next page, away from its picture.
+function jfDeskIsCaption(node){
+  if(!node||node.tagName!=='P')return false;
+  const text=(node.textContent||'').trim();
+  if(!text||text.length>90)return false;
+  // Any short parenthetical that names a picture: （明信片）, （漫画明信片）, （图 3）...
+  return /^[（(]/.test(text)||/[（(][^）)]{0,12}(明信片|图片|图)[^）)]{0,12}[）)]/.test(text);
+}
 function jfDeskBlocksFor(sec){
+  const raw=Array.prototype.slice.call(sec.el.children);
   const blocks=[];
   let i=0,acc=0;
-  for(const node of sec.el.children){
+  for(let k=0;k<raw.length;k++){
+    const node=raw[k];
+    const next=raw[k+1];
+    const carriesImage=node.querySelector&&node.querySelector('img');
+    if(next&&carriesImage&&jfDeskIsCaption(next)){
+      const wrap=document.createElement('figure');
+      wrap.appendChild(document.importNode(node,true));
+      const caption=document.createElement('figcaption');
+      caption.textContent=next.textContent.trim();
+      wrap.appendChild(caption);
+      blocks.push({chapter:sec.n,node:wrap,key:sec.n+':'+(i++),offset:acc,mergedCaption:true});
+      acc+=node.textContent.length+next.textContent.length;
+      k++;
+      continue;
+    }
     blocks.push({chapter:sec.n,node:document.importNode(node,true),
                  key:sec.n+':'+(i++),offset:acc});
     acc+=node.textContent.length;
@@ -1444,6 +1469,15 @@ function jfDeskPagedRender(direction){
   right.replaceChildren(...pageB.map(x=>x.node));
   const first=pageA[0]||pageB[0];
   if(first)jfDeskChapter=first.chapter;
+  // Folio and running head: page numbers follow the book, the head follows the chapter.
+  const leftSheet=left.parentElement, rightSheet=right.parentElement;
+  const start=pageA.length?jfDeskPageIndex+1:jfDeskPageIndex+1;
+  if(leftSheet)leftSheet.dataset.page=String(start);
+  if(rightSheet)rightSheet.dataset.page=pageB.length?String(start+1):'';
+  const title=(jfDeskOutline&&jfDeskOutline.chapters&&jfDeskOutline.chapters[jfDeskChapter])
+    ?jfDeskOutline.chapters[jfDeskChapter].title:'';
+  left.dataset.running=title;
+  right.dataset.running=pageB.length?title:'';
   const sel=document.getElementById('jfReadChapters');
   if(sel)sel.value=String(jfDeskChapter);
   // A light transition sells the turn without touching layout. Skipped when the

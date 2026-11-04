@@ -678,3 +678,45 @@ if(anchor){ /* findIndex by chapter+offset; jfDeskPageIndex = found */ }
 - 行首标点禁则仍依赖 CSS；
 - 章节仍一律另起一页；
 - Windows 实机未验收。
+
+## v7.38 · 纸书模式视觉精修
+
+### 版式
+
+- 行距 1.85 → **1.78**，段距 0.62 → **0.58em**：当前字号下更接近文学书密度；
+- 保留宋体栈（Source Han Serif → Noto Serif SC → Songti SC → STSong → SimSun）；
+- 书脊内阴影由 `-14px 0 22px -18px` 收敛为 `-9px 0 20px -22px`，读作纸张弯曲而非画线。
+
+### 实体书细节
+
+- **页码**：`jfSheet::before` 显示 `data-page`，11px、字距 0.08em、透明度 0.42、等宽数字；
+- **页眉**：`jfSheetBody::before` 显示 `data-running`（当前章标题），10px、字距 0.16em、透明度 0.30；
+- 两者在沉浸模式下隐藏（`.immersive-hidden`）；
+- 页码取自跨页首块的页序，右页空时（末屏）不显示页码。
+
+### 插图与图注
+
+- 图注：`.76em`、行距 1.7、透明度 0.72、居中、与图片间距 0.72em；
+- 插图居中，`max-width:100%`、`height:auto`、`object-fit:contain`，不裁切不拉伸；
+- **独立段落图注合并**（语义修正）：EPUB 常把说明写成图片后的独立 `<p>`。
+  `jfDeskBlocksFor()` 现识别「含图块 + 紧随的短说明块」并合并为 `<figure>+<figcaption>`，
+  从结构上保证图注不会落到下一页。识别规则：块为 `<p>`、长度 ≤ 90、以括号开头或含
+  `（…明信片…）`/`（…图…）` 形式的括注。
+
+### 验证
+
+真实书《崩溃的帝国》第 6 章：3 处独立图注全部合并，页面内 `figure`/`figcaption` 一一对应，
+`orphan: 0`；页码 9/10 与章节页眉显示正常。
+
+### 回归（视觉与语义改动后必须重跑）
+
+`paged-correctness-v736` 10/10、`paged-no-skip-v737` 6/6、
+`paged-stability-v735` 8/8、`epub-render-v732` 42/42。
+
+### 仍未完成
+
+- 图片章出现「一页一图、下半页留白」：figure 为原子块，剩余空间不足以再放一组时自然留白，
+  未实现「等比缩小以容纳第二组图」的策略；
+- 行首标点禁则仍依赖 CSS `line-break:strict`；
+- 章节仍一律另起一页；
+- Windows 实机未验收。
