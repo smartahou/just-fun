@@ -8,11 +8,12 @@ const source=fs.readFileSync(path.join(root,'src/client/scripts/98e-paper-textur
 const sample=Array.from({length:16},(_,i)=>'data:image/webp;base64,TEST'+i);
 const styles=[],stored=new Map();
 const button={attrs:{},addEventListener(type,fn){this.click=fn},setAttribute(k,v){this.attrs[k]=v}};
-const reader={classList:{values:new Set(),toggle(c,on){if(on)this.values.add(c);else this.values.delete(c)}}};
+const wear={value:'medium',title:'',addEventListener(type,fn){this.change=fn}};
+const reader={dataset:{},classList:{values:new Set(),toggle(c,on){if(on)this.values.add(c);else this.values.delete(c)}}};
 const document={
   head:{appendChild(el){styles.push(el)}},
   createElement(){return {id:'',textContent:''}},
-  getElementById(id){return id==='jfReader'?reader:id==='jfReadPaperAged'?button:styles.find(x=>x.id===id)||null},
+  getElementById(id){return id==='jfReader'?reader:id==='jfReadPaperAged'?button:id==='jfReadPaperWear'?wear:styles.find(x=>x.id===id)||null},
   querySelectorAll(){return []}
 };
 class FakeImage{
@@ -27,6 +28,20 @@ vm.runInNewContext(source.replace('__JUSTFUN_PAPER_SPREAD_ASSETS__',JSON.stringi
 const paper=window.JFPaperTextures;
 assert.equal(paper.count,16);
 assert.equal(paper.groups,8);
+assert.equal(paper.getWearLevel(),'medium');
+assert.equal(reader.dataset.paperWear,'medium');
+assert.equal(wear.value,'medium');
+wear.value='heavy';wear.change.call(wear);
+assert.equal(paper.getWearLevel(),'heavy');
+assert.equal(reader.dataset.paperWear,'heavy');
+assert.equal(stored.get('jf-reader-paper-wear-v752'),'heavy');
+assert.equal(paper.setWearLevel('unlisted'),false,'invalid stored/selected intensity rejected');
+assert.equal(paper.getWearLevel(),'heavy');
+assert.equal(paper.setWearLevel('light'),true);
+assert.equal(wear.value,'light');
+assert.equal(reader.dataset.paperWear,'light');
+assert.equal(paper.setWearLevel('medium'),true);
+assert.equal(wear.value,'medium');
 assert.equal(styles.length,1);
 assert.equal((styles[0].textContent.match(/data:image\/webp/g)||[]).length,16);
 const page=(i)=>[{chapter:Math.floor(i/15),offset:i*250,key:'block-'+i}];
@@ -66,5 +81,5 @@ assert.equal(l.dataset.paperGroup,undefined);
  button.click();
  assert.equal(paper.isEnabled(),true);
  assert(reader.classList.values.has('jf-aged-paper'));
- console.log('PASS 16 original pair slots, 8 group mapping, source identity, 0/1/2-page states, LRU cap, toggle');
+ console.log('PASS 16 original pairs, deterministic spread mapping, bounded cache, on/off toggle and persisted 3-level old-paper wear control');
 })().catch(e=>{console.error(e);process.exitCode=1});

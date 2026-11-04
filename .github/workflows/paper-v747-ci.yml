@@ -46,23 +46,23 @@ jobs:
         run: |
           python tests/paged-correctness-v736.py
           python tests/paged-no-skip-v737.py
-          python tests/paper-perf-v747.py --expected-static --output dist/paper-performance-v751.json
-      - name: Baseline comparison against prior v7.50
+          python tests/paper-perf-v747.py --expected-static --output dist/paper-performance-v752.json
+      - name: Baseline comparison against prior v7.51
         continue-on-error: true
         run: |
-          git worktree add --detach /tmp/justfun-paper-baseline 89a9076f96936852dbe48ded935d0a47878df942
+          git worktree add --detach /tmp/justfun-paper-baseline 74e102d0c9f2ba2d080703fa8d83911eb4406f3e
           ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/justfun-paper-baseline/node_modules
           (cd /tmp/justfun-paper-baseline && node scripts/build.js)
-          python tests/paper-perf-v747.py --build /tmp/justfun-paper-baseline/dist/douyin.js --output dist/paper-performance-v750-baseline.json
+          python tests/paper-perf-v747.py --build /tmp/justfun-paper-baseline/dist/douyin.js --output dist/paper-performance-v751-baseline.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: paper-v751-validation
+          name: paper-v752-validation
           path: |
             dist/build-report.json
             dist/douyin.js
-            dist/paper-performance-v751.json
+            dist/paper-performance-v752.json
             dist/paper-v748-browser.png
-            dist/paper-performance-v750-baseline.json
+            dist/paper-performance-v751-baseline.json
             dist-build.log
           if-no-files-found: warn
