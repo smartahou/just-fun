@@ -2025,3 +2025,39 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   box-shadow:0 2px 3px rgba(67,49,26,.11)!important;
   filter:none!important;
 }
+
+
+/* ===== v7.50 · kept old-book paper: brighter center, quieter edges =====
+   CSS only touches existing sheet and book-edge decorations: no geometry,
+   filters, animation, additional DOM, or changing the paired WebP assets. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left']{
+  background-color:#eee9db;
+  box-shadow:0 0 1px rgba(78,59,36,.19),0 2px 4px rgba(0,0,0,.10),
+             inset 1px 0 0 rgba(146,117,76,.07),inset 0 1px 0 rgba(142,112,70,.06);
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  background-color:#eee9db;
+  box-shadow:0 0 1px rgba(78,59,36,.19),0 2px 4px rgba(0,0,0,.10),
+             inset -1px 0 0 rgba(146,117,76,.07),inset 0 1px 0 rgba(142,112,70,.06);
+}
+/* No highly regular comb or metallic gold. Exterior only, never page contents. */
+.jfReader.paged #jfPageView .jfBookPile{
+  background-color:#c4af8c!important;
+  background-image:
+    linear-gradient(90deg,rgba(249,240,219,.42),rgba(182,153,109,.11) 73%,rgba(126,94,57,.16)),
+    repeating-linear-gradient(180deg,#d8c6a6 0 6px,#cdb794 7px,#dac8a9 12px,#c1a681 13px,#dcc9ab 22px)!important;
+  background-size:100% 100%,100% 22px!important;
+  background-repeat:no-repeat,repeat!important;
+  background-blend-mode:normal!important;
+  box-shadow:0 1px 3px rgba(70,52,29,.11)!important;
+  filter:none!important;
+}
+/* Low-amplitude edge distress is painted on the existing WebP layer. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group]::after{
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  pointer-events:none!important;
+  box-shadow:inset 0 1px 0 rgba(158,119,76,.045),inset 0 -1px 0 rgba(155,112,67,.065);
+}
