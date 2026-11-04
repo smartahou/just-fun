@@ -48,6 +48,12 @@ paper.applySpread(l,r,'book-A',page(7),[],true);
 assert.equal(r.dataset.paperGroup,l.dataset.paperGroup);
 assert.equal(r.dataset.paperSide,'right');
 assert(styles[0].textContent.includes('radial-gradient('),'old-paper center correction missing');
+assert.equal((styles[0].textContent.match(/data:image\\/svg\\+xml/g)||[]).length,16,
+  'Each paired paper asset must have one static deterministic edge-patina overlay');
+assert(styles[0].textContent.includes('rgba(246,246,242,.94)'),
+  'Stronger pale-book center correction must be present');
+assert.equal((styles[0].textContent.match(/data:image\\/webp/g)||[]).length,16,
+  'All original 16 WebP leaves must remain in the paired CSS rules');
 paper.applySpread(l,r,'book-A',[],[],true);
 assert.equal(l.dataset.paperGroup,undefined);
 (async()=>{
