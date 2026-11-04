@@ -1820,3 +1820,62 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfPageView .jfSheet{
   box-shadow:0 0 1px rgba(70,52,31,.16),0 2px 4px rgba(0,0,0,.12)
 }
+
+
+/* ===== v7.46 · remembered old books / 旧书的温度 ========================
+   A book that has lived on a relative's shelf: soft oxidation at the page
+   margins, warm uncoated stock and muted irregular end-grain.
+   Pure decoration: no new DOM, no layout, no filters, no animated sheets.
+   The SVG for the tiny book edge contains only a few static strokes. */
+.jfReader.paged{
+  --jf-paper:#eee6d6;
+  --jf-paper-edge:#e6d7bc;
+  --jf-ink:#29241c;
+  --jf-ink-soft:#635a4e;
+}
+/* Organic tint varies by edge and corner. Keep the center bright for text. */
+.jfPageView .jfSheet[data-side='left']{
+  background-color:var(--jf-paper);
+  background-image:
+    radial-gradient(ellipse 36% 23% at 1% 2%,rgba(140,99,49,.10),transparent 92%),
+    radial-gradient(ellipse 33% 28% at 82% 98%,rgba(133,98,50,.055),transparent 95%),
+    linear-gradient(90deg,rgba(132,100,61,.075),transparent 10%,transparent 80%,rgba(48,37,26,.065)),
+    linear-gradient(180deg,rgba(144,115,76,.052),transparent 12%,transparent 91%,rgba(133,104,63,.078));
+}
+.jfPageView .jfSheet[data-side='right']{
+  background-color:var(--jf-paper);
+  background-image:
+    radial-gradient(ellipse 31% 27% at 96% 5%,rgba(146,107,61,.088),transparent 94%),
+    radial-gradient(ellipse 35% 30% at 12% 96%,rgba(141,102,55,.060),transparent 95%),
+    linear-gradient(270deg,rgba(138,103,60,.074),transparent 10%,transparent 80%,rgba(48,37,26,.065)),
+    linear-gradient(180deg,rgba(131,102,63,.052),transparent 12%,transparent 91%,rgba(138,99,56,.068));
+}
+/* Existing pre-rasterized fibre image, static under the page text.
+   Stronger than v7.45, but one image layer and no blur/multiply. */
+.jfPageView .jfSheet::after{
+  background-image:var(--jf-paper-fiber)!important;
+  background-size:355px 355px!important;
+  opacity:.34!important;
+  mix-blend-mode:normal!important;
+}
+/* Reduce the accordion/comb look: no repeating CSS stripes. */
+.jfPageView .jfBookPile{
+  background-color:#e9ddc6;
+  background-image:
+    linear-gradient(90deg,rgba(255,251,240,.55),rgba(177,153,111,.20) 65%,rgba(92,74,50,.13)),
+    url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2230%22%20height%3D%22256%22%20viewBox%3D%220%200%2030%20256%22%3E%3Cpath%20d%3D%22M0%204h24%22%20stroke%3D%22%238a785d%22%20stroke-width%3D%22.7%22%20opacity%3D%22.28%22%2F%3E%3Cpath%20d%3D%22M2%2017h17%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.45%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M4%2035h26%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.45%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M1%2049h14%22%20stroke%3D%22%238a785d%22%20stroke-width%3D%22.45%22%20opacity%3D%22.28%22%2F%3E%3Cpath%20d%3D%22M3%2066h21%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.7%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M0%2082h25%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.45%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M2%20105h16%22%20stroke%3D%22%238a785d%22%20stroke-width%3D%22.45%22%20opacity%3D%22.28%22%2F%3E%3Cpath%20d%3D%22M4%20126h27%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.45%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M1%20143h20%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.7%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M3%20171h24%22%20stroke%3D%22%238a785d%22%20stroke-width%3D%22.45%22%20opacity%3D%22.28%22%2F%3E%3Cpath%20d%3D%22M0%20187h12%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.45%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M2%20210h25%22%20stroke%3D%22%23aa9878%22%20stroke-width%3D%22.45%22%20opacity%3D%22.16%22%2F%3E%3Cpath%20d%3D%22M4%20235h20%22%20stroke%3D%22%238a785d%22%20stroke-width%3D%22.7%22%20opacity%3D%22.28%22%2F%3E%3C%2Fsvg%3E');
+  background-size:100% 100%,100% 256px;
+  background-position:0 0,0 2px;
+  background-repeat:no-repeat,repeat-y;
+  background-blend-mode:normal;
+  box-shadow:0 3px 5px rgba(35,26,15,.15);
+  border-radius:1px 0 1px 1px;
+  transition:none!important;
+}
+/* The outside paper block should be narrower and gently chamfered. */
+.jfPageView .jfBookPile[data-side='left']{
+  clip-path:polygon(100% 0,8% .5%,2% 2%,0 5%,0 95%,2% 98%,8% 99.5%,100% 100%)
+}
+.jfPageView .jfBookPile[data-side='right']{
+  clip-path:polygon(0 0,92% .5%,98% 2%,100% 5%,100% 95%,98% 98%,92% 99.5%,0 100%)
+}
