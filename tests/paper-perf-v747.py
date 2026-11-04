@@ -73,6 +73,22 @@ def main():
                     pg.locator('#jfReadPaperAged').click()
                     assert pg.evaluate("()=>window.JFPaperTextures.isEnabled()")
                     assert before==pg.evaluate("()=>jfDeskPageIndex")
+                    # Real header UI: light / medium / heavy must change only
+                    # decorative paint, never the page index or its geometry.
+                    wear=pg.locator('#jfReadPaperWear')
+                    assert wear.is_visible(), 'Wear selector missing in paper mode'
+                    wear.select_option('heavy')
+                    assert pg.evaluate("()=>window.JFPaperTextures.getWearLevel()")=='heavy'
+                    assert pg.evaluate("()=>document.getElementById('jfReader').dataset.paperWear")=='heavy'
+                    strong=pg.evaluate("()=>getComputedStyle(document.querySelector('.jfSheetStack')).opacity")
+                    wear.select_option('light')
+                    assert pg.evaluate("()=>window.JFPaperTextures.getWearLevel()")=='light'
+                    weak=pg.evaluate("()=>getComputedStyle(document.querySelector('.jfSheetStack')).opacity")
+                    assert float(strong)>float(weak), 'Wear levels do not affect edge appearance'
+                    assert before==pg.evaluate("()=>jfDeskPageIndex"), 'Wear level repaginated content'
+                    assert pg.evaluate("()=>getComputedStyle(document.querySelector('.jfBookPile')).backgroundImage.indexOf('repeating-linear-gradient')<0"),'Mechanical comb stripes returned'
+                    wear.select_option('medium')
+                    assert pg.evaluate("()=>localStorage.getItem('jf-reader-paper-wear-v752')")=='medium'
                 has_static=pg.evaluate("()=>!!window.JFPaperTextures")
                 if args.expected_static:
                     assert has_static,'Missing new paper material module'
