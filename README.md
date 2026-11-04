@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.51.0 / Current version: v7.51.0** · 持续迭代 / Actively evolving
+**当前版本：v7.52.0 / Current version: v7.52.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.52 旧书做旧程度**：纸书 header 在「旧」开关旁新增轻／中／重三档；保持原有 8 组成组 WebP，调档只影响纸边磨损与浅褶皱，不把更旧等同于更黄。左右书口细化为清晰且稀疏的纸层边线，取消模糊感，不更动分页或图片解码策略。
 
 **v7.51 旧纸边缘微修**：16 张原始对页 WebP 保持不变；通过原有纹理层的静态渐变进一步减黄。取消书口周期性机械条纹，以轻微非规则轮廓及浅褐自然明暗呈现旧化，不新增逐页 SVG、运行时随机生成、滤镜或分页重排。
 
