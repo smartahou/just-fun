@@ -74,7 +74,7 @@ python tests/release-gate-v703.py --verify
 **这不是传统团队开发，也不是 AI 完全自动写完的软件。**
 
 - **人类项目拥有者**负责发现需求、界定功能、审美与交互决策、Windows 真实体验和最终验收。
-- **ChatGPT** 作为跨会话 AI 工程协作者，参与需求分析、源码修改、测试、审计、工程治理及 Git 提交。
+- **AI 工程协作者**：**v7.32 之前**为 ChatGPT（GPT-6，推理档位未核验）；**v7.32 起**为 DeepSeek Harness（`deepseek-flash`，推理档位未核验）。二者都参与需求分析、源码修改、测试、审计、工程治理及 Git 提交，但**各自只对实际参与的那部分负责**。
 - **GitHub** 保存模块化源码和正式提交历史；聊天内容不是最新代码的替代品。
 - **隔离 Node/Chromium 测试**验证可复现的功能；**Windows 真实设备**检验最终体验。二者不能混为一谈。
 - 每轮依次进行：真实问题 → 读取最新远程 HEAD → 最小改动 → 专项与回归 → 清洁构建和 SHA 校验 → Commit/Push → 验证远程 HEAD → 用户实际使用。
@@ -87,12 +87,16 @@ python tests/release-gate-v703.py --verify
 
 | 项目 | 已确认的信息 |
 | --- | --- |
-| **本次文档协作者（2026-10-28）** | **OpenAI ChatGPT · GPT-6（推理型模型）** |
-| **当前推理强度（High / Extra High 等）** | **未获得可核验的精确档位记录**，不擅自标为「最高」或「超高」 |
-| **Just Fun 历史迭代** | 多轮、跨会话的 ChatGPT 协作；既有 Git 提交与发行记录**没有逐版本记录模型及推理强度**，不得推断整个工程始终使用 GPT-6 |
-| **Git 作者** | GitHub 上的 `smartahou` 是仓库提交身份，**不代表代码全部由人手写，也不能证明具体 AI 模型** |
+| **v7.32 起（2026-11-04– ）** | **DeepSeek Harness 编码代理**；模型标识 `deepseek-flash`；推理强度**未核验** |
+| **v6.20–v7.31（–2026-11-03）** | **OpenAI ChatGPT · GPT-6**（"推理型"描述来自当次会话自述）；具体档位**未核验** |
+| **推理强度（High / Extra High 等）** | **没有任何可独立审计的档位记录**，因此不标「最高」「超高」或任何具体档位 |
+| **协作载体变更** | 2026-11-04 起由 DeepSeek Harness（本地编码代理）接管日常迭代，取代单一聊天窗口；GitHub 仍是唯一源码事实源 |
+| **分工边界** | ChatGPT 负责 v7.32 之前的实现与文档；DeepSeek Harness 负责 v7.32 及其后的实现与文档。**两者都不覆盖对方未参与的工作** |
+| **Git 作者** | `smartahou` 是仓库提交身份，**不代表代码由人手写，也不能用于识别具体 AI 模型** |
 
-模型名称和推理强度属于**开发时所用 AI** 的信息，不等同于 Just Fun 运行时可选的 Qwen 语音转写模型。未来可在验收记录中逐版注明模型名称与**实际可验证**的推理档位；未记录的保持「未知」。详见 [真实开发过程](docs/DEVELOPMENT.md)。
+**可追溯性。** 声明不是结论，提交才是。v7.32 由 DeepSeek Harness 完成的部分对应提交 `946c7b2`（笔记 CommonMark）、`5b6b8f7`（单命令入口）、`eff5f84`、`33016ee`（文档），提交信息与 `GOVERNANCE-CHECKPOINT-v7.32.md` 中记录的实际测试输出可逐条比对。
+
+模型名称和推理强度属于**开发时所用 AI** 的信息，不等同于 Just Fun 运行时可选的 Qwen 语音转写模型。新增记录只在能确认时逐条注明日期、模型、作用范围和验证环境；无法确认的保持「未知」，不倒填、不推断。详见 [真实开发过程](docs/DEVELOPMENT.md)。
 
 ## 安全、贡献与许可
 
@@ -112,7 +116,7 @@ python tests/release-gate-v703.py --verify
 
 Just Fun is a **local-first personal workspace** for video, audio, pictures, books (PDF/EPUB/TXT), and notes. It started as a small personal short-video viewer and grew through repeated real-world use. Its guiding principle is **immersion first, tools second**.
 
-**Fullscreen playhead continuity:** Exiting native fullscreen retains the actual current video time and updates the Feed seek slider and time label, including when switching Feed items while fullscreen. **Human-led, AI-assisted development:** The owner determines product requirements, tests actual Windows behavior, and accepts changes. ChatGPT assists across conversations with engineering, testing, reviews, documentation and verified GitHub commits. **AI disclosure:** This documentation update (2026-10-28) was assisted by OpenAI ChatGPT **GPT-6** (reasoning model). The exact High/Extra High thinking-effort setting is not independently verifiable here, and prior project iterations have no reliable per-commit model/effort record; neither should be invented. GitHub — not a chat transcript — is the canonical source history. Linux/Chromium synthetic tests supplement, but never replace, real device acceptance.
+**Fullscreen playhead continuity:** Exiting native fullscreen retains the actual current video time and updates the Feed seek slider and time label, including when switching Feed items while fullscreen. **Human-led, AI-assisted development:** The owner determines product requirements, tests actual Windows behavior, and accepts changes. **AI disclosure:** Work up to and including v7.31 (2026-11-03) was produced with **OpenAI ChatGPT · GPT-6**; the "reasoning model" wording comes from that session's own description, and no exact thinking-effort level is recorded or inferable. From **v7.32 (2026-11-04)** onward, daily iteration is handled by **DeepSeek Harness**, a local coding agent whose model identifier is **`deepseek-flash`**; its reasoning-effort setting is likewise unverified. Neither statement covers work the other did not perform. The v7.32 commits `946c7b2`, `5b6b8f7`, `eff5f84` and `33016ee` are the auditable record. GitHub — not a chat transcript — is the canonical source history. Linux/Chromium synthetic tests supplement, but never replace, real device acceptance.
 
 **Uniform Hash policy:** Hash mode is one library-wide setting, independent of folder depth or other documents. All media in the root and nested folders use 32-character anonymous physical filenames; previously indexed original-name media are safely adopted with a write-ahead journal, preserving IDs and metadata. Nonmedia files and physical directory names are left untouched. Existing original-name media files may be renamed once on upgrade, so back up the library first. **Folder API contract:** The server explicitly returns `state: ready`, while the move picker also accepts older server responses without this field; nested folders are not silently filtered out. **Move targets:** Existing regular subfolders remain selectable even if empty, document-only, or vacated by a previous media move. Hidden caches, dependency folders and symlinks are excluded. **File operations:** Media in the library root, nested folders and data/ share the same operations. Explicit moves may target existing nested folders or managed data folders, with file-identity validation, no overwrite, rollback and per-file error reporting. H.264 compatibility encoding offers a real FFmpeg cancel action (medium preset, CRF 18), leaving source media unchanged. **Audio quality:** Video batch extraction preserves supported original audio packets via `-c:a copy`; other codecs are decoded and saved as FLAC without additional lossy compression. Original video files remain untouched. **Windows:** Clone the repository; run 更新.cmd (Update) once, then 启动.cmd (Start). 回退.cmd (Rollback) switches to a previous verified runtime without undoing user data. Git, compatible Node.js, FFmpeg/FFprobe and pinned PDF.js build assets are needed.
 

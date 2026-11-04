@@ -9,7 +9,8 @@ Just Fun 的起点不是一份完整的软件产品设计书，而是用户想�
 | 角色 | 真实职责 |
 | --- | --- |
 | 人类项目拥有者 | 定义产品目标、提出使用反馈、决定取舍、Windows 真机操作和最终验收 |
-| ChatGPT | 跨会话代码分析、方案设计、增量实现、专项测试、回归、文档、质量审查和 GitHub 提交 |
+| ChatGPT | **v7.32 之前**的跨会话代码分析、方案设计、增量实现、专项测试、回归、文档、质量审查和 GitHub 提交 |
+| DeepSeek Harness | **v7.32 起**接手的日常迭代：读码、实现、专项与回归、构建校验、文档和 GitHub 提交 |
 | GitHub | 正式源码版本管理、Commit/分支与并行协作边界 |
 | 隔离测试环境 | Node.js、Chromium、Python、FFmpeg 和合成媒体；只验证其实际覆盖的范围 |
 
@@ -21,6 +22,15 @@ Just Fun 的起点不是一份完整的软件产品设计书，而是用户想�
 - **作者身份：** GitHub Commit 显示仓库所有者的账号，是连接器提交身份；不能据此推断全部代码由该用户手敲，也不能用 Git 作者字段识别 AI。
 - **运行时 AI：** 项目里可选的 Qwen ASR 是应用功能的一部分；其模型及用户 API Key 与协作编程使用的 GPT-6 是两种完全不同的角色。
 - **后续记录原则：** 仅在能确认时，逐次记录 AI 服务、模型名、推理强度档位、日期、作用范围和验证环境；无法确认就标注「未记录 / Unknown」，不倒填猜测值，也不展示内部隐藏推理内容。
+
+#### 2026-11-04 · 从聊天窗口迁移到 DeepSeek Harness
+
+- **新的协作者：** **DeepSeek Harness** 编码代理，模型标识 **`deepseek-flash`**。**推理强度未核验**——Harness 不向被代理的模型暴露其思考档位，因此不写 High / Extra High / 最高 之类未经证实的档位。
+- **接管边界：** 从 **v7.32** 开始。v7.31 及之前的功能、测试与文档由 ChatGPT 协作产生，**不归因于 DeepSeek Harness**；反之，DeepSeek Harness 也不为历史提交背书。
+- **为什么迁移：** 聊天窗口无法直接执行命令、无法读取整个仓库、无法在失败时立刻重试；编码代理可以跑构建、跑测试、读失败日志并在同一轮闭环。这是能力差异，不是模型优劣的结论。
+- **不变的部分：** 人类仍然是需求来源与最终验收人；GitHub 仍是唯一源码事实源；Windows 实机体验仍只能在真机确认。
+- **可审计记录：** v7.32 的 `946c7b2`、`5b6b8f7`、`eff5f84`、`33016ee` 及其 `GOVERNANCE-CHECKPOINT-v7.32.md` 是本次交接的第一批证据，其中包含实际执行过的命令输出与未执行的验证项。
+- **新工作流的固定动作：** 每个任务节点完成后直接 `push` 到 `main`（禁止 force push），并回查远端 HEAD；失败或无法执行时如实标注。详见 [AGENTS.md](../AGENTS.md)。
 
 ### 开发与发行闭环
 
@@ -48,9 +58,9 @@ AI 没有天然可靠的记忆、完美的代码正确性或对个人硬件的�
 
 Just Fun began as a small short-video viewer for one person's media. Real use generated requirements for immersive feeds, audio, photos, PDF/EPUB/TXT reading, note-taking, and workflow polish. Features and engineering practices evolved through many small, concrete iterations instead of a predefined enterprise roadmap.
 
-**Human-led, AI-assisted:** The owner makes product decisions and tests on a real Windows machine. ChatGPT assists with source analysis, implementation, review, tests, documentation, and GitHub commits.
+**Human-led, AI-assisted:** The owner makes product decisions and tests on a real Windows machine. **Up to v7.31** OpenAI ChatGPT assisted with source analysis, implementation, review, tests, documentation, and GitHub commits. **From v7.32** that role is held by **DeepSeek Harness**, a local coding agent with the model identifier `deepseek-flash`.
 
-**Model and reasoning-effort transparency (2026-10-28):** This documentation revision uses **OpenAI ChatGPT GPT-6**, a reasoning model. Its exact UI thinking-effort level (such as High or Extra High) is **not independently verifiable from the available session metadata** and is not asserted. Historical sessions and commits do not include an auditable model/effort-per-release record. A past recommendation to use GPT-6 with high reasoning effort is not proof of actual use. Git author identity refers to the authenticated repository account, not the AI model. The app's optional Qwen ASR is a separate runtime integration. Unknown settings remain **unknown**, never reconstructed from guesswork. GitHub is the source of truth; chat history is not a substitute for current repository state.
+**Model and reasoning-effort transparency (2026-10-28, revised 2026-11-04):** The documentation revision of 2026-10-28 used **OpenAI ChatGPT GPT-6**; "reasoning model" is that session's own description, and its exact thinking-effort level is **not independently verifiable** and is not asserted. Since 2026-11-04, iteration is performed by **DeepSeek Harness** (`deepseek-flash`), whose reasoning-effort setting is likewise **unverified** — the harness does not expose a verifiable effort tier to the model it drives. Historical sessions and commits do not include an auditable model/effort-per-release record. A past recommendation to use GPT-6 with high reasoning effort is not proof of actual use. Neither agent's disclosure covers work the other did not perform: the boundary is commit `946c7b2` (v7.32), the first commit authored under Harness. Git author identity refers to the authenticated repository account, not the AI model. The app's optional Qwen ASR is a separate runtime integration. Unknown settings remain **unknown**, never reconstructed from guesswork. GitHub is the source of truth; chat history is not a substitute for current repository state.
 
 **Typical loop:** real feedback → fetch current remote HEAD → scoped modular change → focused tests and existing regression gate → reproducible build and SHA verification → meaningful commit → safe remote push and HEAD verification → real user acceptance.
 
