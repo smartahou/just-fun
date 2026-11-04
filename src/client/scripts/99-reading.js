@@ -1485,9 +1485,17 @@ function jfDeskPagedRender(direction){
   // left edge thickens as pages are read, the right one thins out.
   const totalPages=Math.max(1,jfDeskPages.length-1);
   const progress=Math.min(1,Math.max(0,jfDeskPageIndex/totalPages));
+  // 6px at the very start/end, 22px once a chapter's worth has accumulated:
+  // visible at 100% zoom, never crowding the type.
+  const readWidth=(10+progress*14).toFixed(1)+'px';
+  const unreadWidth=(10+(1-progress)*14).toFixed(1)+'px';
+  const leftStack=left.parentElement&&left.parentElement.querySelector('.jfSheetStack');
+  const rightStack=right.parentElement&&right.parentElement.querySelector('.jfSheetStack');
+  if(leftStack)leftStack.style.setProperty('--jf-stack-w',readWidth);
+  if(rightStack)rightStack.style.setProperty('--jf-stack-w',unreadWidth);
   const pageView=document.getElementById('jfPageView');
-  pageView.style.setProperty('--jf-stack-read',(3+progress*9).toFixed(1)+'px');
-  pageView.style.setProperty('--jf-stack-unread',(3+(1-progress)*9).toFixed(1)+'px');
+  pageView.style.setProperty('--jf-stack-read',readWidth);
+  pageView.style.setProperty('--jf-stack-unread',unreadWidth);
   // A light transition sells the turn without touching layout. Skipped when the
   // user asked for reduced motion or when the caller only re-renders in place.
   if(direction){

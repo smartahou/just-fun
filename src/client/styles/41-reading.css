@@ -1418,3 +1418,141 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 }
 @keyframes jfBusySpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.jfPageBusyCard::before{animation:none}}
+
+/* ===== v7.40 · real book body =========================================== */
+/* The sheet no longer clips: the page stack lives OUTSIDE it, behind the paper.
+   The text column keeps its exact geometry — only decoration overflows. */
+.jfSheet{overflow:visible}
+.jfSheet::after{border-radius:inherit}
+.jfSheetBody{position:relative;z-index:1}
+
+/* --- page stack: read pages on the left, unread on the right ------------- */
+/* Three offset slabs plus the outer edge texture read as paper thickness at
+   100% zoom without turning into venetian blinds. */
+.jfSheetStack{
+  position:absolute;top:7px;bottom:-13px;width:var(--jf-stack-w,14px);
+  pointer-events:none;z-index:0;border-radius:2px 2px 3px 3px;
+  background-image:var(--jf-page-edge);
+  background-size:100% 100%;background-repeat:no-repeat;
+  box-shadow:
+    1px 1px 0 rgba(255,255,255,.55) inset,
+    -2px 2px 5px rgba(48,38,24,.20),
+    -7px 5px 16px rgba(48,38,24,.14),
+    -14px 8px 30px rgba(48,38,24,.10);
+}
+.jfSheetStack::before,
+.jfSheetStack::after{
+  content:'';position:absolute;top:0;bottom:0;left:0;right:0;border-radius:inherit;
+  background-image:inherit;background-size:100% 100%;background-repeat:no-repeat;
+  pointer-events:none;
+}
+.jfSheetStack::before{transform:translate(-2.5px,3px);opacity:.85;
+  box-shadow:-3px 3px 9px rgba(48,38,24,.16)}
+.jfSheetStack::after{transform:translate(-5px,6px);opacity:.6;
+  box-shadow:-4px 4px 14px rgba(48,38,24,.12)}
+.jfSheet[data-side='left'] .jfSheetStack{left:-14px}
+.jfSheet[data-side='right'] .jfSheetStack{right:-14px;transform:scaleX(-1)}
+.jfPageView.single .jfSheetStack{display:none}
+
+/* --- spine: a wide, continuous curvature, not a line --------------------- */
+.jfSpineShade{
+  position:absolute;top:-2px;bottom:-2px;left:50%;width:128px;
+  transform:translateX(-50%);pointer-events:none;z-index:2;
+  background:
+    var(--jf-spine-crease) center/34px 100% no-repeat,
+    radial-gradient(ellipse 52% 86% at 50% 50%, rgba(52,40,26,.26), rgba(52,40,26,0) 74%),
+    linear-gradient(90deg,
+      rgba(52,40,26,0) 0%,
+      rgba(52,40,26,.045) 26%,
+      rgba(52,40,26,.13) 44%,
+      rgba(40,30,18,.22) 50%,
+      rgba(52,40,26,.13) 56%,
+      rgba(52,40,26,.045) 74%,
+      rgba(52,40,26,0) 100%);
+  mix-blend-mode:multiply;opacity:.95;
+}
+.jfPageView.single .jfSpineShade{display:none}
+/* Remove the old narrow crease so the two do not stack up. */
+.jfPageView:not(.single)::after{display:none}
+
+/* --- paper: a touch more fibre, still below the glyphs ------------------- */
+.jfSheet::after{
+  background-size:210px 210px!important;
+  opacity:.082!important;
+}
+/* Outer sheets catch a little more light than the gutter side. */
+.jfSheet[data-side='left']::before,.jfSheet[data-side='right']::before{opacity:.5}
+
+/* ===== v7.40b · paper edge reads as paper, not as a shadow ============== */
+.jfSheetStack{
+  background-color:#f3ecdc;
+  background-blend-mode:multiply;
+  border-left:1px solid rgba(255,255,255,.85);
+  box-shadow:
+    inset 1px 0 0 rgba(255,255,255,.95),
+    inset -1px 0 0 rgba(120,100,72,.18),
+    2px 2px 6px rgba(48,38,24,.20),
+    9px 5px 18px rgba(48,38,24,.13),
+    18px 10px 34px rgba(48,38,24,.09);
+}
+/* Each slab keeps a bright lip so the layers read as separate sheets. */
+.jfSheetStack::before{
+  box-shadow:inset 1px 0 0 rgba(255,255,255,.9),2px 2px 7px rgba(48,38,24,.18);
+  border-left:1px solid rgba(255,255,255,.7);
+}
+.jfSheetStack::after{
+  box-shadow:inset 1px 0 0 rgba(255,255,255,.8),2px 3px 9px rgba(48,38,24,.14);
+  border-left:1px solid rgba(255,255,255,.55);
+}
+
+/* Spine: deeper gutter, wider falloff, so the curvature survives at a glance. */
+.jfSpineShade{
+  width:150px;
+  background:
+    var(--jf-spine-crease) center/38px 100% no-repeat,
+    radial-gradient(ellipse 46% 92% at 50% 50%, rgba(46,34,20,.34), rgba(46,34,20,0) 76%),
+    linear-gradient(90deg,
+      rgba(46,34,20,0) 0%,
+      rgba(46,34,20,.06) 24%,
+      rgba(46,34,20,.16) 42%,
+      rgba(34,24,14,.30) 50%,
+      rgba(46,34,20,.16) 58%,
+      rgba(46,34,20,.06) 76%,
+      rgba(46,34,20,0) 100%);
+  opacity:1;
+}
+
+/* ===== v7.40c · visible sheet plies ==================================== */
+/* A fine vertical repeat on top of the supplied strata texture: reads as
+   individual sheets at 100% zoom, disappears into texture when zoomed out. */
+.jfSheetStack{
+  background-color:#f1e9d8;
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,.72) 0 1px,
+      rgba(255,255,255,0) 1px 2.5px,
+      rgba(104,86,60,.13) 2.5px 3.4px,
+      rgba(255,255,255,0) 3.4px 5px),
+    var(--jf-page-edge);
+  background-size:5px 100%,100% 100%;
+  background-repeat:repeat,no-repeat;
+  background-blend-mode:normal,multiply;
+  border-left:1px solid rgba(255,255,255,.9);
+  box-shadow:
+    2px 2px 7px rgba(48,38,24,.22),
+    10px 6px 20px rgba(48,38,24,.14),
+    20px 11px 38px rgba(48,38,24,.09);
+}
+.jfSheetStack::before{
+  background-image:inherit;background-size:5px 100%,100% 100%;
+  background-repeat:repeat,no-repeat;background-color:#eee6d4;
+}
+.jfSheetStack::after{
+  background-image:inherit;background-size:5px 100%,100% 100%;
+  background-repeat:repeat,no-repeat;background-color:#eae1cd;
+}
+
+/* The closed book casts one soft shadow onto the desk. */
+.jfPageView:not(.single){
+  filter:drop-shadow(0 26px 44px rgba(0,0,0,.42));
+}

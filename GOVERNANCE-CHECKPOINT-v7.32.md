@@ -779,3 +779,54 @@ if(anchor){ /* findIndex by chapter+offset; jfDeskPageIndex = found */ }
 - 书页堆叠厚度是线性映射，未按实际章节页数加权；
 - 封面/版权页未做专属版式；
 - Windows 实机未验收。
+
+## v7.40 · 真实纸书视觉重构
+
+### 上一版为什么看不出差异
+
+v7.39 的 `.jfSheetStack` 只有 3–12px，而且画在 `.jfSheet` **内部**——sheet 的
+`overflow:hidden` 把它裁在纸面里，等于给平面加了一条边。用户判断正确。
+
+### 改动
+
+**书页厚度**：`.jfSheet{overflow:visible}`，堆叠层移到纸页**外部后方**
+（左页 `left:-14px`、右页 `right:-14px`），上下延伸 `top:7px / bottom:-13px`，
+宽度 10–24px 随进度变化。三层错位（本体 + `::before` 偏移 2.5px + `::after` 偏移 5px），
+每层带亮边 `inset 1px 0 0 rgba(255,255,255,.9)` 与暗边，叠加 `repeating-linear-gradient(90deg)`
+画出**竖向纸页线**——这是「一叠纸」和「一条阴影」的区别。
+
+关键取舍：文字容器的几何完全没动。`.jfSheetBody` 仍是 `overflow:hidden`，
+装饰只在 sheet 外部溢出，不参与测量、不拦截点击（`pointer-events:none`）。
+
+**书脊**：新增 `.jfSpineShade`，宽 150px，三层叠加——折痕纹理（38px）+
+径向暗部（`ellipse 46% 92%`）+ 横向渐变（中央 `.30`、两侧回落到 0）。
+原来的 30px 窄线关闭，避免两层叠加。
+
+**纸张**：纤维 `background-size` 340→210px、透明度 0.055→0.082，`multiply`，仍在文字下方。
+
+**整书投影**：`.jfPageView` 加 `drop-shadow(0 26px 44px)`，书从深色背景上浮起。
+
+### 视觉验收（真实 Chromium，1386×839，同一章节）
+
+整书截图 `.jf-artifacts/v740-full.png`；局部放大 `v740-edge.png`（外缘 180×520）、
+`v740-spine.png`（书脊 280×420）。
+
+- 外缘：可见多层竖线 + 亮边，100% 缩放下可辨；
+- 书脊：中央连续暗部带，宽度约 150px，无硬线；
+- 实测 `--jf-stack-w`：左 10px（进度较低）、右 24px。
+
+### 性能
+
+翻页 P50 **5.6ms**、P95 **6.9ms**、max 7.2ms（v7.39 为 0.1/3.8/5.3ms）。
+变慢来自 `filter:drop-shadow` 与更多合成层，仍远低于 100ms 目标。
+
+### 回归
+
+`paged-correctness-v736` 10/10、`paged-no-skip-v737` 6/6、
+`paged-stability-v735` 8/8、`epub-render-v732` 42/42。分页算法与缓存未改动。
+
+### 仍未完成
+
+- 左下角页码在窄边上略显拥挤（10px 堆叠时距纸边 26px）；
+- 封面/版权页未做专属版式；
+- Windows 实机未验收。
