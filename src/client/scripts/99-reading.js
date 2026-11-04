@@ -1620,6 +1620,14 @@ async function jfDeskPagedLayout(keepPage,reason){
   }
   if(twoPages&&jfDeskPageIndex%2)jfDeskPageIndex-=1;
   jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,Math.max(0,jfDeskPages.length-(twoPages?2:1))));
+  // Warm the first visible spread before publishing it. Future turns never
+  // await an image: each render primes the adjacent spreads in advance.
+  if(window.JFPaperTextures?.isEnabled()){
+    const candidates=[jfDeskPages[jfDeskPageIndex],jfDeskPages[jfDeskPageIndex+1],
+      jfDeskPages[jfDeskPageIndex+2],jfDeskPages[jfDeskPageIndex+3]];
+    await window.JFPaperTextures.warm(jfDeskBook?.id,candidates);
+    if(gen!==jfDeskPageGen)return;
+  }
   jfDeskPagedRender();
 }
 function jfDeskCurrentAnchor(){
@@ -1634,6 +1642,19 @@ function jfDeskPagedRender(direction){
   const right=document.getElementById('jfSheetRight');
   const pageA=jfDeskPages[jfDeskPageIndex]||[];
   const pageB=twoPages?(jfDeskPages[jfDeskPageIndex+1]||[]):[];
+  // Stable per-page paper texture; no random selection, CSS asset recreation
+  // or extra layout measurements in the turn handler.
+  if(window.JFPaperTextures){
+    const paper=window.JFPaperTextures,bookId=jfDeskBook?.id;
+    paper.apply(left.parentElement,bookId,pageA);
+    paper.apply(right.parentElement,bookId,pageB);
+    const step=twoPages?2:1;
+    paper.warm(bookId,[
+      jfDeskPages[jfDeskPageIndex-step],jfDeskPages[jfDeskPageIndex-step+1],
+      pageA,pageB,
+      jfDeskPages[jfDeskPageIndex+step],jfDeskPages[jfDeskPageIndex+step+1]
+    ]).catch(()=>{});
+  }
   left.replaceChildren(...pageA.map(x=>x.node));
   right.replaceChildren(...pageB.map(x=>x.node));
   const first=pageA[0]||pageB[0];

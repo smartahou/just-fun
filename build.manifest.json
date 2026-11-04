@@ -58,6 +58,7 @@
     "src/client/scripts/98b-pdf-geometry.js",
     "src/client/scripts/98c-pdf-projection.js",
     "src/client/scripts/98d-page-engine.js",
+    "src/client/scripts/98e-paper-textures.js",
     "src/client/scripts/99-reading.js",
     "src/client/scripts/99c-note-editor.js",
     "src/client/scripts/99a-pdfjs.js"
@@ -65,5 +66,22 @@
   "assets": [
     "assets/favicon.ico"
   ],
-  "output": "dist/douyin.js"
+  "output": "dist/douyin.js",
+  "paperAssets": {
+    "manifest": "assets/paper/manifest.json",
+    "files": [
+      "assets/paper/paper-01.webp",
+      "assets/paper/paper-02.webp",
+      "assets/paper/paper-03.webp",
+      "assets/paper/paper-04.webp",
+      "assets/paper/paper-05.webp",
+      "assets/paper/paper-06.webp",
+      "assets/paper/paper-07.webp",
+      "assets/paper/paper-08.webp",
+      "assets/paper/paper-09.webp",
+      "assets/paper/paper-10.webp",
+      "assets/paper/paper-11.webp",
+      "assets/paper/paper-12.webp"
+    ]
+  }
 }

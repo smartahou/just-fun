@@ -1879,3 +1879,55 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfPageView .jfBookPile[data-side='right']{
   clip-path:polygon(0 0,92% .5%,98% 2%,100% 5%,100% 95%,98% 98%,92% 99.5%,0 100%)
 }
+
+
+/* ===== v7.47 · static old-paper assets / 姥爷书架上的旧书 ==================
+   No Canvas, turbulence, blend mode, page-turn animation or repeated generated
+   texture. The 12 original WebPs are embedded once by the offline build, and
+   their data URLs are attached as one-shot CSS rules. Only data-paper-index
+   changes when a page is turned. This layer never participates in pagination. */
+.jfReader.paged #jfReadPaperAged{display:inline-flex;align-items:center;justify-content:center}
+.jfReader:not(.paged) #jfReadPaperAged{display:none!important}
+.jfReader.paged .jfPageView .jfSheet{
+  background-color:#f2edde;
+  background-image:
+    linear-gradient(90deg,rgba(62,48,31,.045),transparent 8%,transparent 92%,rgba(62,48,31,.045));
+}
+.jfReader.paged.jf-aged-paper .jfPageView .jfSheet[data-paper-index]::after{
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  background-position:center center!important;
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+.jfReader.paged:not(.jf-aged-paper) .jfPageView .jfSheet::after,
+.jfReader.paged .jfPageView .jfSheet:not([data-paper-index])::after{
+  background-image:none!important;
+  opacity:0!important;
+}
+/* Same physical height as the two pages. Previously top:-2/bottom:-2 and
+   view-relative positioning painted a dark spine outside the book top/bottom. */
+.jfReader.paged .jfPageView .jfSpineShade{
+  top:calc(50% - var(--jf-page-h) / 2)!important;
+  bottom:auto!important;
+  height:var(--jf-page-h)!important;
+  box-sizing:border-box;
+  overflow:hidden;
+  width:30px;
+  background:linear-gradient(90deg,
+    transparent 0%,rgba(42,33,22,.04) 32%,
+    rgba(37,28,19,.15) 49%,rgba(37,28,19,.15) 51%,
+    rgba(253,248,234,.10) 59%,transparent 100%);
+  border-radius:0;
+  mix-blend-mode:normal;
+  opacity:1;
+  box-shadow:none;
+}
+.jfReader.paged .jfPageView .jfSpineShade::before,
+.jfReader.paged .jfPageView .jfSpineShade::after{display:none!important}
+/* The exterior stacks stay subtle and never draw over the page itself. */
+.jfReader.paged .jfPageView .jfBookPile{
+  box-shadow:0 2px 4px rgba(34,25,14,.12);
+  filter:none!important;transition:none!important;
+}
