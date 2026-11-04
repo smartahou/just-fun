@@ -58,10 +58,11 @@ def build_epub(dest, png_bytes):
                    '<script>window.pwned = true;</script><p>tail</p></body></html>')
         z.writestr('OEBPS/images/pic.png', png_bytes)
         for i in range(3, 7):
+            body = ''.join('<p>filler paragraph %d of chapter %d, long enough that the '
+                           'spread layout still has to scroll.</p>' % (j, i) for j in range(1, 14))
             z.writestr('OEBPS/text/ch%d.xhtml' % i,
                        '<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml">'
-                       '<head><title>c%d</title></head><body><h1>Chapter %d</h1>'
-                       '<p>filler paragraph for continuous scrolling %d</p></body></html>' % (i, i, i))
+                       '<head><title>c%d</title></head><body><h1>Chapter %d</h1>%s</body></html>' % (i, i, body))
 
 
 with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
@@ -195,6 +196,33 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
             }""")
             ck('Excerpt anchor stays chapter-local in continuous mode',
                bool(excerpt) and excerpt['local'] and excerpt['matches'], str(excerpt))
+            # v7.32: paper surface and spread layout.
+            spread = page.evaluate("""()=>{
+              const t=document.getElementById('jfReadText');
+              const c=getComputedStyle(t);
+              return {cols:c.columnCount, width:Math.round(t.getBoundingClientRect().width)};
+            }""")
+            if spread['width'] >= 1120:
+                ck('Wide viewport lays the text out as a two-page spread',
+                   spread['cols'] == '2', str(spread))
+                ck('The spine is drawn as a fixed overlay',
+                   'gradient' in page.evaluate(
+                       "()=>getComputedStyle(document.getElementById('jfReadCenter'),'::after').backgroundImage"))
+            else:
+                ck('Narrow viewport stays single column', spread['cols'] in ('auto', '1'), str(spread))
+            page.wait_for_timeout(300)
+            paper = page.evaluate("""()=>{
+              jfDeskSetPref({theme:'paper'});
+              const t=document.getElementById('jfReadText'), cs=getComputedStyle(t);
+              const out={paper:document.getElementById('jfReader').classList.contains('paper'),
+                         bg:cs.backgroundColor, noise:cs.backgroundImage.includes('svg'),
+                         ink:cs.color};
+              jfDeskSetPref({theme:'dark'});
+              return out;
+            }""")
+            ck('Paper theme paints a sheet with fibre grain',
+               paper['paper'] and paper['noise'] and 'gradient' not in paper['bg'], str(paper))
+            ck('Paper ink is dark on the sheet', paper['ink'] == 'rgb(43, 37, 29)', str(paper['ink']))
             browser.close()
     finally:
         if proc:

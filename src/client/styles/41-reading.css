@@ -829,3 +829,124 @@ body:has(.jfReader:not([hidden])){overflow:hidden}
 .jfReadHtml .jfEpubChapter+.jfEpubChapter{margin-top:44px;padding-top:38px;border-top:1px solid rgba(255,255,255,.07)}
 .jfReadHtml .jfEpubChapter:first-child{padding-top:0}
 .jfReadHtml .jfEpubPending{opacity:.55;font-style:italic}
+
+/* ===== v7.32 · paper surface & spread layout ============================== */
+/* Real paper is not a flat fill: it has fibre grain, a soft vignette and a
+   faint centre highlight. Everything below is CSS-only (inline SVG noise),
+   so no extra request is made and the dark theme stays untouched. */
+.jfReader.paper{--jf-paper:#f7f2e4;--jf-paper-hi:#fffdf7;--jf-paper-lo:#e3d9c2;--jf-paper-ink:#2b251d}
+.jfReader.paper .jfReadText{
+  color:var(--jf-paper-ink);
+  background-color:var(--jf-paper);
+  background-image:
+    radial-gradient(150% 95% at 50% -12%,var(--jf-paper-hi) 0%,rgba(255,253,247,0) 58%),
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23f)' opacity='0.05'/%3E%3C/svg%3E");
+  background-blend-mode:normal,multiply;
+  background-attachment:local,local;
+  box-shadow:inset 0 0 140px rgba(122,96,54,.11),inset 0 1px 0 rgba(255,255,255,.6);
+  border-radius:3px;
+}
+/* Notes get the same surface so writing feels like writing, not like filling a form. */
+.jfDeskNotes .jfDeskEditor,.jfDeskNotes .jfDeskNoteList{
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23f)' opacity='0.035'/%3E%3C/svg%3E");
+  background-blend-mode:overlay;
+}
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskEditor{
+  background-color:#f8f4e8;color:#2b251d;
+  box-shadow:inset 0 0 120px rgba(122,96,54,.10);
+}
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskEditor input,
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskEditor textarea{color:#2b251d}
+
+/* Spread: on wide screens the column becomes two facing pages. The spine is
+   fixed to the viewport so it stays put while the text flows past it. */
+@media (min-width:1120px){
+  .jfReader:not(.jfPdfMode) .jfReadText.jfReadHtml,
+  .jfReader:not(.jfPdfMode) .jfReadText.jfTxtProse{
+    max-width:none;column-count:2;column-gap:clamp(46px,6vw,104px);column-fill:balance;
+  }
+  .jfReader:not(.jfPdfMode) .jfReadCenter::after{
+    content:'';position:fixed;top:66px;bottom:64px;left:50%;width:132px;
+    transform:translateX(-50%);pointer-events:none;z-index:3;
+    background:linear-gradient(90deg,transparent,rgba(0,0,0,.10) 38%,rgba(0,0,0,.17) 50%,rgba(0,0,0,.10) 62%,transparent);
+  }
+  .jfReader.paper:not(.jfPdfMode) .jfReadCenter::after{
+    background:linear-gradient(90deg,transparent,rgba(120,96,54,.10) 38%,rgba(120,96,54,.18) 50%,rgba(120,96,54,.10) 62%,transparent);
+  }
+  .jfReadHtml img,.jfReadHtml figure,.jfReadHtml pre,.jfReadHtml table{break-inside:avoid}
+  .jfReadHtml .jfEpubChapter+.jfEpubChapter{border-top-color:rgba(0,0,0,.10)}
+}
+body:has(.jfReader.paper) .jfReader.paper .jfReadText::selection,
+body:has(.jfReader.paper) .jfReader.paper .jfReadText *::selection{background:#c8b98a66}
+
+/* v7.32 refinement: a printed page keeps a margin, and the spine needs a seam. */
+@media (min-width:1120px){
+  .jfReader:not(.jfPdfMode) .jfReadText.jfReadHtml,
+  .jfReader:not(.jfPdfMode) .jfReadText.jfTxtProse{
+    padding-left:clamp(30px,4.8vw,92px)!important;
+    padding-right:clamp(30px,4.8vw,92px)!important;
+  }
+  .jfReader:not(.jfPdfMode) .jfReadCenter::after{
+    top:60px;bottom:58px;width:176px;
+    background:linear-gradient(90deg,transparent,rgba(0,0,0,.10) 34%,rgba(0,0,0,.20) 47%,rgba(255,255,255,.18) 50%,rgba(0,0,0,.20) 53%,rgba(0,0,0,.10) 66%,transparent);
+  }
+  .jfReader.paper:not(.jfPdfMode) .jfReadCenter::after{
+    background:linear-gradient(90deg,transparent,rgba(120,96,54,.10) 34%,rgba(120,96,54,.20) 47%,rgba(255,255,255,.55) 50%,rgba(120,96,54,.20) 53%,rgba(120,96,54,.10) 66%,transparent);
+  }
+}
+
+/* Correction: only the writing surface becomes paper. The tool chrome keeps its
+   dark styling, otherwise the mode switch and sliders lose all contrast. */
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskEditor{background-color:transparent;box-shadow:none;color:inherit}
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskExcerpt,
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskNoteBody{
+  background-color:#f8f4e8;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23f)' opacity='0.04'/%3E%3C/svg%3E");
+  background-blend-mode:multiply;
+  color:#2b251d;
+  border-radius:9px;
+  box-shadow:inset 0 0 90px rgba(122,96,54,.09);
+}
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskExcerpt *{color:#2b251d}
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskExcerpt::placeholder,
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskNoteBody::placeholder{color:#8b7f68}
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskQuote,
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskFlowQuote{background-color:#efe8d6;color:#3a3226}
+
+/* The note title sits on the dark tool chrome, not on paper: keep it legible. */
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskEditor input{color:#e4edef}
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskEditor input::placeholder{color:#7f959d}
+
+/* v7.32: the legacy single-block textarea must never surface. The v6.82 rule
+   keys off body.jfNotesMode, which is not always present when notes open from
+   the reader, so the paper styling briefly exposed it. Hide it structurally. */
+body:has(.jfDeskNotes:not([hidden])) #jfDeskNoteBody{display:none!important}
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskNoteBody{background-color:transparent;box-shadow:none}
+
+/* v7.32: the legacy textarea must not occupy layout, but keeping it in the DOM
+   avoids collapsing the flex editor. display:none destabilised the canvas. */
+body:has(.jfDeskNotes:not([hidden])) #jfDeskNoteBody{
+  border:0!important;background:transparent!important;box-shadow:none!important;
+  height:0!important;min-height:0!important;max-height:0!important;
+  padding:0!important;margin:0!important;resize:none!important;overflow:hidden!important;
+  opacity:0!important;pointer-events:none!important;
+}
+
+/* Correct target: the scrollable canvas is the sheet, the inner editable is
+   only as tall as its text, so painting it produced a thin empty band. */
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas{
+  background-color:#f8f4e8!important;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23f)' opacity='0.04'/%3E%3C/svg%3E")!important;
+  background-blend-mode:multiply!important;
+  color:#2b251d!important;
+  border-radius:10px;
+  box-shadow:inset 0 0 90px rgba(122,96,54,.09);
+  padding:16px 18px;
+}
+body:has(.jfReader.paper) .jfDeskNotes #jfDeskExcerpt{
+  background:transparent!important;box-shadow:none!important;color:#2b251d!important;
+}
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas textarea,
+body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
+  background:transparent!important;color:#2b251d!important;
+}

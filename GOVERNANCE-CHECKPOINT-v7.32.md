@@ -163,3 +163,29 @@ update() 把 node_modules 以 junction 挂进临时 worktree，清理时 git wor
 修复：清理前先 fs.rmdirSync 断开 junction，再移除 worktree。
 
 未做：固定版式 EPUB、跨章搜索、大章节虚拟化（当前上限 15 章）。
+
+## v7.32 追加 · 纸张质感、双页与笔记纸面
+
+需求：EPUB/TXT 要接近纸书的观感；笔记要有纸张背景；宽屏时排成双页。
+
+实现：
+
+1. 纸张不是纯色平涂：`radial-gradient` 做中心高光，内联 SVG `feTurbulence` 做纤维噪点（180px 平铺，透明度 0.05），
+   再用两层 `inset box-shadow` 做边缘暗角。全部 CSS，不产生任何额外请求。
+2. 双页：`@media (min-width:1120px)` 时正文 `column-count:2`，`column-gap` 随视口伸缩，左右各留版心边距。
+   书脊用 `.jfReadCenter::after` 的 `position:fixed` 渐变绘制——固定在视口中央，不随内容滚动。
+   `img/figure/pre/table` 设 `break-inside:avoid`，避免插图被两栏切断。
+3. 笔记：纸张刷在**书写画布** `#jfDeskNoteCanvas` 上（内部可编辑区只按内容撑高，刷它只会得到一条细带）。
+   工具条保持深色配色，标题与模式按钮维持浅色文字以保证对比度。
+
+调试中修正的三处：
+
+- 起初把整个 `.jfDeskEditor` 刷成米色，导致工具条按钮和滑块在浅底上不可见；改为只刷书写区。
+- 笔记标题输入框落在深色工具条上却继承了纸面深色文字，几乎不可读；恢复浅色。
+- v6.82 起本应隐藏的遗留 `#jfDeskNoteBody` 在纸上被着色后显形；`display:none` 反而让 flex 画布塌陷，
+  最终改为 `height:0 + opacity:0 + pointer-events:none` 保留 DOM、不占布局。
+
+验证：`tests/epub-render-v732.py` **32/32 PASS**，新增 4 条——宽屏双栏、书脊为 fixed 覆盖层、
+纸张主题带纤维噪点且底色为纸色而非渐变、纸面文字为深墨色。窄屏（900px）实测保持单栏。
+
+未做：纸张纹理随缩放的状态一致性、打印样式、双页下的页眉页脚页码。
