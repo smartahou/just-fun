@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.46.0 / Current version: v7.46.0** · 持续迭代 / Actively evolving
+**当前版本：v7.47.0 / Current version: v7.47.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.47 纸书做旧**：12 张原始静态 WebP 随单文件离线构建；同书同逻辑页固定纹理，预取相邻页；顶部「旧」按钮可关闭旧纸效果。书脊阴影严格限定在书页上下边缘之间，不再越界。
 
 ## 它是什么
 
