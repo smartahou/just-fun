@@ -16,8 +16,35 @@ const read = p => fs.readFileSync(path.join(root, p), 'utf8').replace(/\r\n/g, '
 const hash = t => crypto.createHash('sha256').update(t).digest('hex');
 const replaceOnce = (text, needle, replacement) => {
   if (text.split(needle).length !== 2) throw Error('Missing/duplicate build marker: '+needle);
-  return text.replace(needle, replacement);
+  // A function replacement is required: third-party bundles legitimately contain
+  // "$&" and "$'" sequences, which String.replace would otherwise expand into the
+  // matched marker and corrupt the emitted script.
+  return text.replace(needle, () => replacement);
 };
+
+// Third-party browser libraries are real npm dependencies now: esbuild bundles
+// src/client/vendor.js into one IIFE that exposes window.JF. The legacy modules
+// still concatenate in shared scope, so their ordering guarantees are unchanged.
+function bundleVendor() {
+  let esbuild;
+  try { esbuild = require('esbuild'); }
+  catch { throw Error('Missing esbuild: run npm install before building'); }
+  const entry = path.join(root, manifest.vendor || 'src/client/vendor.js');
+  if (!fs.existsSync(entry)) throw Error('Missing vendor entry: ' + manifest.vendor);
+  const result = esbuild.buildSync({
+    entryPoints: [entry],
+    bundle: true,
+    format: 'iife',
+    target: ['chrome110'],
+    minify: false,
+    write: false,
+    legalComments: 'none',
+    logLevel: 'silent'
+  });
+  const out = result.outputFiles && result.outputFiles[0];
+  if (!out) throw Error('esbuild produced no vendor bundle');
+  return out.text;
+}
 
 function build() {
   const style = manifest.styles.map(read).join('');
@@ -25,9 +52,13 @@ function build() {
   // Build must fail before writing dist if any client script is invalid.
   new vm.Script(browser, {filename:'bundled-browser.js'});
   const layout = read(manifest.html);
+  const vendorSource = bundleVendor();
+  new vm.Script(vendorSource, {filename:'bundled-vendor.js'});
   const styleTag = '<style>\n<!-- JUSTFUN_CSS -->\n</style>';
+  const vendorTag = '<script>\n/* JUSTFUN_VENDOR */\n</script>';
   const scriptTag = '<script>\n/* JUSTFUN_JS */\n</script>';
   let html = replaceOnce(layout, styleTag, '<style>'+style+'</style>');
+  html = replaceOnce(html, vendorTag, '<script>'+vendorSource+'</script>');
   html = replaceOnce(html, scriptTag, '<script>'+browser+'</script>');
   if (!html.startsWith('<!doctype html>') || !html.endsWith('</html>'))
     throw Error('Generated HTML wrapper is invalid');
@@ -84,6 +115,7 @@ function build() {
   fs.renameSync(temp, out);
   const report = {
     output:manifest.output,
+    vendorBytes:Buffer.byteLength(vendorSource), vendorSha256:hash(vendorSource),
     sourceBytes:Buffer.byteLength(source), sourceSha256:hash(source),
     htmlBytes:Buffer.byteLength(html), htmlSha256:hash(html),
     browserBytes:Buffer.byteLength(browser), browserSha256:hash(browser),

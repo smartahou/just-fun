@@ -16,7 +16,15 @@ function jfNoteInline(raw){
      .replace(/~~([^~\n]+)~~/g,'<s>$1</s>');
   return s.replace(/\uE000(\d+)\uE001/g,(_,idx)=>saved[Number(idx)]||'');
 }
+// v7.32: notes render through markdown-it (CommonMark, bundled by esbuild) when
+// the vendor bundle is present. The legacy scanner stays as a fallback so an
+// older cached page can never lose the ability to show a note.
 function jfNoteMarkdownHtml(md){
+  const renderer=window.JF&&window.JF.markdown;
+  if(renderer&&typeof renderer.render==='function')return renderer.render(String(md??''));
+  return jfNoteMarkdownHtmlLegacy(md);
+}
+function jfNoteMarkdownHtmlLegacy(md){
   const lines=String(md||'').replace(/\r\n?/g,'\n').split('\n'),out=[];
   let list='',para=[],quote=[],code=[];let fenced=false;
   const closePara=()=>{if(para.length){out.push('<p>'+para.map(jfNoteInline).join('<br>')+'</p>');para=[];}};

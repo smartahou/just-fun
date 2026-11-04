@@ -29,6 +29,7 @@
     "src/server/60-http-router.js",
     "src/server/70-watch-and-lifecycle.js"
   ],
+  "vendor": "src/client/vendor.js",
   "html": "src/client/index.html",
   "styles": [
     "src/client/styles/00-foundation.css",

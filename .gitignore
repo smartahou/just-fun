@@ -22,7 +22,9 @@ Thumbs.db
 
 # Local binary deployment; never commit the installed executable or metadata.
 .justfun-runtime/
-package-lock.json
+# package-lock.json is committed on purpose: reproducible dependency resolution.
+.jf-artifacts/
+.jf-demo-media/
 
 __pycache__/
 *.pyc
