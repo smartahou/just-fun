@@ -447,7 +447,7 @@ async function jfDeskShowChapterFlow(number,ratio=0){
   })().catch(()=>{});
 }
 function jfDeskFlowOnScroll(){
-  if(jfReadMaskEnabled||!jfDeskFlow.length||jfDeskFlowBusy)return;
+  if(jfDeskPaged||jfReadMaskEnabled||!jfDeskFlow.length||jfDeskFlowBusy)return;
   const total=jfDeskOutline?.chapters.length||0;
   if(!total)return;
   const c=jfReadCenter;
@@ -497,6 +497,14 @@ async function jfDeskShowChapter(number,ratio=0){
 }
 function jfDeskUpdateProgress(){
   if(!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf||jfReader.hidden)return;
+  if(jfDeskPaged){
+    const total=jfDeskPagedTotal();
+    const base=jfDeskFlow.length?Math.min(...jfDeskFlow.map(x=>x.n)):jfDeskChapter;
+    const pct=Math.min(100,Math.round(((base+(jfDeskPageIndex+1)/total)/Math.max(1,jfDeskOutline.chapters.length))*100));
+    document.getElementById('jfReadProgress').textContent=pct+'%';
+    document.getElementById('jfReadProgressFill').style.width=pct+'%';
+    return;
+  }
   let chapter=jfDeskChapter,ratio=0;
   if(jfDeskFlow.length){
     const vis=jfDeskFlowVisible();
@@ -1202,20 +1210,114 @@ document.addEventListener('pointerdown',event=>{
 document.getElementById('jfReadFamily').addEventListener('change',e=>jfDeskSetPref({family:e.target.value}));
 document.getElementById('jfReadSide').addEventListener('input',e=>{jfReadText.style.setProperty('--jf-read-side',e.target.value+'px');document.getElementById('jfReadSideValue').textContent=e.target.value+'px';});
 document.getElementById('jfReadSide').addEventListener('change',e=>jfDeskSetPref({side:Number(e.target.value)}));
+// ---- v7.32 paged (paper book) mode -----------------------------------------
+// Opt-in only. The continuous reader stays the default; this mode lays the text
+// out as viewport-height columns and turns pages by scrolling one column at a
+// time, so there is never vertical scrolling.
+let jfDeskPaged=false,jfDeskPageIndex=0,jfDeskPagedPrevTheme='dark';
+
+// A wide window shows a two-page spread; a narrow one shows a single page.
+// The turn step is therefore the whole visible spread, not one column.
+function jfDeskPagedCols(){return (jfReadCenter.clientWidth||0)>=1120?2:1;}
+function jfDeskPagedMetrics(){
+  const w=parseFloat(jfReadText.style.getPropertyValue('--jf-page-w'))||0;
+  const gap=parseFloat(jfReadText.style.getPropertyValue('--jf-page-gap'))||0;
+  const cols=jfDeskPagedCols();
+  return {w,gap,cols,step:(w+gap)*cols};
+}
+function jfDeskPagedTotal(){
+  const {step}=jfDeskPagedMetrics();
+  if(!step)return 1;
+  return Math.max(1,Math.ceil(jfReadCenter.scrollWidth/step-0.02));
+}
+function jfDeskPagedLayout(keepPage){
+  if(!jfDeskPaged)return;
+  const cw=jfReadCenter.clientWidth||800;
+  const cols=jfDeskPagedCols();
+  const side=Math.round(Math.min(64,cw*0.045));
+  const gap=Math.round(cw*0.05);
+  const pageW=Math.max(200,Math.floor((cw-side*2-gap*(cols-1))/cols));
+  jfReadText.style.setProperty('--jf-page-w',pageW+'px');
+  jfReadText.style.setProperty('--jf-page-gap',gap+'px');
+  jfDeskPageIndex=0;
+  jfReadCenter.scrollLeft=0;
+  if(keepPage)jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,jfDeskPagedTotal()-1));
+  jfDeskUpdateProgress();
+}
+function jfDeskPagedPrefetch(){
+  if(!jfDeskFlow.length)return;
+  const totalChapters=jfDeskOutline?.chapters.length||0;
+  let maxN=-1;for(const item of jfDeskFlow)if(item.n>maxN)maxN=item.n;
+  if(maxN>=0&&maxN<totalChapters-1)jfDeskFlowAppend(maxN+1).catch(()=>{});
+}
+function jfDeskPageTurn(delta){
+  if(!jfDeskPaged||jfReader.hidden)return false;
+  const {step}=jfDeskPagedMetrics();
+  if(!step)return false;
+  const total=jfDeskPagedTotal();
+  const next=Math.max(0,Math.min(total-1,jfDeskPageIndex+delta));
+  if(next===jfDeskPageIndex)return false;
+  jfDeskPageIndex=next;
+  const reduced=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const maxLeft=Math.max(0,jfReadCenter.scrollWidth-jfReadCenter.clientWidth);
+  jfReadCenter.scrollTo({left:Math.min(maxLeft,jfDeskPageIndex*step),behavior:reduced?'auto':'smooth'});
+  jfDeskUpdateProgress();
+  if(jfDeskPageIndex>=total-2)jfDeskPagedPrefetch();
+  return true;
+}
+async function jfDeskPagedToggle(){
+  jfDeskPaged=!jfDeskPaged;
+  jfReader.classList.toggle('paged',jfDeskPaged);
+  const btn=document.getElementById('jfReadPaged');
+  if(btn){btn.setAttribute('aria-pressed',String(jfDeskPaged));btn.classList.toggle('active',jfDeskPaged);}
+  if(jfDeskPaged){
+    jfDeskPagedPrevTheme=jfDeskPrefs.theme;
+    await jfDeskSetPref({theme:'paper'});
+  }else{
+    jfReadText.style.removeProperty('--jf-page-w');
+    jfReadText.style.removeProperty('--jf-page-gap');
+    await jfDeskSetPref({theme:jfDeskPagedPrevTheme||'dark'});
+  }
+  await jfDeskShowChapter(Math.max(0,jfDeskChapter),0);
+  if(jfDeskPaged)jfDeskPagedLayout(false);
+  else jfReadText.style.removeProperty('--jf-page-w');
+  jfDeskMessage(jfDeskPaged?'纸书翻页：← → 或点击页面左右两侧':'已返回连续滚动');
+}
+
 document.getElementById('jfReadTheme').addEventListener('click',()=>jfDeskSetPref({theme:jfDeskPrefs.theme==='paper'?'dark':'paper'}));
+document.getElementById('jfReadPaged').addEventListener('click',jfDeskPagedToggle);
 document.getElementById('jfReadNotes').addEventListener('click',jfDeskOpenNotes);
 document.getElementById('jfReadMask').addEventListener('click',jfReadToggleMask);
 document.getElementById('jfReadExcerpt').addEventListener('click',jfDeskExcerpt);
 let jfDeskFlowScrollAt=0;
 jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;if(jfDeskOutline?.nativePdf){jfPdfJsOnScroll();return;}
+  if(jfDeskPaged){
+    const {step}=jfDeskPagedMetrics();
+    if(step)jfDeskPageIndex=Math.round(jfReadCenter.scrollLeft/step);
+    jfDeskUpdateProgress();return;
+  }
   jfDeskUpdateProgress();
   const now=Date.now();
   if(now-jfDeskFlowScrollAt>150){jfDeskFlowScrollAt=now;jfDeskFlowOnScroll();}},{passive:true});
+// In paged mode a click on the left/right half turns the page, unless the user
+// was selecting text or hit an interactive element.
+jfReadCenter.addEventListener('click',event=>{
+  if(!jfDeskPaged||jfReader.hidden||jfDeskOutline?.nativePdf)return;
+  if((window.getSelection()?.toString()||'').trim())return;
+  if(event.target.closest('a,button,input,select,textarea,label'))return;
+  const rect=jfReadCenter.getBoundingClientRect();
+  jfDeskPageTurn(event.clientX<rect.left+rect.width/2?-1:1);
+});
+window.addEventListener('resize',()=>{if(jfDeskPaged&&!jfReader.hidden)jfDeskPagedLayout(true);});
 document.addEventListener('keydown',event=>{
   if(!jfReader.hidden && jfNotesPanel.hidden && !event.altKey && !event.ctrlKey && !event.metaKey &&
     !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName) &&
     !document.activeElement?.isContentEditable){
     const key=event.key;
+    if(jfDeskPaged && (key==='ArrowRight'||key==='ArrowLeft'||key==='PageDown'||key==='PageUp')){
+      jfDeskPageTurn(key==='ArrowLeft'||key==='PageUp'?-1:1);
+      event.preventDefault();event.stopImmediatePropagation();return;
+    }
     if(jfDeskOutline?.nativePdf && jfDeskPdfInfo && (key==='ArrowRight'||key==='ArrowLeft')){
       jfDeskShowPdfPage(jfDeskChapter+(key==='ArrowRight'||key==='PageDown'?1:-1));
       event.preventDefault();event.stopImmediatePropagation();return;

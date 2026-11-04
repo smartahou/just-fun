@@ -196,6 +196,10 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
             }""")
             ck('Excerpt anchor stays chapter-local in continuous mode',
                bool(excerpt) and excerpt['local'] and excerpt['matches'], str(excerpt))
+            # Dismiss the excerpt chooser so it cannot intercept the paged-mode clicks.
+            page.evaluate("()=>{const c=document.getElementById('jfPdfQuoteChooser');if(c)c.hidden=true;"
+                          "const s=getSelection();if(s)s.removeAllRanges();}")
+            page.wait_for_timeout(200)
             # v7.32: paper surface and spread layout.
             spread = page.evaluate("""()=>{
               const t=document.getElementById('jfReadText');
@@ -223,6 +227,40 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
             ck('Paper theme paints a sheet with fibre grain',
                paper['paper'] and paper['noise'] and 'gradient' not in paper['bg'], str(paper))
             ck('Paper ink is dark on the sheet', paper['ink'] == 'rgb(43, 37, 29)', str(paper['ink']))
+            # v7.32: paged (paper book) mode is opt-in and turns pages horizontally.
+            ck('Continuous scrolling is the default mode',
+               page.evaluate("()=>!document.getElementById('jfReader').classList.contains('paged')"))
+            page.locator('#jfReadPaged').click()
+            page.wait_for_timeout(1200)
+            paged = page.evaluate("""()=>{
+              const c=document.getElementById('jfReadCenter');
+              return {on:document.getElementById('jfReader').classList.contains('paged'),
+                      oy:getComputedStyle(c).overflowY, ox:getComputedStyle(c).overflowX,
+                      sl:Math.round(c.scrollLeft), step:Math.round(jfDeskPagedMetrics().step),
+                      total:jfDeskPagedTotal()};
+            }""")
+            ck('Paged mode stops vertical scrolling',
+               paged['on'] and paged['oy'] == 'hidden', str(paged))
+            ck('Paged mode has more than one page', paged['total'] > 1, str(paged['total']))
+            page.keyboard.press('ArrowRight')
+            page.wait_for_timeout(800)
+            after = page.evaluate("()=>Math.round(document.getElementById('jfReadCenter').scrollLeft)")
+            ck('ArrowRight turns to the next page', after >= paged['step'], str((paged['sl'], after)))
+            page.keyboard.press('ArrowLeft')
+            page.wait_for_timeout(800)
+            back = page.evaluate("()=>Math.round(document.getElementById('jfReadCenter').scrollLeft)")
+            ck('ArrowLeft turns back a page', back < after, str((after, back)))
+            box = page.locator('#jfReadCenter').bounding_box()
+            page.mouse.click(box['x'] + box['width'] * 0.85, box['y'] + box['height'] * 0.5)
+            page.wait_for_timeout(800)
+            clicked = page.evaluate("()=>Math.round(document.getElementById('jfReadCenter').scrollLeft)")
+            ck('Clicking the right half turns forward', clicked > back, str((back, clicked)))
+            page.locator('#jfReadPaged').click()
+            page.wait_for_timeout(900)
+            off = page.evaluate("""()=>({on:document.getElementById('jfReader').classList.contains('paged'),
+                  oy:getComputedStyle(document.getElementById('jfReadCenter')).overflowY})""")
+            ck('Leaving paged mode restores continuous scrolling',
+               (not off['on']) and off['oy'] == 'auto', str(off))
             browser.close()
     finally:
         if proc:

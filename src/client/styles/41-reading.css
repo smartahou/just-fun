@@ -950,3 +950,37 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas textarea,
 body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   background:transparent!important;color:#2b251d!important;
 }
+
+/* ===== v7.32 · paged (paper book) mode ==================================== */
+/* Opt-in via the header button. Text is laid out as fixed-width columns at the
+   viewport height; a page turn is a smooth scrollLeft by one column. The
+   default continuous reader is untouched. */
+.jfReader.paged .jfReadCenter{
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;-ms-overflow-style:none;
+  overscroll-behavior:x contain;
+}
+.jfReader.paged .jfReadCenter::-webkit-scrollbar{display:none;height:0}
+.jfReader.paged .jfReadText{
+  height:100%!important;max-width:none!important;
+  padding-left:0!important;padding-right:0!important;padding-top:0!important;padding-bottom:0!important;
+  column-width:var(--jf-page-w,600px);
+  column-gap:var(--jf-page-gap,40px);
+  column-fill:auto;
+}
+.jfReader.paged .jfReadText.jfTxtProse{white-space:pre-line}
+.jfReader.paged .jfReadCenter>div,.jfReader.paged .jfReadText>*{
+  break-inside:auto;
+}
+.jfReader.paged .jfReadHtml .jfEpubChapter+.jfEpubChapter{
+  border-top:0;margin-top:0;padding-top:0;
+}
+/* A page-turn cursor makes the click target discoverable. */
+.jfReader.paged .jfReadCenter{cursor:pointer}
+@media (prefers-reduced-motion:reduce){.jfReader.paged .jfReadCenter{scroll-behavior:auto}}
+
+/* Paged mode owns the column geometry; the spread rule must not fight it. */
+.jfReader.paged .jfReadText{column-count:auto!important}
+
+/* Balance the columns so a spread never opens with an empty facing page. */
+.jfReader.paged .jfReadText{column-fill:balance!important}
