@@ -380,3 +380,15 @@ step   = (column + 2*pad + gutter) * cols   翻页位移
 - 孤行寡行仅依赖 `orphans/widows`，拆分长段时未强制最少行数；
 - 未做整本预排版与分片调度；
 - 未做 Windows 实机验收。
+
+## v7.33 补充 · 页面溢出（最后一行被裁）
+
+现象：少数页面底部文字被裁掉半个字高。
+
+根因：`outerHeight()` 用 `getBoundingClientRect().height` 累加，行高取整与 margin 折叠会让
+块的实测量比实际绘制高度短 1–2px；当累计高度刚好等于内容区高度时，最后一行落到裁剪区内。
+
+修复：排版预算取 `innerH - 6`（下限 120px），留出半行余量。
+
+验证：三个 `.jfSheetBody` 的 `scrollHeight - clientHeight` 全为 0；
+`paged-typography-v733` 11/11、`epub-render-v732` 42/42 通过。

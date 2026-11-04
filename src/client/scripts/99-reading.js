@@ -1306,7 +1306,10 @@ function jfDeskPagedLayout(keepPage){
       blocks.push({chapter:jfDeskChapter,node:p,key:'t'+jfDeskChapter+':'+i});
     });
   }
-  jfDeskPages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,geo.innerH,host):[];
+  // Leave a few pixels of slack: line-height rounding and margin collapsing make
+  // a block measure a hair shorter than it paints, which would clip the last line.
+  const budget=Math.max(120,geo.innerH-6);
+  jfDeskPages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
   const twoPages=geo.two&&jfDeskPages.length>1;
