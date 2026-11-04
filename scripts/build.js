@@ -48,7 +48,37 @@ function bundleVendor() {
 
 function build() {
   const style = manifest.styles.map(read).join('');
-  const browser = manifest.scripts.map(read).join('');
+  // These exact original WebPs are bundled into the offline HTML, NOT fetched
+  // from the network. Verify every byte against the user's supplied manifest.
+  const paper=manifest.paperAssets;
+  if(!paper||paper.files?.length!==12)throw Error('Missing 12 WebP paper assets in build.manifest.json');
+  const paperMeta=JSON.parse(read(paper.manifest));
+  if(paperMeta.texture_count!==12||paperMeta.assets?.length!==12)
+    throw Error('Unexpected paper texture manifest');
+  const paperUrls=[];
+  const paperAssetHashes=[];
+  for(let i=0;i<12;i++){
+    const rel=paper.files[i],spec=paperMeta.assets[i];
+    if(rel!=='assets/paper/'+spec.file)throw Error('Paper asset ordering mismatch: '+rel);
+    const data=fs.readFileSync(path.join(root,rel));
+    if(data.length!==spec.bytes||!data.subarray(0,4).equals(Buffer.from('RIFF'))||
+       !data.subarray(8,12).equals(Buffer.from('WEBP')))
+      throw Error('Invalid paper WebP '+rel);
+    const digest=crypto.createHash('sha256').update(data).digest('hex');
+    if(digest!==spec.sha256)throw Error('Paper texture SHA-256 mismatch: '+rel);
+    paperAssetHashes.push(digest);
+    paperUrls.push('data:image/webp;base64,'+data.toString('base64'));
+  }
+  let injected=false;
+  const browser=manifest.scripts.map(p=>{
+    const code=read(p);
+    if(p==='src/client/scripts/98e-paper-textures.js'){
+      injected=true;
+      return replaceOnce(code,'__JUSTFUN_PAPER_ASSETS__',JSON.stringify(paperUrls));
+    }
+    return code;
+  }).join('');
+  if(!injected)throw Error('Paper texture module missing from build order');
   // Build must fail before writing dist if any client script is invalid.
   new vm.Script(browser, {filename:'bundled-browser.js'});
   const layout = read(manifest.html);
@@ -121,6 +151,7 @@ function build() {
     browserBytes:Buffer.byteLength(browser), browserSha256:hash(browser),
     cssBytes:Buffer.byteLength(style), cssSha256:hash(style),
     files:manifest.server.length+manifest.styles.length+manifest.scripts.length+2,
+    paperTextures:paperUrls.length,paperTextureAssetsSha256:paperAssetHashes,
     pdfjsVersion:pdfPkg.version,pdfjsAssets:Object.keys(pdfAssets).length,
     pdfjsModuleSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(pdfRoot,'build/pdf.min.mjs'))).digest('hex'),
     baselinePageIdentical:hash(html)===manifest.baselineRenderedHtmlSha256
