@@ -2064,8 +2064,8 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 
 
 /* ===== v7.51 · 保存良好的旧书 / patient, restrained aging ============
-   The spread WebP stays original; center lightening and 1–3px edge blemishes
-   live in its existing single pseudo-element. No new layout or paint widgets.
+   The original spread WebP remains; center lightening is a simple gradient
+   over the existing image. No additional bitmap/decode pass or layout widgets.
    No repeating stripes, blur, animated textures or page geometry changes. */
 .jfReader.paged #jfPageView .jfSheet[data-side='left'],
 .jfReader.paged #jfPageView .jfSheet[data-side='right']{
@@ -2074,12 +2074,8 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 /* Oxidized page block: depth/color, NOT regularly spaced horizontal lines. */
 .jfReader.paged #jfPageView .jfBookPile{
   background-color:#d4c4aa!important;
-  background-image:
-    linear-gradient(90deg,rgba(246,237,219,.77) 0%,rgba(208,189,161,.41) 46%,rgba(153,126,92,.20) 100%),
-    radial-gradient(ellipse 80% 7% at 26% 14%,rgba(157,124,80,.07),transparent),
-    radial-gradient(ellipse 55% 10% at 63% 68%,rgba(136,109,77,.09),transparent),
-    radial-gradient(ellipse 65% 5% at 28% 88%,rgba(247,236,212,.18),transparent)!important;
-  background-size:100% 100%,100% 100%,100% 100%,100% 100%!important;
+  background-image:linear-gradient(90deg,rgba(247,238,218,.72),rgba(213,194,161,.18) 60%,rgba(155,125,86,.13))!important;
+  background-size:100% 100%!important;
   background-repeat:no-repeat!important;
   background-blend-mode:normal!important;
   box-shadow:0 2px 4px rgba(69,53,32,.11)!important;
