@@ -39,6 +39,9 @@ function jfReadToggleMask(){
 
 const jfNotesPanel=document.getElementById('jfDeskNotes');
 let jfDeskBook=null,jfDeskOutline=null,jfDeskChapter=0,jfDeskEpoch=0,jfDeskFont=18;
+// Reading session: bumped every time a book is opened. Any async work that
+// resolves against an older session is discarded instead of writing back.
+let jfDeskSession=0;
 let jfDeskWorkspace={revision:0,progress:{},notes:[]},jfDeskChain=Promise.resolve();
 let jfDeskActiveNote=null,jfDeskDirty=false,jfDeskSaveTimer=null,jfDeskProgressTimer=null,jfDeskProgressSignature='';
 let jfDeskSaveFailed=false,jfDeskEditorVersion=0,jfDeskSaveInFlight=null,jfDeskDraft=null,jfDeskSelectedQuote=null;
@@ -297,6 +300,8 @@ async function jfDeskOpenReader(bookId,chapter){
   document.getElementById('jfReadExcerpt').disabled=false;
   jfPdfJsMarksListClose();document.getElementById('jfPdfMarksListToggle').hidden=true;
   const epoch=++jfDeskEpoch;
+  jfDeskSession++;
+  jfDeskInflight.clear();
   jfBooksHideDetail();
   jfReader.hidden=false;
   jfReadText.textContent='正在打开这本书…';
@@ -366,33 +371,49 @@ async function jfDeskFlowFetch(n){
   const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+n);
   return data.html||'';
 }
+// One in-flight fetch per (book, chapter). Without this, two concurrent callers
+// both pass the "already mounted" check before either resolves and the chapter
+// is appended twice — which then paginates twice and shifts the reader.
+const jfDeskInflight=new Map();
+function jfDeskFlowFetchOnce(n){
+  if(!jfDeskBook||!jfDeskOutline)return Promise.resolve(false);
+  if(!Number.isInteger(n)||n<0||n>=jfDeskOutline.chapters.length)return Promise.resolve(false);
+  const bookId=jfDeskBook.id,session=jfDeskSession;
+  const key=bookId+'#'+n;
+  if(jfDeskInflight.has(key))return jfDeskInflight.get(key);
+  if(jfDeskFlow.some(x=>x.n===n))return Promise.resolve(false);
+  const task=(async()=>{
+    try{
+      const html=await jfDeskFlowFetch(n);
+      // The reading session may have been replaced while the fetch was in flight.
+      if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return false;
+      if(jfDeskFlow.some(x=>x.n===n))return false;
+      return html;
+    }finally{jfDeskInflight.delete(key);}
+  })();
+  jfDeskInflight.set(key,task);
+  return task;
+}
 async function jfDeskFlowAppend(n){
-  if(n<0||n>=jfDeskOutline.chapters.length)return false;
+  const html=await jfDeskFlowFetchOnce(n);
+  if(html===false)return false;
   if(jfDeskFlow.some(x=>x.n===n))return false;
-  const bookId=jfDeskBook.id;
-  const html=await jfDeskFlowFetch(n);
-  if(jfDeskBook?.id!==bookId)return false;
   const sec=jfDeskFlowSection(n,html);
   jfReadText.append(sec);
   jfDeskFlow.push({n,el:sec});
-  // Paginated mode lays out only what is mounted, so a newly arrived chapter
-  // must be re-flowed too; the block anchor keeps the reader in place.
-  if(jfDeskPaged)jfDeskPagedLayout(true);
+  if(jfDeskPaged)jfDeskPagedLayout(true,'append');
   return true;
 }
 async function jfDeskFlowPrepend(n){
-  if(n<0||n>=jfDeskOutline.chapters.length)return false;
+  const html=await jfDeskFlowFetchOnce(n);
+  if(html===false)return false;
   if(jfDeskFlow.some(x=>x.n===n))return false;
-  const bookId=jfDeskBook.id;
-  const html=await jfDeskFlowFetch(n);
-  if(jfDeskBook?.id!==bookId)return false;
   const sec=jfDeskFlowSection(n,html);
   const before=jfReadCenter.scrollHeight,top=jfReadCenter.scrollTop;
   jfReadText.prepend(sec);
   jfDeskFlow.unshift({n,el:sec});
-  // Inserting above the viewport must not move what the reader is looking at.
   jfReadCenter.scrollTop=top+(jfReadCenter.scrollHeight-before);
-  if(jfDeskPaged)jfDeskPagedLayout(true);
+  if(jfDeskPaged)jfDeskPagedLayout(true,'prepend');
   return true;
 }
 function jfDeskFlowTrim(){
@@ -1280,21 +1301,50 @@ function jfDeskMeasureHost(geo){
   jfMeasureHost.style.padding='0';
   return jfMeasureHost;
 }
-function jfDeskPagedLayout(keepPage){
+// Every layout gets a generation number. Work that finishes after a newer
+// layout started is discarded rather than publishing a stale page list.
+let jfDeskPageGen=0;
+
+// Images must be decoded before they are measured: a not-yet-decoded <img>
+// reports its placeholder height, pagination is computed on a lie, and the page
+// is published with a clipped picture.
+async function jfDeskPrepareImages(){
+  try{ if(document.fonts&&document.fonts.ready)await document.fonts.ready; }catch{}
+  const imgs=Array.prototype.slice.call(jfReadText.querySelectorAll('img'));
+  if(!imgs.length)return;
+  await Promise.all(imgs.map(img=>{
+    if(img.complete&&img.naturalWidth>0)return null;
+    if(img.loading==='lazy')img.loading='eager';
+    return new Promise(resolve=>{
+      let settled=false;
+      const done=()=>{if(!settled){settled=true;resolve();}};
+      img.addEventListener('load',done,{once:true});
+      img.addEventListener('error',done,{once:true});
+      setTimeout(done,2500);
+    });
+  }));
+}
+
+async function jfDeskPagedLayout(keepPage,reason){
   if(!jfDeskPaged)return;
+  const gen=++jfDeskPageGen;
   const geo=jfDeskPagedGeometry();
   const view=document.getElementById('jfPageView');
   view.style.setProperty('--jf-page-w',geo.pageW+'px');
   view.style.setProperty('--jf-page-h',geo.pageH+'px');
   view.style.setProperty('--jf-pad-x',geo.padX+'px');
   view.style.setProperty('--jf-pad-y',geo.padY+'px');
+  await jfDeskPrepareImages();
+  if(gen!==jfDeskPageGen)return;
   const host=jfDeskMeasureHost(geo);
   const blocks=[];
   const anchor=keepPage?jfDeskCurrentAnchor():null;
   for(const sec of jfDeskFlow){
-    let i=0;
+    let i=0,acc=0;
     for(const node of sec.el.children){
-      blocks.push({chapter:sec.n,node:document.importNode(node,true),key:sec.n+':'+(i++)});
+      blocks.push({chapter:sec.n,node:document.importNode(node,true),
+                   key:sec.n+':'+(i++),offset:acc});
+      acc+=node.textContent.length;
     }
   }
   // TXT has no mounted sections: structure the plain chapter text into
@@ -1311,7 +1361,9 @@ function jfDeskPagedLayout(keepPage){
   // No fudge factor: the engine measures the assembled column, so the budget is
   // the real text box height.
   const budget=Math.max(120,geo.innerH);
-  jfDeskPages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
+  const pages=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
+  if(gen!==jfDeskPageGen)return;   // a newer layout already started
+  jfDeskPages=pages;                // atomic swap: page turns never see a half-built list
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -1321,7 +1373,14 @@ function jfDeskPagedLayout(keepPage){
   // pages exist, so the old index is meaningless. Fall back to the first page of
   // the same chapter when the exact block no longer starts a page.
   if(anchor){
-    let found=jfDeskPages.findIndex(p=>p.some(b=>b.key===anchor.key));
+    // Restore by chapter + character offset, not by block key: a reflow can split
+    // blocks differently, so keys are not stable across layouts.
+    let found=-1;
+    for(let i=0;i<jfDeskPages.length;i++){
+      const p=jfDeskPages[i];
+      if(!p.length)continue;
+      if(p[0].chapter===anchor.chapter&&(p[0].offset||0)<=anchor.offset)found=i;
+    }
     if(found<0)found=jfDeskPages.findIndex(p=>p[0]&&p[0].chapter===anchor.chapter);
     jfDeskPageIndex=found>=0?found:0;
   }else jfDeskPageIndex=0;
@@ -1332,7 +1391,7 @@ function jfDeskPagedLayout(keepPage){
 function jfDeskCurrentAnchor(){
   const page=jfDeskPages[jfDeskPageIndex];
   const first=page&&page[0];
-  return first?{key:first.key,chapter:first.chapter}:null;
+  return first?{chapter:first.chapter,offset:first.offset||0}:null;
 }
 function jfDeskPagedRender(){
   const geo=jfDeskPagedGeometry();

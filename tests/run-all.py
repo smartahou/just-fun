@@ -5,7 +5,7 @@ Every destructive test creates its own temp library; never pass user directories
 import concurrent.futures,datetime,json,pathlib,subprocess,sys,time,tempfile,os,signal,hashlib
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-CASES=['isolated','security','workspace','browser','browser-preview','startup-port-unicode','browser-frames-v625','recovery-v626','keyboard-seek-v627','keyboard-seek-v630','long-video-frames-v628','long-real-server-v628','delete-drive-v629','annotations-v631','annotations-ui-v632','annotations-ui-v633','annotation-alignment-v634','annotations-v635','ux-v636','ai-audio-preparation-v637','ai-learning-v638','ai-transcription-v639','ai-transcript-ux-v642','ai-transcript-ranges-v643','ai-transcript-ux-v643','live-photo-v644','live-photo-gestures-v645','photo-crop-v646','photo-crop-zoom-v647','metadata-vault-v648','notes-commonmark-v732','epub-render-v732','paged-typography-v733']
+CASES=['isolated','security','workspace','browser','browser-preview','startup-port-unicode','browser-frames-v625','recovery-v626','keyboard-seek-v627','keyboard-seek-v630','long-video-frames-v628','long-real-server-v628','delete-drive-v629','annotations-v631','annotations-ui-v632','annotations-ui-v633','annotation-alignment-v634','annotations-v635','ux-v636','ai-audio-preparation-v637','ai-learning-v638','ai-transcription-v639','ai-transcript-ux-v642','ai-transcript-ranges-v643','ai-transcript-ux-v643','live-photo-v644','live-photo-gestures-v645','photo-crop-v646','photo-crop-zoom-v647','metadata-vault-v648','notes-commonmark-v732','epub-render-v732','paged-typography-v733','paged-stability-v735']
 
 def test_fingerprint():
     """Bind saved test evidence to the exact test scripts used to produce it."""
@@ -87,7 +87,7 @@ def main():
 # Batch mode for short-lived execution environments. The normal no-argument entry
 # remains compatible with the existing one-command full CI on developer machines.
 BATCHES={
-  1:['browser-preview','startup-port-unicode','browser-frames-v625','recovery-v626','ai-audio-preparation-v637','ai-learning-v638','ai-transcription-v639','ai-transcript-ux-v642','ai-transcript-ranges-v643','ai-transcript-ux-v643','live-photo-v644','live-photo-gestures-v645','photo-crop-v646','photo-crop-zoom-v647','metadata-vault-v648','notes-commonmark-v732','epub-render-v732','paged-typography-v733'],
+  1:['browser-preview','startup-port-unicode','browser-frames-v625','recovery-v626','ai-audio-preparation-v637','ai-learning-v638','ai-transcription-v639','ai-transcript-ux-v642','ai-transcript-ranges-v643','ai-transcript-ux-v643','live-photo-v644','live-photo-gestures-v645','photo-crop-v646','photo-crop-zoom-v647','metadata-vault-v648','notes-commonmark-v732','epub-render-v732','paged-typography-v733','paged-stability-v735'],
   2:['keyboard-seek-v627','keyboard-seek-v630','long-video-frames-v628','delete-drive-v629','long-real-server-v628'],
   3:['annotations-ui-v632','annotations-ui-v633','annotation-alignment-v634','annotations-v635','ux-v636','browser','isolated'],
   4:['security','workspace','annotations-v631'],

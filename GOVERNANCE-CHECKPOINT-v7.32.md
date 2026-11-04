@@ -445,3 +445,56 @@ step   = (column + 2*pad + gutter) * cols   翻页位移
 - 图文联动只到「figure 原子 + 超高缩放」，未做「图随文走」的浮动或独立插图页；
 - 标点禁则仍依赖 CSS `line-break:strict`，未在引擎内做行首标点回退；
 - 未做整本预排版与分片调度；Windows 实机验收未做。
+
+## v7.35 · 纸书阅读 P0 稳定性修复
+
+### 复现到的三个根因（源码位置）
+
+**P0-A 章节重复追加**：`jfDeskFlowAppend()` 只在 `await fetch` **之前**检查
+`jfDeskFlow.some(x=>x.n===n)`。两个并发请求（滚动预取 + 章节边界预取）都能通过该检查，
+各自 await 返回后各追加一次 → 同一章挂载两遍 → 分页两遍 → 阅读位置跳动。
+
+**P0-B 重排后页面倒退**：锚点只保存块级 `key`，而重排会改变块的切分方式（拆分产生的
+`#1/#2` 与被拆的原块 key 不同），于是 `findIndex` 找不到，退回「同章节第一页」。
+另外 `jfDeskPagedLayout` 无代际控制，晚完成的旧排版会覆盖新结果。
+
+**P0-C 图片偶发裁切**：`isFigure()` 只识别 `<figure>` 或含 `<figcaption>` 的块；
+EPUB 中常见的 `<p><img></p>`、`<div><img></div>` 不被识别。这类块超高时要么被
+`trySplit` 按文本偏移拆开（图片是元素节点，`textNodes` 不统计它 → 拆分后图片丢失），
+要么落入 `oversized` 独占一页，再被 `.jfSheetBody` 的 `overflow:hidden` 裁掉。
+图片尚未解码时高度是占位值，进一步让测量失真。
+
+### 修复
+
+1. **按 (书, 章) 的 in-flight 表**：`jfDeskFlowFetchOnce()` 复用同一个 Promise，
+   解析后再次校验会话代际与是否已挂载；`jfDeskSession` 每次打开书递增，旧会话结果丢弃。
+2. **文本锚点**：块带 `offset`（章内累计字符偏移），重排按 `chapter + offset` 恢复，
+   不再依赖块 key；找不到精确位置时回退到同章节、再回退到首页。
+3. **分页代际**：`jfDeskPageGen` 递增，异步排版完成时若代际已变则丢弃；
+   `jfDeskPages` 整体替换，翻页永远读不到半成品列表。
+4. **图片原子化**：`hasImage()` 覆盖 `<img>/<picture>/<svg>/<object>`，含图块一律不拆分；
+   超高时等比缩放（`max-height` + `width:auto`），不做裁切。
+5. **图片就绪门控**：排版前 `await document.fonts.ready` 并等待所有 `<img>` 的
+   load/error（2.5s 超时），把 `loading` 提升为 `eager`，避免用占位高度分页。
+
+### 新增测试 `tests/paged-stability-v735.py`（8 项，全部通过）
+
+- 同一章不得挂载两次（DOM 与数组双向校验）；
+- **连续 50 次快速翻页，锚点序列单调不减**（不回退）；
+- 可见图片矩形不超出内容区、宽高比误差 < 4%；
+- 图注不得脱离其 figure；
+- 三个并发 `jfDeskFlowAppend(同一章)` 只挂载一次；
+- 字号变化后仍停在同一章且偏移接近；
+- 全程无页面异常。
+
+### 验证
+
+- `paged-stability-v735` **8/8 PASS**；
+- `paged-typography-v733` **11/11 PASS**；
+- `epub-render-v732` **42/42 PASS**。
+
+### 仍未完成
+
+- 图片加载失败时的降级只有「保留占位、不裁切」，没有显式的错误占位图；
+- 图注关联仅覆盖 `<figure>` 结构，独立 `<p>（明信片）</p>` 形式的图注未做启发式合并；
+- 未做跨章页序优化与整本预排版；Windows 实机验收未做。

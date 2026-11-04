@@ -64,8 +64,14 @@
     if(!lh||!isFinite(lh))lh=parseFloat(getComputedStyle(host).fontSize)*1.8;
     return lh||24;
   }
+  // Any block that carries an image is atomic. EPUB allows <p><img></p>,
+  // <div><img></div> and bare <img>, not just <figure>; splitting such a block by
+  // text offset would silently drop the image.
+  function hasImage(el){
+    return el.tagName==='IMG'||!!(el.querySelector&&el.querySelector('img,picture,svg,object'));
+  }
   function isFigure(el){
-    return el.tagName==='FIGURE'||!!el.querySelector('figcaption');
+    return el.tagName==='FIGURE'||!!el.querySelector('figcaption')||hasImage(el);
   }
   // Scale a figure that cannot fit a whole page; never crop, never distort.
   function fitFigure(el,pageH,host){
@@ -90,6 +96,8 @@
   // Try to keep [0,offset) on the current page and push the rest forward.
   function trySplit(el,avail,host,lh){
     if(window.JF_DEBUG_SPLIT)console.info('[split] avail',Math.round(avail),'lh',Math.round(lh),'need',Math.round(lh*MIN_LINES),'tag',el.tagName,'len',el.textContent.length);
+    // Never split a block that owns an image: the clone would lose it.
+    if(hasImage(el))return null;
     if(avail<lh*MIN_LINES)return null;
     var walk=textNodes(el);
     if(!walk.total)return null;
@@ -164,7 +172,7 @@
         continue;
       }
 
-      if(isFigure(el)&&h>pageH){
+      if(hasImage(el)&&h>pageH){
         var scaled=fitFigure(el,pageH,host);
         if(scaled){
           flush();
