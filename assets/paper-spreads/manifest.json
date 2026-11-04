@@ -1,0 +1,174 @@
+{
+  "name": "Just Fun 旧纸成组对页纹理",
+  "version": "2.0",
+  "created": "2026-11-04",
+  "pairs": 8,
+  "images": 16,
+  "image_size": [
+    960,
+    1440
+  ],
+  "texture_usage": "左/右素材必须共享同组 id，禁用逐页随机",
+  "assets": [
+    {
+      "set": "01",
+      "name": "温润旧纸",
+      "side": "left",
+      "file": "spread-01-left.webp",
+      "bytes": 13536,
+      "sha256": "14f379d8faf325332a9a6a533d87be174d1b9930ee1c20731b9676010e8e393d",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "01",
+      "name": "温润旧纸",
+      "side": "right",
+      "file": "spread-01-right.webp",
+      "bytes": 15082,
+      "sha256": "c4dd257574ef43a31a046fe366872392bd511ee2b7dab46ff13cd9dcaa034880",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "02",
+      "name": "细纤旧纸",
+      "side": "left",
+      "file": "spread-02-left.webp",
+      "bytes": 16972,
+      "sha256": "cd6d53d684f44a8925d10974cc7f4aed3b4b6e7399bf21a48c731a49e7c43ccb",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "02",
+      "name": "细纤旧纸",
+      "side": "right",
+      "file": "spread-02-right.webp",
+      "bytes": 16912,
+      "sha256": "f8f1c5c34abd9599373fcc1e79104d743b93d1d5a08df689d5f05533232ba217",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "03",
+      "name": "轻浅氧化",
+      "side": "left",
+      "file": "spread-03-left.webp",
+      "bytes": 18308,
+      "sha256": "ad3ba1e683a43197a74e5cf6a34c3a8de7e030138b6d505f5028ae7034df7de8",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "03",
+      "name": "轻浅氧化",
+      "side": "right",
+      "file": "spread-03-right.webp",
+      "bytes": 18062,
+      "sha256": "569d1bd4f6b6a76715d71dac90f60850986183beb761d26664b677bd40c672ff",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "04",
+      "name": "暖灰旧纸",
+      "side": "left",
+      "file": "spread-04-left.webp",
+      "bytes": 16268,
+      "sha256": "d77582dba3f77efdd1c7f4f427f20f63ece1966cb246498f7b03324bba43e606",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "04",
+      "name": "暖灰旧纸",
+      "side": "right",
+      "file": "spread-04-right.webp",
+      "bytes": 17684,
+      "sha256": "d1f39787dc313ee34786328b5f39d30514aceb956f134caa1f241122df2ec800",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "05",
+      "name": "书页旧感",
+      "side": "left",
+      "file": "spread-05-left.webp",
+      "bytes": 17480,
+      "sha256": "b39d9c89dca5423dbed980eee0d1049b17b6370eb57915294b84bc6ca4ca7b74",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "05",
+      "name": "书页旧感",
+      "side": "right",
+      "file": "spread-05-right.webp",
+      "bytes": 17530,
+      "sha256": "1e1611e29ef9602aa4bc3467a72b00c2c4d482a9c07594273bff4af5efe44d97",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "06",
+      "name": "自然斑点",
+      "side": "left",
+      "file": "spread-06-left.webp",
+      "bytes": 16664,
+      "sha256": "01edbe13e1963b50f8fd01da890f48a9f5c80c606d7efe55f722fefd09427acf",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "06",
+      "name": "自然斑点",
+      "side": "right",
+      "file": "spread-06-right.webp",
+      "bytes": 17862,
+      "sha256": "26205fa5d7b40faf8e0a36999cdaf3aadb8c03cccd0dbfc038a7e68e13ac60b4",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "07",
+      "name": "旧纸纤维",
+      "side": "left",
+      "file": "spread-07-left.webp",
+      "bytes": 21260,
+      "sha256": "8a8515b2db1c45e94d55c8cde8be5216bc7ef3f6643c649113b59889b1ce4a0e",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "07",
+      "name": "旧纸纤维",
+      "side": "right",
+      "file": "spread-07-right.webp",
+      "bytes": 21074,
+      "sha256": "68e78ba8622717837d94e7c99d988e0dc55439495990f646e0f3909ea528a783",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "08",
+      "name": "淡淡岁月",
+      "side": "left",
+      "file": "spread-08-left.webp",
+      "bytes": 17304,
+      "sha256": "f5a152224f62976a3fb43e83390a59a264f60127af1825eaa7351361634cd74b",
+      "width": 960,
+      "height": 1440
+    },
+    {
+      "set": "08",
+      "name": "淡淡岁月",
+      "side": "right",
+      "file": "spread-08-right.webp",
+      "bytes": 17650,
+      "sha256": "a5c51ddf43c93df911ad3452b6ed6b8e384b4cab544061cbd4efedfe638435e2",
+      "width": 960,
+      "height": 1440
+    }
+  ]
+}

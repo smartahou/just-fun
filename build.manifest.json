@@ -68,20 +68,24 @@
   ],
   "output": "dist/douyin.js",
   "paperAssets": {
-    "manifest": "assets/paper/manifest.json",
+    "manifest": "assets/paper-spreads/manifest.json",
     "files": [
-      "assets/paper/paper-01.webp",
-      "assets/paper/paper-02.webp",
-      "assets/paper/paper-03.webp",
-      "assets/paper/paper-04.webp",
-      "assets/paper/paper-05.webp",
-      "assets/paper/paper-06.webp",
-      "assets/paper/paper-07.webp",
-      "assets/paper/paper-08.webp",
-      "assets/paper/paper-09.webp",
-      "assets/paper/paper-10.webp",
-      "assets/paper/paper-11.webp",
-      "assets/paper/paper-12.webp"
+      "assets/paper-spreads/spread-01-left.webp",
+      "assets/paper-spreads/spread-01-right.webp",
+      "assets/paper-spreads/spread-02-left.webp",
+      "assets/paper-spreads/spread-02-right.webp",
+      "assets/paper-spreads/spread-03-left.webp",
+      "assets/paper-spreads/spread-03-right.webp",
+      "assets/paper-spreads/spread-04-left.webp",
+      "assets/paper-spreads/spread-04-right.webp",
+      "assets/paper-spreads/spread-05-left.webp",
+      "assets/paper-spreads/spread-05-right.webp",
+      "assets/paper-spreads/spread-06-left.webp",
+      "assets/paper-spreads/spread-06-right.webp",
+      "assets/paper-spreads/spread-07-left.webp",
+      "assets/paper-spreads/spread-07-right.webp",
+      "assets/paper-spreads/spread-08-left.webp",
+      "assets/paper-spreads/spread-08-right.webp"
     ]
   }
 }

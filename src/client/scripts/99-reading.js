@@ -1623,9 +1623,12 @@ async function jfDeskPagedLayout(keepPage,reason){
   // Warm the first visible spread before publishing it. Future turns never
   // await an image: each render primes the adjacent spreads in advance.
   if(window.JFPaperTextures?.isEnabled()){
-    const candidates=[jfDeskPages[jfDeskPageIndex],jfDeskPages[jfDeskPageIndex+1],
-      jfDeskPages[jfDeskPageIndex+2],jfDeskPages[jfDeskPageIndex+3]];
-    await window.JFPaperTextures.warm(jfDeskBook?.id,candidates);
+    const step=twoPages?2:1;
+    const spreads=[0,1,2].map(i=>({
+      left:jfDeskPages[jfDeskPageIndex+i*step],
+      right:twoPages?jfDeskPages[jfDeskPageIndex+i*step+1]:null
+    }));
+    await window.JFPaperTextures.warm(jfDeskBook?.id,spreads);
     if(gen!==jfDeskPageGen)return;
   }
   jfDeskPagedRender();
@@ -1642,18 +1645,16 @@ function jfDeskPagedRender(direction){
   const right=document.getElementById('jfSheetRight');
   const pageA=jfDeskPages[jfDeskPageIndex]||[];
   const pageB=twoPages?(jfDeskPages[jfDeskPageIndex+1]||[]):[];
-  // Stable per-page paper texture; no random selection, CSS asset recreation
-  // or extra layout measurements in the turn handler.
+  // One deterministic texture group per real two-page spread, not guessed parity.
   if(window.JFPaperTextures){
     const paper=window.JFPaperTextures,bookId=jfDeskBook?.id;
-    paper.apply(left.parentElement,bookId,pageA);
-    paper.apply(right.parentElement,bookId,pageB);
+    paper.applySpread(left.parentElement,right.parentElement,bookId,pageA,pageB,twoPages);
     const step=twoPages?2:1;
-    paper.warm(bookId,[
-      jfDeskPages[jfDeskPageIndex-step],jfDeskPages[jfDeskPageIndex-step+1],
-      pageA,pageB,
-      jfDeskPages[jfDeskPageIndex+step],jfDeskPages[jfDeskPageIndex+step+1]
-    ]).catch(()=>{});
+    const spreads=[-2,-1,0,1,2].map(i=>({
+      left:jfDeskPages[jfDeskPageIndex+i*step],
+      right:twoPages?jfDeskPages[jfDeskPageIndex+i*step+1]:null
+    }));
+    paper.warm(bookId,spreads).catch(()=>{});
   }
   left.replaceChildren(...pageA.map(x=>x.node));
   right.replaceChildren(...pageB.map(x=>x.node));
