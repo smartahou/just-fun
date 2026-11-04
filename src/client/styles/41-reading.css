@@ -1716,3 +1716,76 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   background-size:100% 100%,100% 3px;
   background-repeat:no-repeat,repeat;
 }
+
+
+/* ===== v7.43 · physical book shell (layout-neutral) =====================
+   The original side stacks were CHILDREN of paper sheets, so clipping and
+   stacking contexts made them look like stripes. These book-body elements
+   are instead separate SIBLINGS behind the page surfaces. The typography
+   container, pagination geometry, and content DOM are untouched. */
+.jfPageView{isolation:isolate}
+.jfBookBoard,.jfBookPile,.jfBookBottomEdge{position:absolute;pointer-events:none;box-sizing:border-box}
+.jfBookBoard{
+  z-index:0;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:calc(var(--jf-page-w) * 2 + 7px);height:calc(var(--jf-page-h) + 12px);
+  border-radius:5px 5px 7px 7px;
+  background:linear-gradient(180deg,#5d503f 0%,#3c342a 85%,#2e2821 100%);
+  box-shadow:0 14px 20px rgba(0,0,0,.36),0 27px 44px rgba(0,0,0,.24)
+}
+.jfBookPile{
+  z-index:1;top:calc(50% - var(--jf-page-h) / 2 + 8px);
+  height:calc(var(--jf-page-h) - 4px);max-width:36px;
+  background-color:#eee8dc;
+  background-image:
+    linear-gradient(90deg,rgba(251,248,240,.96),rgba(194,180,156,.34) 70%,rgba(97,80,57,.28)),
+    repeating-linear-gradient(180deg,#f8f3e9 0px,#f8f3e9 .9px,#d0c7b7 1.3px,#efe8dc 2.7px);
+  background-blend-mode:multiply;
+  box-shadow:0 4px 9px rgba(0,0,0,.24);
+  transition:width .25s ease
+}
+.jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 1px);width:var(--jf-stack-read,0px);
+  clip-path:polygon(100% 0,6% 1%,0 3%,0 97.5%,100% 100%)
+}
+.jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 1px);width:var(--jf-stack-unread,0px);
+  clip-path:polygon(0 0,94% 1%,100% 3%,100% 97.5%,0 100%)
+}
+.jfBookBottomEdge{
+  z-index:1;bottom:calc(50% - var(--jf-page-h) / 2 - 7px);
+  width:var(--jf-page-w);max-height:10px;
+  background:repeating-linear-gradient(180deg,#e6dfd0 0px,#e6dfd0 1px,#fff9ef 1px,#fff9ef 2px,#c7baa7 2.6px,#ede6da 3.7px);
+  box-shadow:0 3px 5px rgba(25,19,13,.22);
+  transition:height .25s ease
+}
+.jfBookBottomEdge[data-side='left']{right:50%;height:calc(var(--jf-stack-read,0px) * .22);border-radius:0 0 1px 5px}
+.jfBookBottomEdge[data-side='right']{left:50%;height:calc(var(--jf-stack-unread,0px) * .22);border-radius:0 0 5px 1px}
+.jfBookPile[data-empty='true'],.jfBookBottomEdge[data-empty='true']{display:none!important}
+.jfPageView.single .jfBookPile,.jfPageView.single .jfBookBottomEdge{display:none!important}
+.jfPageView.single .jfBookBoard{width:calc(var(--jf-page-w) + 7px)}
+/* Retire the child stacks: do not paint them on top of the new book body. */
+.jfSheet>.jfSheetStack{display:none!important}
+.jfPageView .jfSheet{
+  position:relative;z-index:2;overflow:hidden;isolation:isolate;
+  box-shadow:0 0 1px rgba(70,52,31,.22),0 2px 4px rgba(0,0,0,.14)
+}
+.jfPageView .jfSheet[data-side='left']{
+  background-image:
+    linear-gradient(270deg,rgba(38,29,20,.16) 0%,rgba(43,32,20,.08) 2%,rgba(46,34,22,.027) 8%,transparent 20%),
+    linear-gradient(90deg,rgba(255,255,255,.28),transparent 8%)
+}
+.jfPageView .jfSheet[data-side='right']{
+  background-image:
+    linear-gradient(90deg,rgba(38,29,20,.16) 0%,rgba(43,32,20,.08) 2%,rgba(46,34,22,.027) 8%,transparent 20%),
+    linear-gradient(270deg,rgba(255,255,255,.28),transparent 8%)
+}
+/* Replace the central grey wash/photo with the narrow, coherent leaf fold. */
+.jfPageView:not(.single)::after{display:none!important}
+.jfPageView .jfSpineShade{
+  z-index:4;width:36px;opacity:1;mix-blend-mode:normal;
+  background:linear-gradient(90deg,transparent 0%,rgba(33,24,16,.025) 20%,rgba(33,24,16,.065) 42%,rgba(28,21,15,.16) 49%,rgba(25,19,13,.19) 50%,rgba(33,24,16,.075) 53%,rgba(255,253,245,.18) 62%,transparent 100%);
+  box-shadow:none
+}
+.jfPageView .jfSpineShade::before{opacity:.45;background:linear-gradient(180deg,transparent,rgba(34,27,18,.28) 15%,rgba(34,27,18,.28) 84%,transparent)}
+.jfPageView .jfSpineShade::after{opacity:.55;width:2px;left:calc(50% + 2px)}
+@media (prefers-reduced-motion:reduce){.jfBookPile,.jfBookBottomEdge{transition:none}}
