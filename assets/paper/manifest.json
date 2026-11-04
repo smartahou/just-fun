@@ -1,0 +1,121 @@
+{
+  "pack": "Just Fun · 旧纸纹理素材包",
+  "version": "1.0.0",
+  "created": "2026-11-04",
+  "format": "image/webp",
+  "width": 960,
+  "height": 1440,
+  "texture_count": 12,
+  "license": "本包纹理由程序原创生成；可在 Just Fun 工程中使用和修改。",
+  "design_intent": "轻度旧书纸质：无文字、无线框、无预制书脊重阴影、避免重污渍；不在翻页时生成纹理。",
+  "assets": [
+    {
+      "id": "paper-01",
+      "file": "paper-01.webp",
+      "weight": 16,
+      "width": 960,
+      "height": 1440,
+      "bytes": 10724,
+      "sha256": "e380870bc2dccae6dfab2ac8c5c2d08efc5c64d503cf51cb468ee905dd7a064f"
+    },
+    {
+      "id": "paper-02",
+      "file": "paper-02.webp",
+      "weight": 14,
+      "width": 960,
+      "height": 1440,
+      "bytes": 12802,
+      "sha256": "56f0ee65e7153beffa1330ea4ba386c841d887c62bf6fb8091afaaedb49c2fa0"
+    },
+    {
+      "id": "paper-03",
+      "file": "paper-03.webp",
+      "weight": 13,
+      "width": 960,
+      "height": 1440,
+      "bytes": 14188,
+      "sha256": "d9991c39e2072f4b8e0ba78bf44bc36881fc3f2ec0bb8551a648ba42917c4fb6"
+    },
+    {
+      "id": "paper-04",
+      "file": "paper-04.webp",
+      "weight": 10,
+      "width": 960,
+      "height": 1440,
+      "bytes": 12814,
+      "sha256": "b401b29da02671b167627a7a57a4b863ecb86697a4c493eca6eb9dc84cee89a6"
+    },
+    {
+      "id": "paper-05",
+      "file": "paper-05.webp",
+      "weight": 9,
+      "width": 960,
+      "height": 1440,
+      "bytes": 14408,
+      "sha256": "4c20fef0306bd333df02f3c3b9cb30fa65eb80a6acca5ad5434aebe703cc1fce"
+    },
+    {
+      "id": "paper-06",
+      "file": "paper-06.webp",
+      "weight": 8,
+      "width": 960,
+      "height": 1440,
+      "bytes": 13848,
+      "sha256": "4d6915d19227e44ec317a94d69db7f6195d6a036ee589e0553dd20c438eff7b1"
+    },
+    {
+      "id": "paper-07",
+      "file": "paper-07.webp",
+      "weight": 8,
+      "width": 960,
+      "height": 1440,
+      "bytes": 11674,
+      "sha256": "a782f16aa76490cadccc45f972fcbc684f6f75de13e248ec4b68e787e6c1c3ba"
+    },
+    {
+      "id": "paper-08",
+      "file": "paper-08.webp",
+      "weight": 7,
+      "width": 960,
+      "height": 1440,
+      "bytes": 14738,
+      "sha256": "a97c4b3101bebeded7008d79d6204a0fcac74dcc285c76fc3f34d5059a08137e"
+    },
+    {
+      "id": "paper-09",
+      "file": "paper-09.webp",
+      "weight": 6,
+      "width": 960,
+      "height": 1440,
+      "bytes": 17850,
+      "sha256": "0982fd92bffdc17aae2f0d961a7383f4d424b017b359fc7b50fd5b139370648d"
+    },
+    {
+      "id": "paper-10",
+      "file": "paper-10.webp",
+      "weight": 4,
+      "width": 960,
+      "height": 1440,
+      "bytes": 14214,
+      "sha256": "de44a51468055ebc40105d3d0e91674305ec85a77855d48a992c541f5922c4fb"
+    },
+    {
+      "id": "paper-11",
+      "file": "paper-11.webp",
+      "weight": 3,
+      "width": 960,
+      "height": 1440,
+      "bytes": 14182,
+      "sha256": "ca401180414a01b5e70b31e4bc35e41a382c5f4579d5a831a4d25866f74dbe58"
+    },
+    {
+      "id": "paper-12",
+      "file": "paper-12.webp",
+      "weight": 2,
+      "width": 960,
+      "height": 1440,
+      "bytes": 18416,
+      "sha256": "91b1589f05068eb03493dcb10bb45eed5a78b57e46b877b82197f773fb444f4e"
+    }
+  ]
+}
