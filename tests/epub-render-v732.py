@@ -206,14 +206,8 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
               const c=getComputedStyle(t);
               return {cols:c.columnCount, width:Math.round(t.getBoundingClientRect().width)};
             }""")
-            if spread['width'] >= 1120:
-                ck('Wide viewport lays the text out as a two-page spread',
-                   spread['cols'] == '2', str(spread))
-                ck('The spine is drawn as a fixed overlay',
-                   'gradient' in page.evaluate(
-                       "()=>getComputedStyle(document.getElementById('jfReadCenter'),'::after').backgroundImage"))
-            else:
-                ck('Narrow viewport stays single column', spread['cols'] in ('auto', '1'), str(spread))
+            ck('Normal reading stays a single column at any width',
+               spread['cols'] in ('auto', '1'), str(spread))
             page.wait_for_timeout(300)
             paper = page.evaluate("""()=>{
               jfDeskSetPref({theme:'paper'});
@@ -261,6 +255,22 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-v732-') as d:
                   oy:getComputedStyle(document.getElementById('jfReadCenter')).overflowY})""")
             ck('Leaving paged mode restores continuous scrolling',
                (not off['on']) and off['oy'] == 'auto', str(off))
+            page.locator('#jfReadImmersive').click()
+            page.wait_for_timeout(500)
+            page.evaluate("()=>{document.getElementById('jfReadCenter').scrollTop+=700;}")
+            page.wait_for_timeout(600)
+            imm = page.evaluate("""()=>{
+              const h=document.querySelector('.jfReaderHeader');
+              return {hidden:document.getElementById('jfReader').classList.contains('immersive-hidden'),
+                      transform:getComputedStyle(h).transform,
+                      pressed:document.getElementById('jfReadImmersive').getAttribute('aria-pressed')};
+            }""")
+            ck('Immersive mode hides the chrome while reading down',
+               imm['hidden'] and imm['transform'] != 'none' and imm['pressed'] == 'true', str(imm))
+            page.evaluate("()=>{document.getElementById('jfReadCenter').scrollTop-=900;}")
+            page.wait_for_timeout(600)
+            ck('Scrolling back up restores the chrome',
+               page.evaluate("()=>!document.getElementById('jfReader').classList.contains('immersive-hidden')"))
             browser.close()
     finally:
         if proc:

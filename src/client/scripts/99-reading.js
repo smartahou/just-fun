@@ -1234,11 +1234,14 @@ function jfDeskPagedLayout(keepPage){
   if(!jfDeskPaged)return;
   const cw=jfReadCenter.clientWidth||800;
   const cols=jfDeskPagedCols();
-  const side=Math.round(Math.min(64,cw*0.045));
-  const gap=Math.round(cw*0.05);
-  const pageW=Math.max(200,Math.floor((cw-side*2-gap*(cols-1))/cols));
-  jfReadText.style.setProperty('--jf-page-w',pageW+'px');
+  // Each sheet is (cw-24)/2 wide; the gutter carries both inner margins so the
+  // columns line up with the sheets at any width.
+  const contentW=Math.max(200,cw-24);
+  const gap=cols===2?52:40;
+  const colW=Math.max(160,(contentW-gap*(cols-1))/cols);
+  jfReadText.style.setProperty('--jf-page-cols',String(cols));
   jfReadText.style.setProperty('--jf-page-gap',gap+'px');
+  jfReadText.style.setProperty('--jf-page-w',Math.round(colW)+'px');
   jfDeskPageIndex=0;
   jfReadCenter.scrollLeft=0;
   if(keepPage)jfDeskPageIndex=Math.max(0,Math.min(jfDeskPageIndex,jfDeskPagedTotal()-1));
@@ -1268,6 +1271,7 @@ function jfDeskPageTurn(delta){
 async function jfDeskPagedToggle(){
   jfDeskPaged=!jfDeskPaged;
   jfReader.classList.toggle('paged',jfDeskPaged);
+  jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
   const btn=document.getElementById('jfReadPaged');
   if(btn){btn.setAttribute('aria-pressed',String(jfDeskPaged));btn.classList.toggle('active',jfDeskPaged);}
   if(jfDeskPaged){
@@ -1286,11 +1290,34 @@ async function jfDeskPagedToggle(){
 
 document.getElementById('jfReadTheme').addEventListener('click',()=>jfDeskSetPref({theme:jfDeskPrefs.theme==='paper'?'dark':'paper'}));
 document.getElementById('jfReadPaged').addEventListener('click',jfDeskPagedToggle);
+document.getElementById('jfReadImmersive').addEventListener('click',jfDeskImmersiveToggle);
+// ---- v7.32 immersive reading ------------------------------------------------
+// Hides the header/footer chrome; scrolling down keeps it hidden, scrolling up
+// (or hovering the top strip) brings it back, matching the PDF reader habit.
+let jfDeskImmersive=false,jfDeskImmersiveLast=0;
+function jfDeskImmersiveToggle(){
+  jfDeskImmersive=!jfDeskImmersive;
+  const btn=document.getElementById('jfReadImmersive');
+  if(btn){btn.setAttribute('aria-pressed',String(jfDeskImmersive));btn.classList.toggle('active',jfDeskImmersive);}
+  jfReader.classList.toggle('immersive-hidden',jfDeskImmersive);
+  jfDeskImmersiveLast=jfReadCenter.scrollTop;
+  jfDeskMessage(jfDeskImmersive?'沉浸阅读：向下滚动隐藏页眉页脚，向上滚动恢复':'已退出沉浸阅读');
+}
+function jfDeskImmersiveOnScroll(){
+  if(!jfDeskImmersive||jfReader.hidden)return;
+  const top=jfReadCenter.scrollTop;
+  if(top>jfDeskImmersiveLast+6)jfReader.classList.add('immersive-hidden');
+  else if(top<jfDeskImmersiveLast-6)jfReader.classList.remove('immersive-hidden');
+  jfDeskImmersiveLast=top;
+}
+
 document.getElementById('jfReadNotes').addEventListener('click',jfDeskOpenNotes);
 document.getElementById('jfReadMask').addEventListener('click',jfReadToggleMask);
 document.getElementById('jfReadExcerpt').addEventListener('click',jfDeskExcerpt);
 let jfDeskFlowScrollAt=0;
-jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;if(jfDeskOutline?.nativePdf){jfPdfJsOnScroll();return;}
+jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;
+  jfDeskImmersiveOnScroll();
+  if(jfDeskOutline?.nativePdf){jfPdfJsOnScroll();return;}
   if(jfDeskPaged){
     const {step}=jfDeskPagedMetrics();
     if(step)jfDeskPageIndex=Math.round(jfReadCenter.scrollLeft/step);
