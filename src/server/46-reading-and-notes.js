@@ -456,22 +456,21 @@ function jfReadingEpub(buf){
     if(chapters.length>=500)break;
   }
   if(!chapters.length)throw jfReaderError(422,'EPUB 未找到可阅读章节');
-  // A paper book's cover is on the shelf, not inside the readable spread.
-  // EPUB spine often starts with an empty leaf and an image-only cover XHTML.
-  // Classify ONLY the leading front matter, never arbitrary illustrated chapters;
-  // the original EPUB and the continuous reader remain unchanged.
+  // Paper mode starts at the readable book, not at the cover displayed on shelf.
+  // A spine may lead with blank XHTML and an image-only cover: only classify
+  // this initial run, not any later historical illustration or photo chapter.
   let coverFound=false;
   for(let n=0;n<Math.min(3,chapters.length);n++){
     const chapter=chapters[n];
     let xhtml='';
     try{xhtml=jfReadingTextDecode(zip.read(chapter.file));}catch{break;}
-    const body=xhtml.match(/<body\\b[^>]*>([\\s\\S]*?)<\\/body\\s*>/i)?.[1]||xhtml;
-    const withoutHead=body.replace(/<head\\b[^>]*>[\\s\\S]*?<\\/head\\s*>/gi,'');
-    const text=jfReadingHtmlToText(withoutHead).replace(/\\s+/g,'').trim();
-    const images=(withoutHead.match(/<img\\b/gi)||[]).length;
+    const body=xhtml.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1]||xhtml;
+    const withoutHead=body.replace(/<head\b[^>]*>[\s\S]*?<\/head\s*>/gi,'');
+    const text=jfReadingHtmlToText(withoutHead).replace(/\s+/g,'').trim();
+    const images=(withoutHead.match(/<img\b/gi)||[]).length;
     const empty=images===0&&!text;
-    const hinted=/^(?:封面|cover|front[ -_]?cover)$/i.test(chapter.title.trim())||
-      /(?:^|\\/)(?:cover|front[-_]?cover|封面)[-_0-9]*\\.x?html?$/i.test(chapter.file);
+    const hinted=/^(?:封面|cover|front[\s_-]?cover)$/i.test(chapter.title.trim())||
+      /(?:^|\/)(?:cover|front[-_]?cover|封面)[-_0-9]*\.x?html?$/i.test(chapter.file);
     const singleCoverImage=images===1&&text.length<=16&&!coverFound;
     if(empty){chapter.paperOmit='blank';continue;}
     if(!coverFound&&(hinted||singleCoverImage)){
