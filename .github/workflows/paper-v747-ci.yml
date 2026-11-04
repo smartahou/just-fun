@@ -34,6 +34,8 @@ jobs:
           node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==12||r.paperTextureAssetsSha256.length!==12)throw Error('bad paper assets');console.log('BUILD SHA-256:',r.sourceSha256);"
       - name: Prepare real Chromium tests
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           python -m pip install -q playwright
           python -m playwright install chromium --with-deps
           CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
