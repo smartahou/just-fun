@@ -2232,3 +2232,43 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
    their repetitive scratches did not convey thickness, only visual noise. */
 .jfReader.paged #jfPageView .jfBookPile::before{content:none!important}
 .jfReader.paged #jfPageView .jfBookPile[data-empty='true']{display:none!important}
+
+/* ===== v7.54 · edge joinery ===========================================
+   Two things were wrong at the bound edge, and only one of them is a
+   texture problem:
+   - the radius was 2px/1px on ALL corners, so the book edge read as a
+     pasted rectangle while the fold side was rounded when it should be
+     square;
+   - the outer edge had no cut line, so the sheet ended exactly where the
+     bitmap ended and the dark desk showed through the corner pixel.
+   Real geometry: the fore-edge (outer) is rounded by handling, the gutter
+   (spine side) stays crisp because it is the bound fold. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left']{
+  border-radius:5px 0 0 5px;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  border-radius:0 5px 5px 0;
+}
+/* the paper bitmap must follow the same silhouette */
+.jfReader.paged #jfPageView .jfSheet[data-side='left']::after{
+  border-radius:5px 0 0 5px!important;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']::after{
+  border-radius:0 5px 5px 0!important;
+}
+/* A cut edge catches light: 1px of pale paper along the fore-edge only,
+   never around the gutter, so the fold still reads as a fold. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left']{
+  box-shadow:inset 1px 0 0 rgba(255,251,242,.55),
+             inset 0 1px 0 rgba(255,251,242,.28),
+             inset 0 -1px 0 rgba(120,96,64,.16),
+             0 1px 2px rgba(52,38,22,.16),
+             0 4px 10px rgba(0,0,0,.12);
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  box-shadow:inset -1px 0 0 rgba(255,251,242,.55),
+             inset 0 1px 0 rgba(255,251,242,.28),
+             inset 0 -1px 0 rgba(120,96,64,.16),
+             0 1px 2px rgba(52,38,22,.16),
+             0 4px 10px rgba(0,0,0,.12);
+}
