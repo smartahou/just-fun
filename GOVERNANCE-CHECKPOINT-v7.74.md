@@ -18,3 +18,6 @@
 - 新增 `tests/print-glyph-ink-v774.js`：合成白底/黑底位图实测 Alpha 变换；克隆 p1/p2/p3 的空白隐藏且 `textContent` 不变；检查 CSS 特例和字形数据 URL 绑定。
 - GitHub API 读取最新版、唯一代码位置断言、JS 语法校验及提交后的远端 HEAD 回查；当前没有该书真实 EPUB 与可运行的本地浏览器，无法宣称截图已真实通过。
 - 本地运行 `node tests/print-glyph-ink-v774.js`、`node tests/epub-glyph-bridge-v773.js`、`node scripts/build.js`；查看《道光皇帝》原截图中的相关页面，验证接缝、白方块、文字融纸，以及字号变化后的段落/页码/阅读位置。
+
+## 同版本补充回归
+- 兼容历史 EPUB 单测中构造的纯数据章节节点：`sec.el.querySelectorAll?.('img.jfInlineGlyph')||[]`，缺少原生查询方法时跳过可选扫描；真实浏览器 DOM 逻辑完全不变。

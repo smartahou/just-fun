@@ -1996,7 +1996,7 @@ function jfDeskBlocksFor(sec){
   // The same inline-vs-plate classification is copied into measured blocks.
   jfDeskMarkInlineGlyphs(sec.el);
   const keyedGlyphs=new Map();
-  for(const img of sec.el.querySelectorAll('img.jfInlineGlyph')){
+  for(const img of sec.el.querySelectorAll?.('img.jfInlineGlyph')||[]){
     const result=jfDeskGlyphInkForSource(img);
     if(result)keyedGlyphs.set(img.getAttribute('src')||img.src,result);
   }

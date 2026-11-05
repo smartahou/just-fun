@@ -68,6 +68,7 @@ assert(css.includes("img.jfInlineGlyph[data-jf-plate='glyph-ink']"),
 assert(css.includes('p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph)'),
   'text paragraphs with only glyph images now participate in paper blending');
 assert(js.includes('const keyedGlyphs=new Map();'),'scanned paper-glyph normalization available');
+assert(js.includes("sec.el.querySelectorAll?.('img.jfInlineGlyph')||[]"),'older EPUB mocks without querySelectorAll remain safe');
 assert(js.includes("if(normalized){img.src=normalized;img.dataset.jfPlate='glyph-ink';}"),
   'transparency applied only to cloned printer images');
 assert(js.includes("jfDeskPageForAnchor(jfDeskPages,number"),'reading anchor restore retained');
