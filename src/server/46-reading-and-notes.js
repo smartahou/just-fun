@@ -411,7 +411,7 @@ function jfReaderZipIndex(buffer){
   return {entries,read};
 }
 function jfReadingAttr(tag,key){return new RegExp('(?:^|\\s)'+key+'\\s*=\\s*["\']([^"\']+)["\']','i').exec(tag)?.[1]||'';}
-function jfReadingEpub(buf){
+function jfReadingEpub(buf,{enhance=true}={}){
   const zip=jfReaderZipIndex(buf);
   const container=jfReadingTextDecode(zip.read('META-INF/container.xml'));
   const opfPath=jfReadingAttr(container.match(/<rootfile\b[^>]*>/i)?.[0]||'','full-path');
@@ -491,7 +491,8 @@ function jfReadingEpub(buf){
     }
     break;
   }
-  return {zip,chapters,base};
+  const epub={zip,chapters,base};
+  return enhance?jfEpubEnhance(epub):epub;
 }
 
 const JF_EPUB_ASSET_EXT=new Set(['.jpg','.jpeg','.png','.gif','.webp','.svg','.bmp','.avif']);
@@ -612,13 +613,24 @@ function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
   return body.trim();
 }
 
+// Cache the current enhanced index; chapter prefetch must not rescan an entire
+// EPUB archive hundreds of times or retain more than one reader's ZIP data.
+let jfEpubReadingCache=null;
+async function jfReadingCachedEpub(info,file,stat){
+  if(jfEpubReadingCache?.id===info.id&&jfEpubReadingCache.mtime===stat.mtimeMs&&
+     jfEpubReadingCache.size===stat.size)return jfEpubReadingCache.epub;
+  const epub=jfReadingEpub(await fs.promises.readFile(file));
+  jfEpubReadingCache={id:info.id,mtime:stat.mtimeMs,size:stat.size,epub};
+  return epub;
+}
 async function jfReadingOutline(id){
   const {info,file,stat}=await jfBookFindById(id);
   if(info.ext==='PDF')return {ok:true,book:info,format:'PDF',chapters:[{title:'PDF 文档'}],nativePdf:true};
   if(stat.size>40*1024*1024)throw jfReaderError(413,'此书超过当前离线阅读器大小上限（40MB）');
   if(info.ext==='EPUB'){
-    const epub=jfReadingEpub(await fs.promises.readFile(file));
-    return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title,...(c.paperOmit?{paperOmit:c.paperOmit}:{})}))};
+    const epub=await jfReadingCachedEpub(info,file,stat);
+    return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title,...(c.paperOmit?{paperOmit:c.paperOmit}:{})})),
+      toc:epub.toc||[],annotations:epub.annotations||[]};
   }
   if(stat.size>12*1024*1024)throw jfReaderError(413,'文本书籍超过当前 12MB 阅读限制');
   const t=jfReadingTextDecode(await fs.promises.readFile(file));
@@ -635,21 +647,22 @@ function jfReadingSplitText(raw){
   }
   return chapters.length?chapters:[''];
 }
-async function jfReadingChapter(id,index){
+async function jfReadingChapter(id,index,paper=false){
   const {info,file,stat}=await jfBookFindById(id);
   if(!Number.isSafeInteger(index)||index<0||index>5000)throw jfReaderError(400,'章节编号无效');
   if(info.ext==='PDF')throw jfReaderError(400,'PDF 使用浏览器内置阅读器');
   let text,total,html;
   if(info.ext==='EPUB'){
     if(stat.size>40*1024*1024)throw jfReaderError(413,'EPUB 文件超出 40MB');
-    const epub=jfReadingEpub(await fs.promises.readFile(file));
+    const epub=await jfReadingCachedEpub(info,file,stat);
     total=epub.chapters.length;
     if(index>=total)throw jfReaderError(404,'章节不存在');
     const entry=epub.chapters[index];
     const xhtml=jfReadingTextDecode(epub.zip.read(entry.file));
     // text stays the plain rendering: excerpt anchors and progress math depend on it.
     text=jfReadingHtmlToText(xhtml);
-    html=jfReadingEpubChapterHtml(xhtml,{dir:require('node:path').posix.dirname(entry.file),bookId:info.id,zip:epub.zip});
+    const surface=paper?jfEpubPaperXhtml(epub,entry.file,xhtml):xhtml;
+    html=jfReadingEpubChapterHtml(surface,{dir:require('node:path').posix.dirname(entry.file),bookId:info.id,zip:epub.zip});
   }else{
     if(stat.size>12*1024*1024)throw jfReaderError(413,'文本文件超出 12MB');
     const sections=jfReadingSplitText(jfReadingTextDecode(await fs.promises.readFile(file)));
@@ -670,7 +683,7 @@ async function jfReadingEpubAsset(res,id,src){
   if(!mime)throw jfReaderError(404,'书内资源类型不支持');
   let cached=jfEpubAssetCache.get(id);
   if(!cached||cached.mtime!==stat.mtimeMs||cached.size!==stat.size){
-    cached={mtime:stat.mtimeMs,size:stat.size,epub:jfReadingEpub(await fs.promises.readFile(file))};
+    cached={mtime:stat.mtimeMs,size:stat.size,epub:jfReadingEpub(await fs.promises.readFile(file),{enhance:false})};
     if(jfEpubAssetCache.size>=2)jfEpubAssetCache.delete(jfEpubAssetCache.keys().next().value);
     jfEpubAssetCache.set(id,cached);
   }

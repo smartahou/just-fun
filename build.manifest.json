@@ -12,6 +12,7 @@
     "src/server/40-http-media.js",
     "src/server/45-bookshelf.js",
     "src/server/46-reading-and-notes.js",
+    "src/server/46g-epub-folios.js",
     "src/server/46a-reading-image-identity.js",
     "src/server/46b-reading-relations-audit.js",
     "src/server/46c-reading-migration-preflight.js",

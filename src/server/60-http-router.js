@@ -99,7 +99,7 @@ function startServer() {
               if(url.pathname==='/api/reading/outline' && req.method==='GET')
                 sendJson(res,await jfReadingOutline(id));
               else if(url.pathname==='/api/reading/chapter' && req.method==='GET')
-                sendJson(res,await jfReadingChapter(id,Number(url.searchParams.get('chapter'))));
+                sendJson(res,await jfReadingChapter(id,Number(url.searchParams.get('chapter')),url.searchParams.get('paper')==='1'));
               else if(url.pathname==='/api/reading/pdf-info' && req.method==='GET')
                 sendJson(res,await jfPdfInfoResponse(id));
               else if(url.pathname==='/api/reading/pdf-page' && req.method==='GET')
