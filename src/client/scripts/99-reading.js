@@ -346,6 +346,9 @@ async function jfDeskOpenReader(bookId,chapter){
     jfDeskPaged=outline.format==='EPUB'&&savedMode==='paged';
     jfReader.classList.toggle('paged',jfDeskPaged);
     jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
+    // Restore the selected old-paper skin whenever a book is reopened. The
+    // paged/flow switch must not suppress its persistent textured state.
+    window.JFPaperTextures?.syncButton();
     const pagedButton=document.getElementById('jfReadPaged');
     if(pagedButton){
       pagedButton.setAttribute('aria-pressed',String(jfDeskPaged));
@@ -2200,6 +2203,7 @@ async function jfDeskPagedToggle(){
   const task=(async()=>{
     jfDeskPaged=!oldMode;
     jfReader.classList.toggle('paged',jfDeskPaged);
+    window.JFPaperTextures?.syncButton();
     // Paper-book is a VIEW MODE, not a global theme preference. Switching one
     // book must not silently switch every other book into the paper theme.
     jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
@@ -2231,6 +2235,7 @@ async function jfDeskPagedToggle(){
       jfDeskPaged=oldMode;
       jfReader.classList.toggle('paged',oldMode);
       jfReader.classList.toggle('paper',oldMode||jfDeskPrefs.theme==='paper');
+      window.JFPaperTextures?.syncButton();
       const btn=document.getElementById('jfReadPaged');
       if(btn){btn.setAttribute('aria-pressed',String(oldMode));btn.classList.toggle('active',oldMode);}
       // A failed write must not leave the DOM in the new mode with the button

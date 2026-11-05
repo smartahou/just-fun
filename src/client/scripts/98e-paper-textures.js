@@ -3,7 +3,11 @@
   'use strict';
   const textures=__JUSTFUN_PAPER_SPREAD_ASSETS__;
   if(!Array.isArray(textures)||textures.length!==16)throw Error('Expected 8 paired WebP sets');
-  const KEY='jf-reader-aged-paper';
+  // v7.68: an old hidden "off" preference could turn the approved photographic
+  // pages into plain white paper after the toolbar control moved into Aa.
+  // Migrate to a fresh preference namespace: once default to ON, while all
+  // explicit ON/OFF actions from v7.68 onwards remain durable.
+  const KEY='jf-reader-aged-paper-v768';
   const WEAR_KEY='jf-reader-paper-wear-v752';
   const WEAR_LEVELS=new Set(['light','medium','heavy']);
   let wearLevel='medium';
@@ -69,6 +73,9 @@
     return Promise.all(Array.from(wanted,putWarm));
   }
   function applySpread(leftSheet,rightSheet,bookId,left,right,two){
+    // Render cannot depend solely on the startup hook: keep static texture
+    // rules available even after a reader/DOM refresh.
+    injectRules();
     const i=indexFor(bookId,left,right);
     function mark(sheet,side,show){
       if(!sheet)return;
