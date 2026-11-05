@@ -2701,9 +2701,10 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody{
   /* Opaque printing pigment restores crisp strokes: paper grain belongs in
      the photographed background, not in semi-transparent font antialiasing. */
-  color:#4d3b29;
+  color:#493827;
   text-rendering:optimizeLegibility;
-  text-shadow:none;
+  /* Subpixel dot gain softens hard antialias edges without blurring ink. */
+  text-shadow:0 .12px 0 rgba(74,50,28,.16);
 }
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody>
   :is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table):not(:has(img,picture,svg,canvas,video,object)){
@@ -2838,6 +2839,36 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   object-fit:contain!important;
   filter:none!important;
   mix-blend-mode:multiply!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+}
+
+/* ===== v7.74 · character seams and paper-absorbed print ================
+   A hidden seam span keeps source whitespace in textContent/reading offsets,
+   but removes the phantom gap left when a gaiji image <p> is recombined.
+   Pure prose and photographs retain their original layout. */
+.jfReader.paged #jfPageView .jfSheetBody .jfGlyphSeamSpace{
+  display:none!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody p:has(img.jfInlineGlyph){
+  letter-spacing:0!important;
+  word-spacing:0!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody img.jfInlineGlyph{
+  margin:0!important;
+  padding:0!important;
+  vertical-align:-.115em!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody >
+p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,video,object)){
+  /* The original print-ink selector excluded every paragraph with an <img>,
+     inadvertently including paragraphs containing only rare-character glyphs. */
+  mix-blend-mode:multiply;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody img.jfInlineGlyph[data-jf-plate='glyph-ink']{
+  /* Transparent, warmed glyph pixels are already embedded in the ink block. */
+  mix-blend-mode:normal!important;
+  filter:none!important;
   -webkit-mask-image:none!important;
   mask-image:none!important;
 }

@@ -1869,6 +1869,35 @@ function jfDeskMarkInlineGlyphs(root){
 // Keep every original child and text character (including whitespace), but
 // combine the three boxes so the rare character lives on the same baseline.
 // This is done only on clones for the page-engine, never the EPUB source DOM.
+// v7.74 · EPUBs may have whitespace text nodes at a broken gaiji boundary.
+// Never delete those bytes: character offsets are persisted reading bookmarks.
+// Hide ONLY seam whitespace on cloned printer paragraphs (not source EPUB text).
+function jfDeskHideGlyphSeamSpace(root,edge){
+  const nodes=[];
+  const walk=node=>{
+    if(node?.nodeType===3||node?.tagName==='TEXT'){nodes.push(node);return;}
+    for(const child of Array.from(node?.childNodes||[]))walk(child);
+  };
+  walk(root);
+  const candidates=edge==='all'?nodes:edge==='start'?nodes.slice(0,1):nodes.slice(-1);
+  for(const node of candidates){
+    if(typeof node.splitText!=='function'||!node.parentNode)continue;
+    const value=node.nodeValue||'';
+    const match=edge==='start'?/^[\s\u00a0\u3000\u200b\ufeff]+/.exec(value):
+      edge==='end'?/[\s\u00a0\u3000\u200b\ufeff]+$/.exec(value):
+      /^[\s\u00a0\u3000\u200b\ufeff]+$/.exec(value);
+    if(!match||!match[0])continue;
+    let target=node;
+    if(edge==='end'&&match[0].length<value.length)
+      target=node.splitText(value.length-match[0].length);
+    else if(edge==='start'&&match[0].length<value.length)
+      node.splitText(match[0].length);
+    const hidden=document.createElement('span');
+    hidden.className='jfGlyphSeamSpace';
+    target.parentNode.insertBefore(hidden,target);
+    hidden.appendChild(target);
+  }
+}
 function jfDeskMergeGlyphBlocks(raw,start){
   const source=raw[start];
   if(source?.tagName!=='P'||!(source.textContent||'').trim()||
@@ -1883,18 +1912,94 @@ function jfDeskMergeGlyphBlocks(raw,start){
        !jfDeskCanBridgeGlyphText(raw[index].textContent,after.textContent))break;
     const nextCount=(middle.textContent||'').length+(after.textContent||'').length;
     if(chars+nextCount>220)break;
-    for(const node of Array.from(middle.childNodes||[]))
-      merged.appendChild(document.importNode(node,true));
-    for(const node of Array.from(after.childNodes||[]))
-      merged.appendChild(document.importNode(node,true));
+    // The EPUB sometimes indents <p> wrappers and their <img> with spaces
+    // or NBSP. Such source bytes must not create a full-width visual gap
+    // between a reconstructed inline glyph and its neighbouring Hanzi.
+    jfDeskHideGlyphSeamSpace(merged,'end');
+    const carrier=document.importNode(middle,true);
+    jfDeskHideGlyphSeamSpace(carrier,'all');
+    const continuation=document.importNode(after,true);
+    jfDeskHideGlyphSeamSpace(continuation,'start');
+    for(const node of Array.from(carrier.childNodes||[]))
+      merged.appendChild(node);
+    for(const node of Array.from(continuation.childNodes||[]))
+      merged.appendChild(node);
     chars+=nextCount;glyphs++;index+=2;
   }
   return glyphs?{node:merged,end:index,count:glyphs}:null;
+}
+// v7.74 · White/cream-backed rare-character bitmaps look like stickers.
+// For strongly detected inline glyphs ONLY, convert their nearly uniform
+// pale backing into transparent alpha and tint remaining strokes to the warm
+// print pigment. The source EPUB picture is never modified; the result is
+// cached by asset URL and only written into paginated block clones.
+function jfDeskGlyphInkPixels(px,w,h){
+  if(w<8||h<8||px.length!==w*h*4)return false;
+  let pale=0,light=0,dark=0,borderCount=0;
+  const luminance=(k)=>.299*px[k]+.587*px[k+1]+.114*px[k+2];
+  const check=(x,y)=>{
+    const k=(y*w+x)*4;
+    if(px[k+3]<220)return;
+    borderCount++;
+    const l=luminance(k);
+    if(l>=205&&Math.max(px[k],px[k+1],px[k+2])-
+        Math.min(px[k],px[k+1],px[k+2])<70){pale++;light+=l;}
+  };
+  const steps=32;
+  for(let i=0;i<steps;i++){
+    const x=Math.min(w-1,Math.floor((i+.5)*w/steps));
+    const y=Math.min(h-1,Math.floor((i+.5)*h/steps));
+    check(x,0);check(x,h-1);check(0,y);check(w-1,y);
+  }
+  if(borderCount<16||pale/borderCount<.78)return false;
+  const paper=light/pale;
+  for(let i=0;i<px.length;i+=4)
+    if(px[i+3]>=80&&luminance(i)<paper-55)dark++;
+  if(dark/(w*h)<.012)return false;
+  const span=Math.max(80,paper-55);
+  for(let i=0;i<px.length;i+=4){
+    const l=luminance(i);
+    const coverage=Math.min(1,Math.max(0,(paper-l)/span));
+    const a=coverage<.045?0:Math.round(px[i+3]*coverage);
+    px[i]=72;px[i+1]=53;px[i+2]=34;px[i+3]=a;
+  }
+  return true;
+}
+const jfDeskGlyphInkCache=new Map();
+function jfDeskGlyphInkForSource(img){
+  const url=img?.getAttribute?.('src')||img?.src;
+  if(!url||!img.complete||!img.naturalWidth||!img.naturalHeight)return null;
+  if(jfDeskGlyphInkCache.has(url))return jfDeskGlyphInkCache.get(url);
+  let result=null;
+  try{
+    const scale=Math.min(1,192/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement('canvas');
+    c.width=Math.max(8,Math.round(img.naturalWidth*scale));
+    c.height=Math.max(8,Math.round(img.naturalHeight*scale));
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    if(ctx){
+      ctx.drawImage(img,0,0,c.width,c.height);
+      const frame=ctx.getImageData(0,0,c.width,c.height);
+      if(jfDeskGlyphInkPixels(frame.data,c.width,c.height)){
+        ctx.putImageData(frame,0,0);
+        result=c.toDataURL('image/png');
+      }
+    }
+  }catch{} // CORS/invalid images must remain the original bitmap, never blank.
+  if(jfDeskGlyphInkCache.size>=96)
+    jfDeskGlyphInkCache.delete(jfDeskGlyphInkCache.keys().next().value);
+  jfDeskGlyphInkCache.set(url,result);
+  return result;
 }
 function jfDeskBlocksFor(sec){
   // This runs after image decode in both normal paging and the book census.
   // The same inline-vs-plate classification is copied into measured blocks.
   jfDeskMarkInlineGlyphs(sec.el);
+  const keyedGlyphs=new Map();
+  for(const img of sec.el.querySelectorAll('img.jfInlineGlyph')){
+    const result=jfDeskGlyphInkForSource(img);
+    if(result)keyedGlyphs.set(img.getAttribute('src')||img.src,result);
+  }
   const raw=Array.prototype.slice.call(sec.el.children);
   const blocks=[];
   const imprint=jfDeskIsImprintChapter(sec.n,sec.el.textContent);
@@ -1932,6 +2037,15 @@ function jfDeskBlocksFor(sec){
     blocks.push({chapter:sec.n,node:printed,
                  key:sec.n+':'+(i++),offset:acc});
     acc+=node.textContent.length;
+  }
+  // Only the paginated clones receive transparent ink; the source DOM and
+  // all textContent lengths (used by saved offsets) remain unchanged.
+  for(const block of blocks){
+    for(const img of block.node.querySelectorAll?.('img.jfInlineGlyph')||[]){
+      const source=img.getAttribute('src')||img.src;
+      const normalized=keyedGlyphs.get(source);
+      if(normalized){img.src=normalized;img.dataset.jfPlate='glyph-ink';}
+    }
   }
   return blocks;
 }
