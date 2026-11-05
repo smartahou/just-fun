@@ -8,7 +8,9 @@
   const WEAR_LEVELS=new Set(['light','medium','heavy']);
   let wearLevel='medium';
   try{const saved=localStorage.getItem(WEAR_KEY);if(WEAR_LEVELS.has(saved))wearLevel=saved;}catch{}
-  const CAP=12; // 6 spreads max; bounded decoded image handles
+  // Avoid repeated decompression of high-detail WebPs when revisiting spreads.
+  // A full book skin has only 16 leaves; low-memory devices keep a smaller LRU.
+  const CAP=(typeof navigator!=='undefined'&&navigator.deviceMemory&&navigator.deviceMemory<=4)?10:16;
   const cache=new Map();
   let enabled=true;
   try{enabled=localStorage.getItem(KEY)!=='off';}catch{}
