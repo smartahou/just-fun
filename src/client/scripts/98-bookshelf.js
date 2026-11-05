@@ -53,7 +53,9 @@ function jfBooksRender(){
       // PDF.js paints the first *real page* on the client, on every OS.
       // Only visible cards are rendered; OS-specific PDF tools are not required.
       jfPdfJsObserveCover(book,cover);
-    }else if(book.coverName){
+    }else if(book.coverName||book.ext==='EPUB'){
+      // EPUB has no sidecar image, but the archive carries its own cover and the
+      // server can extract it, so it uses the same endpoint as a sidecar photo.
       const preview=document.createElement('img');preview.className='jfBookCoverImage';preview.loading='lazy';
       preview.alt='';preview.decoding='async';preview.referrerPolicy='same-origin';
       preview.src='/api/books/cover?id='+encodeURIComponent(book.id);
@@ -105,7 +107,7 @@ async function jfBooksLoad(force=false){
     const result=await response.json();if(!result.ok)throw Error(result.error||'未知错误');
     if(epoch!==jfBooksEpoch||!document.body.classList.contains('jfBooksMode'))return;
     // Polling must not tear down all covers every 20s when nothing changed.
-    const signature=JSON.stringify(result.books.map(b=>[b.id,b.modified,b.size,b.coverName]));
+    const signature=JSON.stringify(result.books.map(b=>[b.id,b.modified,b.size,b.coverName,b.ext]));
     const changed=signature!==jfBooksSignature;
     jfBooks=result.books;jfBooksSignature=signature;
     status.textContent=result.total+' 本书'+(result.truncated?' · 扫描达到安全上限':'')+(result.skipped?' · 部分目录不可读取':'');

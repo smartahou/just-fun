@@ -193,7 +193,16 @@ function jfReadingUpdate(body){
     const total=body.total;
     if(total!==undefined && (!Number.isSafeInteger(total)||total<1||total>5001||body.chapter>=total))
       throw jfReaderError(400,'阅读章节总数无效');
-    d.progress[id]={chapter:body.chapter,ratio:body.ratio,updatedAt:Date.now(),...(total===undefined?{}:{total})};
+    // offset is the character position inside the chapter. It is optional for
+    // backward compatibility but preferred on restore, because a ratio drifts
+    // as soon as an illustration changes the height of the chapter.
+    const offset=Number.isSafeInteger(body.offset)&&body.offset>=0&&body.offset<=5000000
+      ? body.offset : undefined;
+    const scroll=Number.isFinite(body.scroll)&&body.scroll>=0&&body.scroll<=100000000
+      ? Math.round(body.scroll) : undefined;
+    d.progress[id]={chapter:body.chapter,ratio:body.ratio,updatedAt:Date.now(),
+      ...(total===undefined?{}:{total}),...(offset===undefined?{}:{offset}),
+      ...(scroll===undefined?{}:{scroll})};
   } else if(body.action==='note'){
     const n=body.note;
     if(!n||typeof n!=='object')throw jfReaderError(400,'笔记数据无效');

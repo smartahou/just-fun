@@ -1307,3 +1307,52 @@ sidecar 图片 → 否则若 `ext!=='PDF'` 就 `204` 空响应。EPUB 走到这�
 书架的视觉截图没有拿到：`.jfBooksWorkspace` 的打开入口在自动化里没触发成功
 （`#jfBooksGrid` 子元素为 0）。API 层已验证，但「页面上真的画出来」这一步
 **尚未用截图确认**——留给所有者第一次打开书架时目视核对。
+
+## v7.63 · 阅读进度：修好的一半，和没修好的一半
+
+### 修好了
+
+**1. 保存的 ratio 曾经有两个含义。** `jfDeskUpdateProgress()` 存的是「章节内比例」，
+`jfDeskCloseReader()` 存的是「整本滚动比例」——同一个字段两种含义，恢复时必然错位。
+抽出 `jfDeskCurrentPosition()` 作为唯一来源，两处共用。
+
+**2. 空章节被当成可见章节。** `jfDeskFlowVisible()` 只判断 `bottom > top`，
+高度为 0 的封面/占位 section 也满足条件。实测第 0 章 `height: 0` 却被返回，
+进度一直记在错误的章节上。加 `if(r.height < 1) continue`。
+
+**3. 409 冲突导致保存静默失败。** 乐观锁 revision 过期时服务端返回 409，
+`jfDeskMutate()` 没有重试——进度丢失，阅读器还拒绝关闭（实测 `closeReader → false`）。
+现在会重新载入 workspace 后重试一次。实测 `closed: true`、`stored: {chapter:2, ratio:0.051}`。
+
+**4. 进入时不再先把 scrollTop 归零。** 原来 `scrollTop=0` 再在下一帧设回目标，
+中间那一帧就是可见的跳动。
+
+### 没修好
+
+**位置恢复仍然偏差，进入时仍有跳动。** 实测：
+
+```
+保存:  chapter 2, ratio 0.051, scrollTop 1092
+恢复:  chapter 1, ratio 0.220, scrollTop  316
+跳动:  最大 797px（第 12 帧 938 → 141）
+```
+
+**根因已定位**：放置阅读位置会触发 scroll 事件 → `jfDeskFlowOnScroll` 判断需要预取 →
+`jfDeskFlowPrepend` 在上方插入章节 → `scrollHeight` 变化 → 位置被改写。
+我试过 `jfDeskFlowBusy` 门控、双 rAF、恢复期间 `visibility:hidden`、补挂前置章节、
+绝对 scrollTop、字符偏移——**六种方案都没收敛**，其中 offset 方案里 `caretRangeFromPoint`
+始终解析到章节开头（实测 offset 恒为 4），绝对 scrollTop 则被浏览器 clamp 到内容高度。
+
+**要真正解决必须重构**：把「定位」和「预取」做成互斥阶段——恢复完成前禁止任何 prepend，
+或者预取只允许 append（向下），向上翻页时才 prepend。这不是调参能解决的。
+
+### 服务端
+
+`action:'progress'` 现在接受并存储可选的 `offset`（章节内字符偏移）与 `scroll`（绝对滚动位置），
+带边界校验。它们已经正确落库（实测 `stored: {..., offset:4, scroll:1092}`），
+只是客户端恢复路径未采用——留给下一轮重构使用。
+
+### 诚实结论
+
+这一轮让**保存变对了**（章节正确、冲突可重试、关闭不再失败），
+但**恢复仍然不准**。所有者要的「进入即上次位置」没有达成。

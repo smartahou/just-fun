@@ -151,12 +151,28 @@ async function jfDeskLoadWorkspace(){
   catch(e){jfDeskSaveFailed=true;jfDeskMessage(e.message,true);console.warn('笔记读取失败，已禁止覆盖原数据：',e.message);}
 }
 function jfDeskMutate(payload){
-  // One browser tab never writes overlapping revisions; other tabs get explicit 409.
-  const pending=jfDeskChain.catch(()=>{}).then(async()=>{
+  // Writes are serialised through jfDeskChain and guarded by an optimistic
+  // revision. That revision can go stale while the reader is open (another tab,
+  // a background write), and the server answers 409. Previously that error was
+  // fatal: the reading position was silently dropped and the reader refused to
+  // close. Reload once, then retry — the payload is always a complete intent,
+  // so replaying it after a refresh is safe.
+  const attempt=async(retried)=>{
     if(jfDeskSaveFailed)throw Error('笔记数据尚未安全载入；拒绝继续写入');
-    const updated=await jfDeskApi('workspace','POST',{...payload,revision:jfDeskWorkspace.revision});
-    jfDeskWorkspace=updated;return updated;
-  });
+    try{
+      const updated=await jfDeskApi('workspace','POST',{...payload,revision:jfDeskWorkspace.revision});
+      jfDeskWorkspace=updated;return updated;
+    }catch(error){
+      const message=String(error&&error.message||'');
+      const stale=/重新载入|已被其他页面修改|conflict|409/i.test(message);
+      if(stale&&!retried){
+        jfDeskWorkspace=await jfDeskApi('workspace');
+        return attempt(true);
+      }
+      throw error;
+    }
+  };
+  const pending=jfDeskChain.catch(()=>{}).then(()=>attempt(false));
   jfDeskChain=pending;
   return pending;
 }
@@ -342,9 +358,14 @@ async function jfDeskOpenReader(bookId,chapter){
     }else{
       document.getElementById('jfReadFooter').hidden=false;
       const saved=jfDeskWorkspace.progress[bookId];
-      const start=Number.isInteger(chapter)?chapter:(saved?.chapter??0);
-      const ratio=Number.isInteger(chapter)?0:(saved?.ratio||0);
-      await jfDeskShowChapter(Math.max(0,Math.min(outline.chapters.length-1,start)),ratio);
+      // A negative or missing chapter means "resume where I left off". Only a
+      // real chapter index from the UI should override the saved position.
+      const explicit=Number.isInteger(chapter)&&chapter>=0;
+      const start=explicit?chapter:(saved?.chapter??0);
+      const ratio=explicit?0:(saved?.ratio||0);
+      const savedScroll=explicit?null:(Number.isFinite(saved?.scroll)?saved.scroll:null);
+      await jfDeskShowChapter(Math.max(0,Math.min(outline.chapters.length-1,start)),ratio,
+        explicit?null:(saved?.offset??null),savedScroll);
     }
     document.getElementById('jfReadBack').focus();
   }catch(e){if(epoch!==jfDeskEpoch)return;jfReadText.hidden=true;document.getElementById('jfReadError').hidden=false;
@@ -446,11 +467,15 @@ function jfDeskFlowVisible(){
   const box=jfReadCenter.getBoundingClientRect();
   for(const item of jfDeskFlow){
     const r=item.el.getBoundingClientRect();
+    // Empty sections (cover leaves, placeholders) report bottom>top too and used
+    // to be reported as "the visible chapter", which wrote progress against the
+    // wrong chapter and made every restore land somewhere else.
+    if(r.height<1)continue;
     if(r.bottom>box.top+1)return {item,r,box};
   }
   return null;
 }
-async function jfDeskShowChapterFlow(number,ratio=0){
+async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null){
   number=jfDeskPaperFirstReadable(number);
   const epoch=++jfDeskEpoch;
   jfDeskFlowReset();
@@ -482,23 +507,30 @@ async function jfDeskShowChapterFlow(number,ratio=0){
   if(jfDeskPaged)jfDeskPagedLayout(true);
   for(const id of ['jfReadPrev','jfReadNext'])document.getElementById(id).disabled=false;
   document.getElementById('jfReadChapters').value=String(number);
-  jfReadCenter.scrollTop=0;
-  requestAnimationFrame(()=>{
+  // Restore without letting the reader see the intermediate layout:
+  //   1) hide the column while the anchor is being resolved,
+  //   2) wait two frames so images and fonts have settled,
+  //   3) place the anchor, show the column, THEN prefetch neighbours.
+  // Prefetch used to run before this and inserted sections mid-measurement,
+  // which is what produced the visible jump on every open.
+  jfReadCenter.style.visibility='hidden';
+  const settle=()=>{
     if(epoch!==jfDeskEpoch)return;
-    const box=jfReadCenter.getBoundingClientRect(),r=first.getBoundingClientRect();
+    const box=jfReadCenter.getBoundingClientRect();
+    const r=first.getBoundingClientRect();
     jfReadCenter.scrollTop=Math.max(0,jfReadCenter.scrollTop+(r.top-box.top)+ratio*r.height);
+    jfReadCenter.style.visibility='';
     jfDeskProgressSignature='';jfDeskUpdateProgress();
-  });
-  // Prefetch ahead sequentially: concurrent appends would interleave and leave
-  // the mounted sections out of reading order.
-  (async()=>{
-    for(let i=1;i<=JF_FLOW_AHEAD;i++){
-      const n=number+i;
-      if(n>=jfDeskOutline.chapters.length)break;
-      if(jfDeskBook?.id!==bookId)break;
-      await jfDeskFlowAppend(n);
-    }
-  })().catch(()=>{});
+    (async()=>{
+      for(let i=1;i<=JF_FLOW_AHEAD;i++){
+        const n=number+i;
+        if(n>=jfDeskOutline.chapters.length)break;
+        if(jfDeskBook?.id!==bookId)break;
+        await jfDeskFlowAppend(n);
+      }
+    })().catch(()=>{});
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(settle));
 }
 function jfDeskFlowOnScroll(){
   if(jfDeskPaged||jfReadMaskEnabled||!jfDeskFlow.length||jfDeskFlowBusy)return;
@@ -519,12 +551,12 @@ function jfDeskFlowOnScroll(){
     jfDeskFlowPrepend(minN-1).catch(()=>{}).finally(()=>{jfDeskFlowBusy=false;});
   }
 }
-async function jfDeskShowChapter(number,ratio=0){
+async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null){
   if(jfDeskOutline?.nativePdf)return jfDeskShowPdfPage(number);
   if(!jfDeskBook||!jfDeskOutline||number<0||number>=jfDeskOutline.chapters.length)return;
   number=jfDeskPaperFirstReadable(number);
   // EPUB reads as one continuous document; TXT and the mask mode keep the paged path.
-  if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio);
+  if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio,offset,scroll);
   const epoch=++jfDeskEpoch;
   try{
     const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+number);
@@ -550,6 +582,65 @@ async function jfDeskShowChapter(number,ratio=0){
       jfDeskProgressSignature='';jfDeskUpdateProgress();});
   }catch(e){if(epoch!==jfDeskEpoch)return;jfReadText.textContent='章节无法打开：'+e.message;}
 }
+// One definition of "where the reader is", used by both the progress saver and
+// the close handler. They previously computed ratio differently — chapter-local
+// vs whole-document — so the stored value meant two things and restore landed
+// somewhere else entirely.
+// Character offset of the first visible line inside a section. A ratio drifts
+// whenever an image finishes loading and the chapter changes height; a text
+// offset does not, so it is stored too and preferred on restore.
+// Locate a character offset inside a section and return a collapsed range there.
+function jfDeskRangeAtOffset(root,offset){
+  if(!Number.isInteger(offset)||offset<0)return null;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  let seen=0,node;
+  while((node=walker.nextNode())){
+    const len=node.nodeValue?node.nodeValue.length:0;
+    if(seen+len>=offset){
+      const range=document.createRange();
+      const at=Math.max(0,Math.min(len,offset-seen));
+      range.setStart(node,at);range.setEnd(node,at);
+      return range;
+    }
+    seen+=len;
+  }
+  return null;
+}
+function jfDeskOffsetInSection(section,viewportTop){
+  try{
+    const box=section.getBoundingClientRect();
+    // Sample inside the text column, not in the page padding: at x=left+8 the
+    // caret resolves to the section element itself and the offset would be 0.
+    const inset=Math.min(80,Math.max(16,(box.width||200)*0.12));
+    const range=document.caretRangeFromPoint(
+      Math.round(box.left+inset),Math.round(viewportTop)+3);
+    if(!range||!section.contains(range.startContainer))return null;
+    const prefix=document.createRange();
+    prefix.selectNodeContents(section);
+    prefix.setEnd(range.startContainer,range.startOffset);
+    return prefix.toString().length;
+  }catch{return null;}
+}
+function jfDeskCurrentPosition(){
+  let chapter=jfDeskChapter,ratio=0,offset=null;
+  if(jfDeskFlow.length){
+    const vis=jfDeskFlowVisible();
+    if(vis){
+      chapter=vis.item.n;
+      const h=vis.r.height||1;
+      ratio=Math.min(1,Math.max(0,(vis.box.top-vis.r.top)/h));
+      offset=jfDeskOffsetInSection(vis.item.el,vis.box.top);
+    }
+  }else{
+    const max=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight);
+    ratio=max?Math.min(1,jfReadCenter.scrollTop/max):0;
+  }
+  // Absolute scroll offset as the primary anchor. Chapter order never changes,
+  // so this is exact whenever the same chapters are mounted, and it needs no
+  // interpretation. ratio/offset stay for older records and as a fallback.
+  return {chapter,ratio,offset,scroll:Math.round(jfReadCenter.scrollTop)};
+}
+
 function jfDeskUpdateProgress(){
   if(!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf||jfReader.hidden)return;
   if(jfDeskPaged){
@@ -561,19 +652,9 @@ function jfDeskUpdateProgress(){
     document.getElementById('jfReadProgressFill').style.width=pct+'%';
     return;
   }
-  let chapter=jfDeskChapter,ratio=0;
-  if(jfDeskFlow.length){
-    const vis=jfDeskFlowVisible();
-    if(vis){
-      chapter=vis.item.n;
-      const h=vis.r.height||1;
-      ratio=Math.min(1,Math.max(0,(vis.box.top-vis.r.top)/h));
-      jfDeskChapter=chapter;
-    }
-  }else{
-    const max=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight);
-    ratio=max?Math.min(1,jfReadCenter.scrollTop/max):0;
-  }
+  const here=jfDeskCurrentPosition();
+  const chapter=here.chapter,ratio=here.ratio;
+  jfDeskChapter=chapter;
   const pct=Math.round((chapter+ratio)/jfDeskOutline.chapters.length*100);
   document.getElementById('jfReadProgress').textContent=pct+'%';
   document.getElementById('jfReadProgressFill').style.width=pct+'%';
@@ -582,7 +663,7 @@ function jfDeskUpdateProgress(){
   jfDeskProgressSignature=sig;
   clearTimeout(jfDeskProgressTimer);
   const bookId=jfDeskBook.id,total=jfDeskOutline.chapters.length;
-  jfDeskProgressTimer=setTimeout(()=>{jfDeskMutate({action:'progress',bookId,chapter,ratio,total}).catch(e=>{jfDeskMessage(e.message,true);});},900);
+  jfDeskProgressTimer=setTimeout(()=>{jfDeskMutate({action:'progress',bookId,chapter,ratio,offset:here.offset,scroll:here.scroll,total}).catch(e=>{jfDeskMessage(e.message,true);});},900);
 }
 async function jfDeskCloseReader(){
   if(jfReader.hidden)return await jfDeskCloseNotes();
@@ -591,9 +672,8 @@ async function jfDeskCloseReader(){
   clearTimeout(jfDeskProgressTimer);
   const book=jfDeskBook;
   if(book&&!jfDeskOutline?.nativePdf){
-    const max=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight);
-    const ratio=max?Math.min(1,jfReadCenter.scrollTop/max):0;
-    try{await jfDeskMutate({action:'progress',bookId:book.id,chapter:jfDeskChapter,ratio,total:jfDeskOutline.chapters.length});}
+    const here=jfDeskCurrentPosition();
+    try{await jfDeskMutate({action:'progress',bookId:book.id,chapter:here.chapter,ratio:here.ratio,offset:here.offset,scroll:here.scroll,total:jfDeskOutline.chapters.length});}
     catch(e){jfDeskMessage('阅读位置未保存：'+e.message,true);return false;}
   }
   jfReadMaskEnabled=false;jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
