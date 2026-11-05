@@ -1655,6 +1655,17 @@ function jfDeskCurrentAnchor(){
   const first=page&&page[0];
   return first?{chapter:first.chapter,offset:first.offset||0}:null;
 }
+// v7.54 · Physical paper stacks are a visual reading-progress indicator.
+// A perceptual curve emphasizes the beginning/end without pretending that
+// every printed sheet has one screen pixel of physical thickness. No DOM,
+// layout measurement or animation is involved in this pure calculation.
+function jfDeskStackForProgress(value){
+  const raw=Number(value);
+  const p=Number.isFinite(raw)?Math.max(0,Math.min(1,raw)):0;
+  const thickness=portion=>portion<=0?0:
+    Math.round((3.2+25.8*Math.pow(portion,.78))*10)/10;
+  return {read:thickness(p),unread:thickness(1-p)};
+}
 function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -1711,21 +1722,30 @@ function jfDeskPagedRender(direction){
   const readPages=Math.max(0,leftPageNumber-1);
   const unreadPages=Math.max(0,totalSheets-rightPageNumber);
 
-  // Zero sheets must be zero pixels: an empty edge is not a thin edge. The curve
-  // only starts once there is at least one sheet to show.
-  //   px(n) = (MAX - BASE) * (1 - e^(-(n-1)/K)), 0 when n <= 0
-  // K follows the document so a short book still shows a readable difference.
-  const stackK=Math.max(10,totalSheets*0.3);
-  const stackPx=sheets=>{
-    if(sheets<=0)return '0px';
-    // Visible sheet depth, restrained: even long books should not look like a comb.
-    const BASE=2,MAX=14;
-    return (BASE+(MAX-BASE)*(1-Math.exp(-(sheets-1)/stackK))).toFixed(1)+'px';
-  };
-  const readWidth=stackPx(readPages);
-  const unreadWidth=stackPx(unreadPages);
+  // Use exact physical page counts as soon as the background chapter census
+  // finishes. Before then use the *readable chapter* position, never the local
+  // mounted-window array index or an unreliable extrapolated total.
+  const exactProgress=book.exact&&exactNumber&&totalSheets>0;
+  const firstReadable=jfDeskPaperFirstReadable(0);
+  const readableChapters=Math.max(1,book.chapters-firstReadable);
+  const chapterFraction=chapterPages.length?inChapter/chapterPages.length:0;
+  let progress=Math.max(0,Math.min(1,
+    (chapterOfPage-firstReadable+chapterFraction)/readableChapters));
+  if(exactProgress){
+    const pagesBetween=Math.max(1,totalSheets-Math.min(totalSheets,geo.two?2:1));
+    progress=Math.max(0,Math.min(1,readPages/pagesBetween));
+  }else if(chapterOfPage>=book.chapters-1&&
+           inChapter>=Math.max(0,chapterPages.length-(pageB.length?2:1))){
+    progress=1;
+  }
+  const stacks=jfDeskStackForProgress(progress);
+  const readVisible=exactProgress?readPages>0:progress>0;
+  const unreadVisible=exactProgress?unreadPages>0:progress<1;
+  const readWidth=readVisible?stacks.read.toFixed(1)+'px':'0px';
+  const unreadWidth=unreadVisible?stacks.unread.toFixed(1)+'px':'0px';
   jfDeskStackState={total:totalSheets,exact:book.exact,left:leftPageNumber,right:rightPageNumber,
                     read:readPages,unread:unreadPages,readPx:readWidth,unreadPx:unreadWidth,
+                    progress:Math.round(progress*100),progressExact:exactProgress,
                     folio:exactNumber?'exact':'estimated'};
   // Folio numbers are book-wide values, never the index into the mounted array.
   if(leftSheet){
@@ -1744,13 +1764,13 @@ function jfDeskPagedRender(direction){
   pageView.style.setProperty('--jf-stack-read',readWidth);
   pageView.style.setProperty('--jf-stack-unread',unreadWidth);
   // No sheets, no stack: the element is removed from paint entirely, shadow included.
-  if(leftStack){leftStack.dataset.empty=readPages<=0?'true':'false';leftStack.dataset.sheets=String(readPages);}
-  if(rightStack){rightStack.dataset.empty=unreadPages<=0?'true':'false';rightStack.dataset.sheets=String(unreadPages);}
+  if(leftStack){leftStack.dataset.empty=readVisible?'false':'true';leftStack.dataset.sheets=String(readPages);}
+  if(rightStack){rightStack.dataset.empty=unreadVisible?'false':'true';rightStack.dataset.sheets=String(unreadPages);}
   // The physical book shell lives OUTSIDE the paper sheets. Keep its two
   // independent side/bottom edges in lockstep with the same book-wide census,
   // and remove each side completely when the sheet count reaches zero.
   for(const side of ['left','right']){
-    const empty=side==='left'?readPages<=0:unreadPages<=0;
+    const empty=side==='left'?!readVisible:!unreadVisible;
     for(const el of pageView.querySelectorAll('.jfBookPile[data-side="'+side+'"]')){
       el.dataset.empty=empty?'true':'false';
     }
