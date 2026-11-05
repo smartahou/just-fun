@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.52.0 / Current version: v7.52.0** · 持续迭代 / Actively evolving
+**当前版本：v7.53.0 / Current version: v7.53.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.53 用户认可的实体旧纸素材**：替换为用户实际验收的 8 组、16 张原始 960×1440 WebP（SHA-256 严格核验）。同组左右页保持同步，移除遮盖照片纹理的大范围泛白渐变，保留轻／中／重做旧、旧纸开关、相邻页预解码和无网络的单文件构建。封面与正文分页、页码及媒体模块不改动。
 
 **v7.52 旧书做旧程度**：纸书 header 在「旧」开关旁新增轻／中／重三档；保持原有 8 组成组 WebP，调档只影响纸边磨损与浅褶皱，不把更旧等同于更黄。左右书口细化为清晰且稀疏的纸层边线，取消模糊感，不更动分页或图片解码策略。
 
