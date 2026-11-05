@@ -29,7 +29,8 @@ jobs:
         run: npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
       - name: Verify deterministic mapping and build exact binary assets
         run: |
-          node tests/paper-texture-v747.js
+          node tests/aged-paper-default-v768.js
+          node tests/epub-paper-structure-v7782.js
           node scripts/build.js > dist-build.log
           node --check dist/douyin.js
           node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==16||r.paperTextureAssetsSha256.length!==16||r.paperRuntimeAssetSha256.length!==16||r.paperRuntimeBytes>=4291594)throw Error('bad approved/optimized paper assets');console.log('BUILD SHA-256:',r.sourceSha256);"
@@ -44,6 +45,7 @@ jobs:
           sudo ln -sf "$CHROME" /usr/bin/chromium
       - name: Current paper-rendering regressions
         run: |
+          python tests/epub-paper-tabs-v7782.py
           python tests/paged-correctness-v736.py
           python tests/paged-no-skip-v737.py
           python tests/paper-perf-v747.py --expected-static --output dist/paper-performance-v754.json
@@ -63,6 +65,7 @@ jobs:
             dist/douyin.js
             dist/paper-performance-v754.json
             dist/paper-v748-browser.png
+            dist/epub-tabs-v7782.png
             dist/paper-performance-v753-baseline.json
             dist-build.log
           if-no-files-found: warn
