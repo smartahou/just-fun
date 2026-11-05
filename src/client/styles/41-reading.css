@@ -2159,10 +2159,12 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 }
 .jfReader.paged #jfPageView .jfBookPile[data-side='left']::before{left:0}
 .jfReader.paged #jfPageView .jfBookPile[data-side='right']::before{right:0}
-/* Reuse the existing (formerly hidden) sheet stack as an 11px outer-edge
-   patina strip; it never changes the sheet's box or text column. */
+/* v7.78.1: original photographed WebP already owns the outer leaf edge.
+   v7.43 retired the child stack; v7.52 mistakenly re-enabled it on top of
+   real paper, producing a tinted translucent vertical film on both sides.
+   The sibling .jfBookPile still conveys genuine progress and thickness. */
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet>.jfSheetStack{
-  display:block!important;position:absolute;top:0;bottom:0;
+  display:none!important;position:absolute;top:0;bottom:0;
   width:12px!important;height:auto;z-index:1;pointer-events:none;
   background-image:
     radial-gradient(ellipse 11px 26px at 0 var(--jf-wear-y1,20%),rgba(102,79,55,.35),transparent 88%),
