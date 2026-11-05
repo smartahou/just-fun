@@ -2730,6 +2730,11 @@ async function jfDeskPagedToggle(){
     }
     await jfDeskShowChapter(Math.max(0,position.chapter),position.ratio,position.offset,
       null,position.anchorY);
+    // EPUB mounts chapters and paginates through jfDeskShowChapterFlow. TXT
+    // uses the older single-chapter path and must explicitly initialize its
+    // paper page list after the text has loaded (historic v7.36 regression).
+    if(jfDeskPaged&&jfDeskOutline.format!=='EPUB')
+      await jfDeskPagedLayout(false,'toggle-text');
     if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return false;
     if(jfDeskPaged&&!jfDeskPages.length)throw Error('纸书页尚未准备完成，无法保存阅读模式');
     const here=jfDeskCurrentPosition();
