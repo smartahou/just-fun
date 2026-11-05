@@ -89,6 +89,24 @@ def main():
                     assert pg.evaluate("()=>getComputedStyle(document.querySelector('.jfBookPile')).backgroundImage.indexOf('repeating-linear-gradient')<0"),'Mechanical comb stripes returned'
                     wear.select_option('medium')
                     assert pg.evaluate("()=>localStorage.getItem('jf-reader-paper-wear-v752')")=='medium'
+                    # Verify the exact visual-depth mapping at representative
+                    # reading positions, without mutating the user's actual progress.
+                    depths=pg.evaluate("""()=>{
+                      return [0,.25,.5,.75,1].map(p=>jfDeskStackForProgress(p));
+                    }""")
+                    assert depths[0]['read']==0 and depths[0]['unread']>=27, depths
+                    assert depths[4]['unread']==0 and depths[4]['read']>=27, depths
+                    assert depths[1]['read']<depths[1]['unread'],depths
+                    assert abs(depths[2]['read']-depths[2]['unread'])<.1,depths
+                    assert depths[3]['read']>depths[3]['unread'],depths
+                    assert all(depths[i]['read']<depths[i+1]['read'] for i in range(4)),depths
+                    assert all(depths[i]['unread']>depths[i+1]['unread'] for i in range(4)),depths
+                    cssDepth=pg.evaluate("""()=>{
+                      const e=document.querySelector('.jfBookPile[data-side="right"]');
+                      return {max:getComputedStyle(e).maxWidth,background:getComputedStyle(e).backgroundImage};
+                    }""")
+                    assert float(cssDepth['max'].replace('px',''))>=29,cssDepth
+                    assert 'repeating-linear-gradient' not in cssDepth['background'],cssDepth
                 has_static=pg.evaluate("()=>!!window.JFPaperTextures")
                 if args.expected_static:
                     assert has_static,'Missing new paper material module'
@@ -106,7 +124,10 @@ def main():
                       texture:left?.dataset.paperGroup||left?.dataset.paperIndex||'',
                       paired:!!left?.dataset.paperGroup,
                       other:document.querySelector('.jfSheet[data-side="right"]')?.dataset.paperGroup||'',
-                      index:jfDeskPageIndex};
+                      index:jfDeskPageIndex,
+                      stackProgress:jfDeskStackState?.progress??null,
+                      stackLeft:jfDeskStackState?.readPx??null,
+                      stackRight:jfDeskStackState?.unreadPx??null};
                   };
                   const start=sample(), original=start.key;
                   const times=[],frameTimes=[],forward=[],backward=[];
@@ -143,6 +164,11 @@ def main():
                             assert keys[row['key']]==row['texture'], 'Same page changed paper texture'
                         keys[row['key']]=row['texture']
                     assert data['styleRules']==16, 'Offline CSS bank did not contain all sixteen WebPs'
+                    assert data['start']['stackProgress'] is not None,'No book-wide stack progress'
+                    assert data['forward'][-1]['stackProgress']>data['start']['stackProgress'],(
+                        '30 forward turns did not thicken read stack',data['start'],data['forward'][-1])
+                    assert data['backward'][-1]['stackProgress']<=data['forward'][-1]['stackProgress'],(
+                        'Back turns did not reduce read-stack progress',data['backward'][-1])
                     assert all((x['texture']==x['other']) for x in data['forward']+data['backward'] if x['paired']), 'Wrong left/right pair'
                 assert not errors,'Browser exceptions: '+str(errors[:2])
                 summary={

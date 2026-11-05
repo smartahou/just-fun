@@ -2206,3 +2206,29 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged[data-paper-wear="light"]{--jf-paper-wear-strength:.03}
 .jfReader.paged[data-paper-wear="medium"]{--jf-paper-wear-strength:.11}
 .jfReader.paged[data-paper-wear="heavy"]{--jf-paper-wear-strength:.23}
+
+
+/* ===== v7.54 · visible progress with low-cost paper edges ==============
+   Book-wide reading position now controls 0–29px side stacks. All depth lines
+   are in ONE static gradient: no full-height pseudo layers, clipping masks,
+   horizontal comb stripes, blur or animated paint. */
+.jfReader.paged #jfPageView .jfBookPile{
+  max-width:32px!important;
+  background-color:#d7c4a6!important;
+  background-image:linear-gradient(90deg,
+    #eadcc3 0%,#dfcbac 15%,
+    #c6ad89 17%,#e6d3b5 19%,
+    #d9c3a4 39%,#bca07c 41%,#e5d1b0 43%,
+    #d4bb99 64%,#af906d 66%,#dfc8a6 68%,
+    #cdb291 87%,#b29473 89%,#d1ba9b 91%,#c1a785 100%)!important;
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  background-blend-mode:normal!important;
+  box-shadow:0 1px 2px rgba(56,41,24,.13)!important;
+  filter:none!important;
+  transition:none!important;
+}
+/* Remove the seven old horizontal hairline strokes on a 3px pseudo-element:
+   their repetitive scratches did not convey thickness, only visual noise. */
+.jfReader.paged #jfPageView .jfBookPile::before{content:none!important}
+.jfReader.paged #jfPageView .jfBookPile[data-empty='true']{display:none!important}
