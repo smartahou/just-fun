@@ -1715,9 +1715,37 @@ function jfDeskIsCaption(node){
   // Any short parenthetical that names a picture: （明信片）, （漫画明信片）, （图 3）...
   return /^[（(]/.test(text)||/[（(][^）)]{0,12}(明信片|图片|图)[^）)]{0,12}[）)]/.test(text);
 }
+// v7.67 · Only physical-book publication metadata receives the imprint layout.
+// Detection is deliberately conservative: first chapters AND several bibliographic
+// signals. Never classify prose because it happens to mention a publisher/ISBN.
+function jfDeskIsImprintChapter(chapter,source){
+  if(!Number.isSafeInteger(chapter)||chapter<0||chapter>7)return false;
+  const text=String(source||'').replace(/[\s\u00a0\u3000]+/g,'');
+  if(text.length<30||text.length>4500)return false;
+  const signals=[
+    /图书在版编目|(?:^|[^A-Za-z])CIP(?:[^A-Za-z]|$)/i.test(text),
+    /ISBN[\dXx][\dXx-]{5,}/i.test(text),
+    /出版社|出版发行|出版者|发行部|印刷者|印刷厂|经销者/.test(text),
+    /责任编辑|责任校对|责任编审|编辑部|封面设计/.test(text),
+    /定价|版权所有|未经许可|翻印必究|开本|印张|印数|邮编|电话号码|电子信箱|电话|网址/.test(text)
+  ];
+  const count=signals.filter(Boolean).length;
+  return (signals[0]&&signals[1]) ||
+    (count>=3&&(signals[0]||signals[1]||(signals[2]&&signals[3]&&signals[4])));
+}
+function jfDeskDecorateImprintBlock(node,chapter,isImprint,originalIndex){
+  if(!isImprint||!node||!node.classList||!node.tagName)return node;
+  if(!/^(P|DIV|SECTION|H[1-6]|UL|OL|DL|ADDRESS)$/i.test(node.tagName))return node;
+  if(node.querySelector&&node.querySelector('img,picture,svg,object,video'))return node;
+  node.classList.add('jfPrintImprint');
+  if(originalIndex===0&&/^(图书在版编目|CIP|版权信息|版权页|出版信息)/i.test((node.textContent||'').trim()))
+    node.classList.add('jfPrintImprintLead');
+  return node;
+}
 function jfDeskBlocksFor(sec){
   const raw=Array.prototype.slice.call(sec.el.children);
   const blocks=[];
+  const imprint=jfDeskIsImprintChapter(sec.n,sec.el.textContent);
   let i=0,acc=0;
   for(let k=0;k<raw.length;k++){
     const node=raw[k];
@@ -1734,7 +1762,11 @@ function jfDeskBlocksFor(sec){
       k++;
       continue;
     }
-    blocks.push({chapter:sec.n,node:document.importNode(node,true),
+    // Decorate the clone, never mutate the EPUB source. The page-engine
+    // measures this same node and preserves classes when it splits a block.
+    const printed=document.importNode(node,true);
+    jfDeskDecorateImprintBlock(printed,sec.n,imprint,k);
+    blocks.push({chapter:sec.n,node:printed,
                  key:sec.n+':'+(i++),offset:acc});
     acc+=node.textContent.length;
   }

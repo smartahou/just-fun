@@ -4,7 +4,7 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.66.0 / Current version: v7.66.0** · 持续迭代 / Actively evolving
+**当前版本：v7.67.0 / Current version: v7.67.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
 
