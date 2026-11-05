@@ -59,7 +59,7 @@ def make_epub(p):
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='jf-epub-paper-tabs-v7782-') as d:
+    with tempfile.TemporaryDirectory(prefix='jf-architecture-test-epub-tabs-v7782-') as d:
         temp = pathlib.Path(d)
         library = temp / 'books'
         library.mkdir()
