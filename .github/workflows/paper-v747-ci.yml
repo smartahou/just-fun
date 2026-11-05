@@ -32,7 +32,7 @@ jobs:
           node tests/paper-texture-v747.js
           node scripts/build.js > dist-build.log
           node --check dist/douyin.js
-          node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==16||r.paperTextureAssetsSha256.length!==16)throw Error('bad paper assets');console.log('BUILD SHA-256:',r.sourceSha256);"
+          node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==16||r.paperTextureAssetsSha256.length!==16||r.paperRuntimeAssetSha256.length!==16||r.paperRuntimeBytes>=4291594)throw Error('bad approved/optimized paper assets');console.log('BUILD SHA-256:',r.sourceSha256);"
       - name: Prepare real Chromium tests
         run: |
           sudo apt-get update -qq
