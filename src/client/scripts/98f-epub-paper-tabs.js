@@ -155,9 +155,15 @@
     }
   },true);
   document.addEventListener('keydown',event=>{
-    if(open&&event.key==='Escape'){
-      event.preventDefault();event.stopImmediatePropagation();close();
+    if(!open)return;
+    if(event.key==='Escape'){
+      event.preventDefault();event.stopImmediatePropagation();close();return;
     }
+    // The global reader's arrow/page shortcuts must never steal scrolling
+    // from the focused long directory or note list.
+    if(drawer.contains(document.activeElement)&&
+       ['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))
+      event.stopImmediatePropagation();
   },true);
   function sync(options){
     close();root.hidden=true;
