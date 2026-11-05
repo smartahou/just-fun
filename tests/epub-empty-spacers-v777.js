@@ -46,7 +46,7 @@ assert(styles.includes('.jfReader.paged #jfPageView .jfSheetBody div.empty{'),
 assert(styles.includes('.jfReader .jfReadHtml div.empty{'),
   'continuous EPUB reader also isolates .empty from application global rules');
 assert(styles.includes('padding:0!important;'),'global 70px padding overridden');
-assert(!/\.empty\s*\{/.test(styles),'global app .empty UI is not changed');
+assert(!/(?:^|\n)\s*\.empty\s*\{/.test(styles),'no naked global .empty CSS selector was added');
 assert(js.includes('jfDeskPageForAnchor(jfDeskPages,number'),'saved book position handling unchanged');
 const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
 assert.equal(pkg.version,'7.77.0');
