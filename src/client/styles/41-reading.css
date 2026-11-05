@@ -2189,3 +2189,20 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
    STATIC existing nicks more apparent via the adjacent edge shading only. */
 .jfReader.paged.jf-aged-paper[data-paper-wear="light"] #jfPageView .jfSheet::after{clip-path:none!important}
 @media(max-width:780px){.jfReader.paged.jf-aged-paper #jfReadPaperWear{width:39px;height:30px;padding:0 1px}}
+
+/* v7.53 · 批准的 8 组真实旧纸。照片已有纹理、折痕和磨损：
+   禁止再次裁切或叠加泛白涂层；不改变分页盒模型。 */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{
+  clip-path:none!important;
+  background-size:100% 100%!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  filter:none!important;
+  pointer-events:none!important;
+}
+/* 做旧档位保留，但边缘附加污迹只作极淡辅助，不遮盖新素材。 */
+.jfReader.paged[data-paper-wear="light"]{--jf-paper-wear-strength:.03}
+.jfReader.paged[data-paper-wear="medium"]{--jf-paper-wear-strength:.11}
+.jfReader.paged[data-paper-wear="heavy"]{--jf-paper-wear-strength:.23}
