@@ -1,0 +1,110 @@
+/* EPUB-only old-paper bookmarks: restrained, not an app sidebar.
+   UI sits outside pagination measurements and never resizes physical leaves. */
+.jfEpubPaperTools[hidden],
+.jfEpubPaperTools [hidden]{display:none!important}
+.jfReader.paged #jfPageView .jfEpubPaperTools{
+  position:absolute;inset:0;z-index:18;pointer-events:none;
+  color:#493826;font-family:'Source Han Serif SC','Noto Serif CJK SC','Songti SC',STSong,serif;
+}
+.jfReader.paged #jfPageView .jfEpubPaperTab{
+  position:absolute;left:calc(50% + var(--jf-page-w,0px) + 6px);
+  top:calc(50% - var(--jf-page-h,0px) / 2 + 48px);
+  width:34px;height:56px;box-sizing:border-box;
+  border:0;border-radius:2px 6px 5px 1px;cursor:pointer;
+  color:#5d4731;background:linear-gradient(100deg,#d4be95,#e7d5b3 28%,#ddc8a1 88%,#bda17a);
+  box-shadow:2px 3px 5px rgba(32,22,10,.2),inset 1px 0 1px rgba(253,245,222,.34);
+  font:600 17px/1 'Source Han Serif SC','Noto Serif SC',SimSun,serif;
+  pointer-events:auto;transform:rotate(1deg);
+  transition:background .15s ease;
+}
+.jfReader.paged #jfPageView .jfEpubNoteTab{
+  top:calc(50% - var(--jf-page-h,0px) / 2 + 114px);
+  transform:rotate(-1.5deg);
+}
+.jfReader.paged #jfPageView .jfEpubPaperTab:is(:hover,.is-open){
+  background:linear-gradient(100deg,#d1b487,#eddbb7 28%,#e2cda7);
+}
+.jfReader.paged #jfPageView .jfEpubPaperTab:focus-visible,
+.jfReader.paged #jfPageView .jfEpubPaperDrawer button:focus-visible{
+  outline:2px solid #8e6340;outline-offset:3px;
+}
+.jfReader.paged #jfPageView .jfEpubPaperDrawer{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(-.3deg);
+  box-sizing:border-box;width:min(325px,calc(100vw - 30px));
+  max-height:min(78vh,780px);min-height:150px;
+  display:flex;flex-direction:column;overflow:hidden;
+  pointer-events:auto;
+  border:1px solid rgba(112,84,48,.16);border-radius:2px 7px 5px 3px;
+  background:
+    radial-gradient(ellipse 20% 30% at 98% 5%,rgba(109,70,30,.12),transparent 98%),
+    linear-gradient(107deg,#e4d2ad 0%,#efdfbe 22%,#e9d7b2 76%,#dfc9a2);
+  box-shadow:5px 12px 29px rgba(21,14,7,.37),inset 2px 1px 2px rgba(255,248,227,.22);
+  font:15px/1.65 'Source Han Serif SC','Noto Serif SC','Songti SC',serif;
+}
+.jfReader.paged #jfPageView .jfEpubPaperDrawerHead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:15px 17px 11px 20px;border-bottom:1px solid rgba(89,64,35,.13);
+}
+.jfReader.paged #jfPageView .jfEpubPaperDrawerHead strong{
+  font-size:17px;font-weight:600;letter-spacing:.16em;
+}
+.jfReader.paged #jfPageView .jfEpubPaperClose{
+  cursor:pointer;border:0;background:none;color:#634c37;font-size:24px;
+  line-height:1;min-width:30px;min-height:30px;
+}
+.jfReader.paged #jfPageView .jfEpubPaperDrawerBody{
+  overflow:auto;overscroll-behavior:contain;min-height:0;
+  padding:14px 12px 22px;scrollbar-color:#ac9675 transparent;scrollbar-width:thin;
+}
+.jfReader.paged #jfPageView .jfEpubTocRow{
+  display:flex;align-items:start;gap:2px;
+  padding-left:calc(var(--jf-toc-depth,0) * 13px);
+}
+.jfReader.paged #jfPageView .jfEpubTocTwist{
+  border:0;background:transparent;color:#80684b;
+  flex:none;width:20px;min-height:34px;padding:3px 0;
+  cursor:pointer;font-size:15px;text-align:center;
+}
+.jfReader.paged #jfPageView .jfEpubTocJump{
+  flex:1;text-align:left;border:0;background:none;
+  color:#4b3b2b;cursor:pointer;
+  font:inherit;font-size:14px;line-height:1.5;
+  padding:6px 5px 7px;overflow-wrap:anywhere;
+}
+.jfReader.paged #jfPageView .jfEpubTocJump:hover{background:rgba(107,74,37,.08)}
+.jfReader.paged #jfPageView .jfEpubTocJump.is-current{color:#794b28;font-weight:700}
+.jfReader.paged #jfPageView .jfEpubTocJump:disabled{opacity:.46;cursor:not-allowed}
+.jfReader.paged #jfPageView .jfEpubNoteItem{
+  display:block;width:100%;text-align:left;
+  cursor:pointer;border:0;border-bottom:1px solid rgba(88,62,34,.13);
+  background:transparent;color:#4a3927;padding:12px 7px 15px;
+  font:inherit;white-space:normal;
+}
+.jfReader.paged #jfPageView .jfEpubNoteItem:hover{background:rgba(111,74,37,.07)}
+.jfReader.paged #jfPageView .jfEpubNoteItem strong{
+  display:block;margin-bottom:5px;font-weight:650;color:#765237;line-height:1.6;
+}
+.jfReader.paged #jfPageView .jfEpubNoteText{
+  display:block;white-space:pre-line;overflow-wrap:anywhere;line-height:1.8;
+}
+.jfReader.paged #jfPageView .jfEpubNoteAnchor{
+  display:inline!important;width:0!important;height:0!important;
+  font-size:0!important;line-height:0!important;overflow:hidden!important;
+}
+::highlight(jfEpubNoteFlash){background:rgba(167,104,50,.23);color:inherit}
+@media(max-width:780px){
+ .jfReader.paged #jfPageView .jfEpubPaperTab{
+   left:auto;right:2px;width:29px;height:46px;
+   top:calc(50% - var(--jf-page-h,0px) / 2 + 34px);
+   font-size:15px;
+ }
+ .jfReader.paged #jfPageView .jfEpubNoteTab{
+   top:calc(50% - var(--jf-page-h,0px) / 2 + 86px);
+ }
+ .jfReader.paged #jfPageView .jfEpubPaperDrawer{
+   right:3px;max-height:73vh;width:min(315px,calc(100vw - 18px));
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .jfReader.paged #jfPageView .jfEpubPaperTab{transition:none}
+}
