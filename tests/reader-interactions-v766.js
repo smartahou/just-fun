@@ -42,7 +42,11 @@ const mode=section('async function jfDeskPagedToggle(){',"document.getElementByI
 assert(mode.includes("mode:jfDeskPaged?'paged':'flow'"),'instant book-specific mode saved');
 assert(mode.includes("const bookId=jfDeskBook.id,session=jfDeskSession"),'book identity isolated');
 assert(!mode.includes("jfDeskSetPref({theme:'paper'})"),'no global theme mutation on mode switch');
-assert(js.includes('if(jfDeskPagedSwitchPromise)await jfDeskPagedSwitchPromise;'),'close waits for mode persistence');
+assert(js.includes('try{await jfDeskPagedSwitchPromise;}'),'close waits for mode persistence');
+assert(js.includes('catch{return false;} // keep the book open when a mode write fails'),'failed mode save cannot close book');
+assert(mode.includes("jfDeskPagedSwitchPromise.catch(()=>false)"),'second click never propagates an unhandled promise');
+assert(mode.includes('clearTimeout(jfDeskProgressTimer);'),'rollback clears pending progress save');
+assert(mode.includes('try{await jfDeskShowChapter(Math.max(0,position.chapter)'),'rollback restores old layout');
 assert(js.includes("const savedMode=jfDeskWorkspace.progress[bookId]?.mode;"),'per-book mode restored');
 assert(js.includes("jfDeskPaged=outline.format==='EPUB'&&savedMode==='paged';"),'EPUB opens in saved mode');
 assert(css.includes('#jfReadPaperWear'),'paper wear styles retained');

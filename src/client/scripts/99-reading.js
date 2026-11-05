@@ -789,7 +789,10 @@ function jfDeskUpdateProgress(){
 async function jfDeskCloseReader(){
   if(jfReader.hidden)return await jfDeskCloseNotes();
   // Never leave during a mode transition: its per-book setting must be durable.
-  if(jfDeskPagedSwitchPromise)await jfDeskPagedSwitchPromise;
+  if(jfDeskPagedSwitchPromise){
+    try{await jfDeskPagedSwitchPromise;}
+    catch{return false;} // keep the book open when a mode write fails
+  }
   // Never leave the reader if a note is not durably saved.
   if(!await jfDeskCloseNotes())return false;
   clearTimeout(jfDeskProgressTimer);
@@ -2157,7 +2160,7 @@ function jfDeskPageTurn(delta){
   return true;
 }
 async function jfDeskPagedToggle(){
-  if(jfDeskPagedSwitchPromise)return jfDeskPagedSwitchPromise;
+  if(jfDeskPagedSwitchPromise)return jfDeskPagedSwitchPromise.catch(()=>false);
   if(jfReader.hidden||jfDeskRestoring||!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf)return false;
   const bookId=jfDeskBook.id,session=jfDeskSession;
   const oldMode=jfDeskPaged;
@@ -2192,11 +2195,16 @@ async function jfDeskPagedToggle(){
   try{return await task;}
   catch(error){
     if(jfDeskSession===session&&jfDeskBook?.id===bookId){
+      clearTimeout(jfDeskProgressTimer);
       jfDeskPaged=oldMode;
       jfReader.classList.toggle('paged',oldMode);
       jfReader.classList.toggle('paper',oldMode||jfDeskPrefs.theme==='paper');
       const btn=document.getElementById('jfReadPaged');
       if(btn){btn.setAttribute('aria-pressed',String(oldMode));btn.classList.toggle('active',oldMode);}
+      // A failed write must not leave the DOM in the new mode with the button
+      // saying old mode, or let the failed mode's debounce overwrite it later.
+      try{await jfDeskShowChapter(Math.max(0,position.chapter),position.ratio,
+        position.offset,null,position.anchorY);}catch{}
       jfDeskMessage('阅读模式切换失败：'+(error.message||error),true);
     }
     return false;
