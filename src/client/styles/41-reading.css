@@ -2701,10 +2701,11 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody{
   /* Opaque printing pigment restores crisp strokes: paper grain belongs in
      the photographed background, not in semi-transparent font antialiasing. */
-  color:#493827;
+  /* Genuine ink transmits a small part of the paper colour, preserving the
+     photographed fibre through strokes without a floating drop-shadow. */
+  color:rgba(53,36,22,.87);
   text-rendering:optimizeLegibility;
-  /* Subpixel dot gain softens hard antialias edges without blurring ink. */
-  text-shadow:0 .12px 0 rgba(74,50,28,.16);
+  text-shadow:none;
 }
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody>
   :is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table):not(:has(img,picture,svg,canvas,video,object)){
@@ -2871,4 +2872,36 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   filter:none!important;
   -webkit-mask-image:none!important;
   mask-image:none!important;
+}
+
+/* ===== v7.75 · unified old-book ink and original glyph dimensions =========
+   A raster gaiji cropped to its real dark-stroke bounds is still one character
+   tall but its actual em width no longer includes the source's blank margins.
+   This matters for real EPUBs with characters painted into padded thumbnails. */
+.jfReader.paged #jfPageView .jfSheetBody img.jfInlineGlyph[data-jf-plate='glyph-ink']{
+  display:inline-block!important;
+  width:var(--jf-glyph-width,.96em)!important;
+  height:.98em!important;
+  max-width:1.12em!important;
+  max-height:1.04em!important;
+  object-fit:contain!important;
+  margin:0!important;
+  padding:0!important;
+  vertical-align:-.115em!important;
+  image-rendering:auto;
+}
+/* Empty EPUB paragraphs are not narrative content. A single quiet break
+   remains; multiple consecutive blank paragraphs cannot manufacture a huge
+   vertical cavity in the middle of the printed book. Text nodes stay in the
+   clone for stable chapter/offset calculations. */
+.jfReader.paged #jfPageView .jfSheetBody>p.jfPrintQuietBreak{
+  margin:0 0 .44em!important;
+  padding:0!important;
+  line-height:.75!important;
+  height:.75em!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody>p.jfPrintRedundantBlank{
+  display:none!important;
 }

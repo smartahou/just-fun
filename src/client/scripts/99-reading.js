@@ -1965,6 +1965,27 @@ function jfDeskGlyphInkPixels(px,w,h){
   }
   return true;
 }
+// v7.75 · Alpha alone does not remove the transparent *layout box* around
+// a scanned character. Tight cropping removes the phantom half-character
+// gap visible after v7.74, but preserves the actual strokes and their aspect.
+function jfDeskGlyphTightBounds(px,w,h){
+  if(!px||px.length!==w*h*4||w<8||h<8)return null;
+  let left=w,top=h,right=-1,bottom=-1,ink=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(px[(y*w+x)*4+3]<28)continue;
+    left=Math.min(left,x);right=Math.max(right,x);
+    top=Math.min(top,y);bottom=Math.max(bottom,y);ink++;
+  }
+  if(right<left||bottom<top||ink<Math.max(8,w*h*.003))return null;
+  const pad=Math.max(1,Math.round(Math.min(w,h)*.018));
+  left=Math.max(0,left-pad);right=Math.min(w-1,right+pad);
+  top=Math.max(0,top-pad);bottom=Math.min(h-1,bottom+pad);
+  return {x:left,y:top,width:right-left+1,height:bottom-top+1};
+}
+function jfDeskGlyphEmWidth(bounds){
+  if(!bounds||!bounds.height)return .96;
+  return Math.min(1.10,Math.max(.64,.98*bounds.width/bounds.height));
+}
 const jfDeskGlyphInkCache=new Map();
 function jfDeskGlyphInkForSource(img){
   const url=img?.getAttribute?.('src')||img?.src;
@@ -1982,7 +2003,21 @@ function jfDeskGlyphInkForSource(img){
       const frame=ctx.getImageData(0,0,c.width,c.height);
       if(jfDeskGlyphInkPixels(frame.data,c.width,c.height)){
         ctx.putImageData(frame,0,0);
-        result=c.toDataURL('image/png');
+        const box=jfDeskGlyphTightBounds(frame.data,c.width,c.height);
+        if(box){
+          // The 1–2px safeguard keeps antialiased fringe strokes intact.
+          // Crop only the normalized clone; no original asset is rewritten.
+          const tight=document.createElement('canvas');
+          tight.width=box.width;tight.height=box.height;
+          const dest=tight.getContext('2d');
+          if(dest){
+            dest.drawImage(c,box.x,box.y,box.width,box.height,
+              0,0,box.width,box.height);
+            result={src:tight.toDataURL('image/png'),
+              widthEm:jfDeskGlyphEmWidth(box),cropped:true};
+          }
+        }
+        if(!result)result={src:c.toDataURL('image/png'),widthEm:.96,cropped:false};
       }
     }
   }catch{} // CORS/invalid images must remain the original bitmap, never blank.
@@ -1990,6 +2025,16 @@ function jfDeskGlyphInkForSource(img){
     jfDeskGlyphInkCache.delete(jfDeskGlyphInkCache.keys().next().value);
   jfDeskGlyphInkCache.set(url,result);
   return result;
+}
+// v7.75 · A stack of EPUB blank paragraphs can create a large accidental hole
+// in an otherwise continuous printed page. Retain the first quiet break and
+// conceal redundant consecutive blanks ONLY on page-engine clones. Their source
+// text is untouched, so reading-progress offsets remain stable.
+function jfDeskIsBookBlank(node){
+  if(node?.tagName!=='P')return false;
+  if((node.textContent||'').replace(/[\s\u00a0\u3000\u200b\ufeff]/g,'')!=='')return false;
+  if(node.querySelector?.('img,svg,picture,object,video,hr,table'))return false;
+  return true;
 }
 function jfDeskBlocksFor(sec){
   // This runs after image decode in both normal paging and the book census.
@@ -2003,9 +2048,11 @@ function jfDeskBlocksFor(sec){
   const raw=Array.prototype.slice.call(sec.el.children);
   const blocks=[];
   const imprint=jfDeskIsImprintChapter(sec.n,sec.el.textContent);
-  let i=0,acc=0;
+  let i=0,acc=0,consecutiveBlanks=0;
   for(let k=0;k<raw.length;k++){
     const node=raw[k];
+    const blank=jfDeskIsBookBlank(node);
+    consecutiveBlanks=blank?consecutiveBlanks+1:0;
     // Isolated image-glyph paragraphs are not book plates. Bridge short
     // sentence fragments into one printed paragraph before measuring pages.
     const bridged=jfDeskMergeGlyphBlocks(raw,k);
@@ -2033,6 +2080,10 @@ function jfDeskBlocksFor(sec){
     // Decorate the clone, never mutate the EPUB source. The page-engine
     // measures this same node and preserves classes when it splits a block.
     const printed=document.importNode(node,true);
+    if(blank){
+      printed.classList.add('jfPrintQuietBreak');
+      if(consecutiveBlanks>1)printed.classList.add('jfPrintRedundantBlank');
+    }
     jfDeskDecorateImprintBlock(printed,sec.n,imprint,k);
     blocks.push({chapter:sec.n,node:printed,
                  key:sec.n+':'+(i++),offset:acc});
@@ -2044,7 +2095,11 @@ function jfDeskBlocksFor(sec){
     for(const img of block.node.querySelectorAll?.('img.jfInlineGlyph')||[]){
       const source=img.getAttribute('src')||img.src;
       const normalized=keyedGlyphs.get(source);
-      if(normalized){img.src=normalized;img.dataset.jfPlate='glyph-ink';}
+      if(normalized){
+        img.src=normalized.src;img.dataset.jfPlate='glyph-ink';
+        img.style.setProperty('--jf-glyph-width',normalized.widthEm.toFixed(3)+'em');
+        img.dataset.jfGlyphCrop=normalized.cropped?'1':'0';
+      }
     }
   }
   return blocks;
@@ -2340,6 +2395,7 @@ window.JFReaderGlyphAudit=()=>{
       authored:[img.dataset.jfSourceWidth||null,img.dataset.jfSourceHeight||null],
       displayed:[Math.round(r.width),Math.round(r.height)],
       classification:img.dataset.jfInlineGlyph||null,
+      crop:img.dataset.jfGlyphCrop||null,
       bridge:img.dataset.jfGlyphBridge||null,
       display:cs.display,context:img.parentElement?.textContent?.trim().slice(0,60)||''};
   });
