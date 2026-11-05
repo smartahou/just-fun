@@ -1798,21 +1798,38 @@ function jfDeskDecorateImprintBlock(node,chapter,isImprint,originalIndex){
     node.classList.add('jfPrintImprintLead');
   return node;
 }
-// v7.72 · Some EPUBs use tiny raster images for an uncommon Han character.
-// Their <img> has no trusted width/height (the EPUB sanitizer removes those),
-// and the regular book-photo rule display:block centred them like giant plates.
-// Require small square intrinsic pixels *and* text on both sides in one paragraph.
-// Never rewrite text or the EPUB image: the entire paragraph stays atomic in the
-// page engine so a glyph cannot be duplicated/dropped at a Range split.
-function jfDeskIsInlineGlyphShape(width,height,before,after){
+// v7.73 · EPUB glyph images may be embedded inside a paragraph OR be placed
+// in their own <p> between two sentence fragments. The source image's authored
+// width/height and semantic name are now preserved by the safe server rewrite.
+// Only near-square, small glyphs within Chinese sentence context are allowed.
+function jfDeskGlyphDimensions(img){
+  const declaredW=Number(img?.dataset?.jfSourceWidth);
+  const declaredH=Number(img?.dataset?.jfSourceHeight);
+  if(declaredW>=8&&declaredH>=8&&declaredW<=128&&declaredH<=128)
+    return [declaredW,declaredH];
+  return [Number(img?.naturalWidth)||0,Number(img?.naturalHeight)||0];
+}
+function jfDeskIsInlineGlyphShape(width,height,before,after,hinted=false){
   if(!Number.isFinite(width)||!Number.isFinite(height)||
-     width<8||height<8||width>160||height>160)return false;
+     width<8||height<8||width>(hinted?1024:240)||height>(hinted?1024:240))return false;
   const ratio=width/height;
-  if(ratio<.58||ratio>1.72)return false;
+  if(ratio<(hinted?.46:.70)||ratio>(hinted?2.16:1.42))return false;
   const left=String(before||'').replace(/[\s\u00a0\u3000]/g,'');
   const right=String(after||'').replace(/[\s\u00a0\u3000]/g,'');
-  if(left.length<2||right.length<1||left.length+right.length<7)return false;
+  if(left.length<1||right.length<1||left.length+right.length<4)return false;
   return /[\u3400-\u9fff]/.test(left+right);
+}
+function jfDeskCanBridgeGlyphText(before,after){
+  const left=String(before||'').trim(),right=String(after||'').trim();
+  if(!left||!right||left.length+right.length>220)return false;
+  // Do not remove real paragraph breaks after a complete sentence or before
+  // a heading. A character placeholder normally falls in the middle of a word.
+  return /[\u3400-\u9fff]$/.test(left)&&/^[\u3400-\u9fff]/.test(right);
+}
+function jfDeskIsGlyphOnlyParagraph(node){
+  if(!node||node.tagName!=='P'||(node.textContent||'').trim())return false;
+  const imgs=node.querySelectorAll?.('img')||[];
+  return imgs.length===1&&imgs[0].classList?.contains('jfInlineGlyph');
 }
 function jfDeskMarkInlineGlyphs(root){
   if(!root?.querySelectorAll||!document.createRange)return;
@@ -1820,18 +1837,59 @@ function jfDeskMarkInlineGlyphs(root){
     if(img.classList?.contains('jfInlineGlyph'))continue;
     if(img.closest?.('figure,figcaption,table,pre'))continue;
     const paragraph=img.closest?.('p,li,blockquote');
-    if(!paragraph||paragraph.querySelectorAll('img').length!==1)continue;
+    if(!paragraph)continue;
+    let before='',after='';
     try{
       const range=document.createRange();
       range.selectNodeContents(paragraph);range.setEndBefore(img);
-      const before=range.toString();
+      before=range.toString();
       range.selectNodeContents(paragraph);range.setStartAfter(img);
-      const after=range.toString();
-      if(!jfDeskIsInlineGlyphShape(img.naturalWidth,img.naturalHeight,before,after))continue;
-      img.classList.add('jfInlineGlyph');
-      img.dataset.jfInlineGlyph='1';
-    }catch{} // invalid book DOM must never stop the reader
+      after=range.toString();
+    }catch{continue}
+    const imageOnly=paragraph.tagName==='P'&&
+      paragraph.querySelectorAll('img').length===1&&!(paragraph.textContent||'').trim();
+    let bridge=false;
+    if(imageOnly){
+      const prev=paragraph.previousElementSibling,next=paragraph.nextElementSibling;
+      if(prev?.tagName==='P'&&next?.tagName==='P'&&
+         jfDeskCanBridgeGlyphText(prev.textContent,next.textContent)){
+        before=prev.textContent;after=next.textContent;bridge=true;
+      }
+    }
+    const hinted=img.dataset?.jfGlyphHint==='1'||
+      /^[\u3400-\u9fff\uf900-\ufaff]$/.test(String(img.alt||'').trim());
+    const [w,h]=jfDeskGlyphDimensions(img);
+    if(!jfDeskIsInlineGlyphShape(w,h,before,after,hinted))continue;
+    img.classList.add('jfInlineGlyph');
+    img.dataset.jfInlineGlyph='1';
+    if(bridge)img.dataset.jfGlyphBridge='1';
   }
+}
+// Build a single printer paragraph from original adjacent p + glyph-p + p.
+// Keep every original child and text character (including whitespace), but
+// combine the three boxes so the rare character lives on the same baseline.
+// This is done only on clones for the page-engine, never the EPUB source DOM.
+function jfDeskMergeGlyphBlocks(raw,start){
+  const source=raw[start];
+  if(source?.tagName!=='P'||!(source.textContent||'').trim()||
+     source.querySelector?.('img'))return null;
+  const merged=document.importNode(source,true);
+  let index=start, glyphs=0, chars=(source.textContent||'').length;
+  while(index+2<raw.length&&glyphs<5){
+    const middle=raw[index+1],after=raw[index+2];
+    if(!jfDeskIsGlyphOnlyParagraph(middle)||
+       middle.querySelector('img')?.dataset?.jfGlyphBridge!=='1'||
+       after?.tagName!=='P'||after.querySelector?.('img')||
+       !jfDeskCanBridgeGlyphText(raw[index].textContent,after.textContent))break;
+    const nextCount=(middle.textContent||'').length+(after.textContent||'').length;
+    if(chars+nextCount>220)break;
+    for(const node of Array.from(middle.childNodes||[]))
+      merged.appendChild(document.importNode(node,true));
+    for(const node of Array.from(after.childNodes||[]))
+      merged.appendChild(document.importNode(node,true));
+    chars+=nextCount;glyphs++;index+=2;
+  }
+  return glyphs?{node:merged,end:index,count:glyphs}:null;
 }
 function jfDeskBlocksFor(sec){
   // This runs after image decode in both normal paging and the book census.
@@ -1843,6 +1901,17 @@ function jfDeskBlocksFor(sec){
   let i=0,acc=0;
   for(let k=0;k<raw.length;k++){
     const node=raw[k];
+    // Isolated image-glyph paragraphs are not book plates. Bridge short
+    // sentence fragments into one printed paragraph before measuring pages.
+    const bridged=jfDeskMergeGlyphBlocks(raw,k);
+    if(bridged){
+      jfDeskDecorateImprintBlock(bridged.node,sec.n,imprint,k);
+      blocks.push({chapter:sec.n,node:bridged.node,key:sec.n+':'+(i++),
+        offset:acc,mergedGlyphs:bridged.count});
+      for(let m=k;m<=bridged.end;m++)acc+=raw[m].textContent.length;
+      k=bridged.end;
+      continue;
+    }
     const next=raw[k+1];
     const carriesImage=node.querySelector&&node.querySelector('img:not(.jfInlineGlyph)');
     if(next&&carriesImage&&jfDeskIsCaption(next)){
@@ -2145,6 +2214,30 @@ function jfDeskIsPlateGalleryPage(page){
   }
   return pictures===2;
 }
+// v7.73 · Read-only diagnosis when the EPUB doesn't match our conservative
+// classifiers. It describes the actual visible DOM without private book HTML.
+window.JFReaderGlyphAudit=()=>{
+  const root=document.getElementById('jfPageView');
+  if(!root)return {error:'paper-book view unavailable'};
+  const pictures=Array.from(root.querySelectorAll('.jfSheet .jfSheetBody img')).map(img=>{
+    const r=img.getBoundingClientRect(),cs=getComputedStyle(img);
+    return {side:img.closest('.jfSheet')?.dataset?.side||'',
+      alt:String(img.alt||'').slice(0,40),natural:[img.naturalWidth,img.naturalHeight],
+      authored:[img.dataset.jfSourceWidth||null,img.dataset.jfSourceHeight||null],
+      displayed:[Math.round(r.width),Math.round(r.height)],
+      classification:img.dataset.jfInlineGlyph||null,
+      bridge:img.dataset.jfGlyphBridge||null,
+      display:cs.display,context:img.parentElement?.textContent?.trim().slice(0,60)||''};
+  });
+  const abnormalText=Array.from(root.querySelectorAll('.jfSheet .jfSheetBody *'))
+    .filter(el=>el.children.length===0&&(el.textContent||'').trim().length>0&&
+      (el.textContent||'').trim().length<=2&&
+      parseFloat(getComputedStyle(el).fontSize)>28).slice(0,16)
+    .map(el=>({tag:el.tagName,text:el.textContent?.trim(),
+      size:getComputedStyle(el).fontSize}));
+  return {version:'7.73',pictures,abnormalText,
+    note:'If anomalous glyphs remain, inspect their source element and EPUB dimensions rather than guessing CSS.'};
+};
 function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;

@@ -563,6 +563,31 @@ function jfReadingEpubEntryName(dir,href){
 }
 // EPUB chapters are re-emitted as a restricted HTML fragment: readable structure
 // and in-archive images only. Scripts, remote resources and handlers never survive.
+// v7.73 · Preserve ONLY numeric image display-size hints and a boolean
+// glyph semantic hint. EPUB CSS/classes never execute as a result of this data.
+function jfReadingEpubImageLayoutHints(tag){
+  const source=String(jfReadingAttr(tag,'src')||'');
+  const alt=String(jfReadingXmlDecode(jfReadingAttr(tag,'alt')||'')).trim();
+  const names=String(jfReadingAttr(tag,'class')||'')+' '+String(jfReadingAttr(tag,'id')||'')+' '+source;
+  const known=/(?:^|[/_.\s-])(?:gaiji|glyph|rarechar|hanzi|inlinechar|charimg|u[0-9a-f]{4,6})(?:[/_.\s-]|$)/i.test(names)
+    ||/^[\u3400-\u9fff\uf900-\ufaff]$/.test(alt);
+  const style=String(jfReadingAttr(tag,'style')||'');
+  function dim(name){
+    const fromAttr=String(jfReadingAttr(tag,name)||'').trim();
+    const pattern=new RegExp('(?:^|;)\\s*'+name+'\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(px|em)?(?:\\s*(?:;|$))','i');
+    const match=pattern.exec(style);
+    const raw=fromAttr||match?.[1]||'';
+    const unit=fromAttr?'px':(match?.[2]||'px').toLowerCase();
+    if(!/^\d+(?:\.\d+)?(?:px)?$/i.test(raw))return 0;
+    let number=parseFloat(raw);
+    if(unit==='em')number*=18;
+    return Number.isFinite(number)&&number>=4&&number<=1024?Math.round(number):0;
+  }
+  const w=dim('width'),h=dim('height');
+  return (known?' data-jf-glyph-hint="1"':'')
+    +(w?' data-jf-source-width="'+w+'"':'')
+    +(h?' data-jf-source-height="'+h+'"':'');
+}
 function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
   const posix=require('node:path').posix;
   const bodyMatch=/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i.exec(xhtml);
@@ -574,7 +599,8 @@ function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
     if(!entry||!zip.entries.has(entry))return '';
     if(!JF_EPUB_ASSET_EXT.has(posix.extname(entry).toLowerCase()))return '';
     const alt=jfReadingXmlDecode(jfReadingAttr(tag,'alt')||'');
-    return '<img src="'+jfReadingEpubAssetUrl(bookId,entry)+'" alt="'+jfReadingHtmlEscape(alt)+'" loading="lazy" decoding="async">';
+    return '<img src="'+jfReadingEpubAssetUrl(bookId,entry)+'" alt="'+jfReadingHtmlEscape(alt)+'"'
+      +jfReadingEpubImageLayoutHints(tag)+' loading="lazy" decoding="async">';
   });
   body=body.replace(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi,(match,attrs,inner)=>{
     const href=jfReadingAttr(attrs,'href');

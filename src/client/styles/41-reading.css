@@ -2817,3 +2817,27 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   margin-top:.38em;
   margin-bottom:.38em;
 }
+
+/* v7.73 · A standalone rare-character bitmap must never inherit centred plate
+   geometry. Normal-size line glyphs take their place inside the real sentence
+   when authored in a separate paragraph, too. Measurement host and visible
+   sheets both use .jfSheetBody; no style-size discrepancy or paper changes. */
+.jfReader.paged #jfPageView .jfSheetBody p:has(img.jfInlineGlyph){
+  text-align:justify;
+  line-height:inherit;
+  letter-spacing:normal;
+}
+.jfReader.paged #jfPageView .jfSheetBody img.jfInlineGlyph{
+  display:inline-block!important;
+  width:auto!important;
+  height:.98em!important;
+  max-width:1.28em!important;
+  max-height:1.04em!important;
+  vertical-align:-.13em!important;
+  margin:0 .015em!important;
+  object-fit:contain!important;
+  filter:none!important;
+  mix-blend-mode:multiply!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+}
