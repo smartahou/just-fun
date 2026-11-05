@@ -2728,15 +2728,48 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   letter-spacing:.012em!important;
   margin-bottom:.65em;
 }
-/* The photo keying done in jfDeskKnockOutPlates is asynchronous, and images
-   without a successfully keyed pale backing remain opaque. Lightly feather
-   the outermost 1.5% of those only, avoiding box-like scan boundaries.
-   Do NOT feather successfully alpha-keyed plates; preserve their silhouettes. */
-@supports (mask-image:linear-gradient(black,transparent)){
-  .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody img:not([data-jf-plate='done']){
-    -webkit-mask-image:linear-gradient(to right,transparent 0%,#000 1.6%,#000 98.4%,transparent 100%);
-    mask-image:linear-gradient(to right,transparent 0%,#000 1.6%,#000 98.4%,transparent 100%);
+/* v7.71 · Never feather every unkeyed photograph. The JS edge probe marks
+   an orientation only when its real scanned margin is pale. Dark lettering
+   and original photographic borders remain completely opaque. */
+@supports (mask-image:linear-gradient(#000,transparent)){
+  .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody img[data-jf-plate-edge='x']{
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 1.5%,#000 98.5%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 1.5%,#000 98.5%,transparent);
   }
+  .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody img[data-jf-plate-edge='y']{
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 1.5%,#000 98.5%,transparent);
+    mask-image:linear-gradient(180deg,transparent,#000 1.5%,#000 98.5%,transparent);
+  }
+}
+@supports (mask-composite:intersect){
+  .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody img[data-jf-plate-edge='xy']{
+    -webkit-mask-image:
+      linear-gradient(90deg,transparent,#000 1.5%,#000 98.5%,transparent),
+      linear-gradient(180deg,transparent,#000 1.5%,#000 98.5%,transparent);
+    mask-image:
+      linear-gradient(90deg,transparent,#000 1.5%,#000 98.5%,transparent),
+      linear-gradient(180deg,transparent,#000 1.5%,#000 98.5%,transparent);
+    -webkit-mask-composite:source-in;
+    mask-composite:intersect;
+  }
+}
+/* v7.71 · Optical centring is restricted to one-image-only printed leaves.
+   The paging engine still measures the original block as before, so no new
+   pixels, paragraphs or pages are introduced. */
+.jfReader.paged #jfPageView .jfSheet.jf-plate-only .jfSheetBody{
+  display:flex;
+  flex-direction:column;
+  justify-content:safe center;
+  align-items:stretch;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-plate-only .jfSheetBody > *{
+  flex:0 0 auto;
+  max-width:100%;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-plate-only .jfSheetBody > :is(figure,p,div){
+  width:100%;
+  margin-top:0;
+  margin-bottom:0;
 }
 /* Explicitly keep the designated WebP 16-image paper on its own pseudolayer:
    no background replacement, image raster modification or extra overlays. */

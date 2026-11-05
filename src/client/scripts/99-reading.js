@@ -54,6 +54,52 @@ const jfReadFamilyMap={
   kai:"'Kaiti SC','KaiTi','STKaiti',serif",
   mono:"'Sarasa Mono SC','Microsoft YaHei UI',monospace"
 };
+// v7.71 · Typeface diagnostics are opt-in, not a guessed "installed font"
+// badge. getComputedStyle reports a CSS fallback list, not the actual raster
+// face; a canvas comparison is only a hint. Chrome DevTools > Fonts remains
+// authoritative when a user needs to identify the exact rendered glyph face.
+function jfDeskPrintDiagnostics(){
+  const page=document.querySelector('#jfPageView .jfSheet[data-side="left"] .jfSheetBody');
+  const probe=document.querySelector('#jfPageView .jfPageMeasure.jfSheetBody');
+  const describe=node=>{
+    if(!node)return null;
+    const c=getComputedStyle(node);
+    return {fontFamily:c.fontFamily,fontSize:c.fontSize,fontWeight:c.fontWeight,
+      lineHeight:c.lineHeight,letterSpacing:c.letterSpacing,
+      wordSpacing:c.wordSpacing,textAlign:c.textAlign};
+  };
+  const painted=describe(page),measured=describe(probe);
+  const fields=['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','wordSpacing','textAlign'];
+  const parity=!!(painted&&measured&&fields.every(k=>painted[k]===measured[k]));
+  const familyCandidates=['Source Han Serif SC','Noto Serif CJK SC',
+    'Noto Serif SC','Songti SC','STSong','SimSun'];
+  const hint=[];
+  try{
+    const canvas=document.createElement('canvas');canvas.width=300;canvas.height=62;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    if(ctx){
+      const signature=family=>{
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.font='33px "'+family+'",serif';
+        ctx.fillStyle='#000';
+        ctx.fillText('永明清史宋鉴',6,42);
+        const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+        let h=2166136261;
+        for(let i=3;i<pixels.length;i+=4){h=Math.imul(h^pixels[i],16777619);}
+        return h>>>0;
+      };
+      const fallback=signature('__jf_not_an_installed_font__');
+      for(const family of familyCandidates)hint.push({family,
+        rasterDiffersFromGenericFallback:signature(family)!==fallback});
+    }
+  }catch(e){hint.push({error:String(e.message||e)});}
+  return {version:'7.71',bookId:jfDeskBook?.id??null,
+    userChoice:jfDeskPrefs.family,
+    selectedStack:jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif,
+    painted,measured,layoutMetricsMatch:parity,fontRasterHints:hint,
+    warning:'Canvas comparisons are indicative only. Chrome DevTools > Fonts shows actual rendered fonts. No external fonts are downloaded.'};
+}
+window.JFReaderPrintDiagnostics=jfDeskPrintDiagnostics;
 function jfApplyTextReadingPrefs(){
   jfDeskFont=jfDeskPrefs.font;
   jfReadText.style.fontSize=jfDeskFont+'px';
@@ -1938,6 +1984,32 @@ function jfDeskStackForProgress(value){
 // the sheet colour. No blend mode can hide that difference: multiply keeps it,
 // darken keeps whichever side is darker. The only honest fix is to key the
 // backing out at the pixel level, once per image, and keep the result.
+// Return a conservative border orientation. Only samples matching warm,
+// high-value photographic *margins* are softened. Dark caption bands, picture
+// detail and already-transparent images never get a blanket four-sided mask.
+function jfDeskPalePlateEdges(px,w,h){
+  if(w<80||h<80)return '';
+  const sample=(x,y)=>{
+    const at=(Math.max(0,Math.min(h-1,y))*w+Math.max(0,Math.min(w-1,x)))*4;
+    const r=px[at],g=px[at+1],b=px[at+2],a=px[at+3];
+    return a>=230&&(.299*r+.587*g+.114*b)>=215&&
+      Math.max(r,g,b)-Math.min(r,g,b)<=58;
+  };
+  const sx=Math.max(1,Math.round(w*.019));
+  const sy=Math.max(1,Math.round(h*.019));
+  let left=0,right=0,top=0,bottom=0;
+  const count=24;
+  for(let n=0;n<count;n++){
+    const x=Math.floor((n+.5)*w/count),y=Math.floor((n+.5)*h/count);
+    if(sample(0,y)&&sample(sx,y))left++;
+    if(sample(w-1,y)&&sample(w-1-sx,y))right++;
+    if(sample(x,0)&&sample(x,sy))top++;
+    if(sample(x,h-1)&&sample(x,h-1-sy))bottom++;
+  }
+  const x=left/count>=.75&&right/count>=.75;
+  const y=top/count>=.75&&bottom/count>=.75;
+  return x&&y?'xy':x?'x':y?'y':'';
+}
 const jfDeskPlateDone=new WeakSet();
 function jfDeskKnockOutPlate(img){
   if(!img||jfDeskPlateDone.has(img))return;
@@ -1961,7 +2033,15 @@ function jfDeskKnockOutPlate(img){
     }
     // Only plates with a large pale field are keyed; photos that bleed to the
     // edge keep their own tone, and line art on white is exactly the target.
-    if(pale/total<0.22){img.dataset.jfPlate='skip';return;}
+    if(pale/total<0.22){
+      // Never fade an opaque photographic border unless multiple edge samples
+      // confirm pale paper all the way 1.9% into those particular sides.
+      img.dataset.jfPlate='skip';
+      const edge=jfDeskPalePlateEdges(px,c.width,c.height);
+      if(edge)img.dataset.jfPlateEdge=edge;
+      else delete img.dataset.jfPlateEdge;
+      return;
+    }
     for(let i=0;i<px.length;i+=4){
       const l=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
       if(l>=234){px[i+3]=0;}
@@ -1979,6 +2059,27 @@ function jfDeskKnockOutPlates(root){
   for(const img of root.querySelectorAll('img:not([data-jf-plate])'))jfDeskKnockOutPlate(img);
 }
 
+// v7.71 · A full-page plate is different from a prose page which merely owns
+// an illustration. Classify the already-paginated blocks without rewriting or
+// remeasuring any of them; body paragraphs and captions stay untouched.
+function jfDeskIsPlateOnlyPage(page){
+  if(!Array.isArray(page)||page.length<1||page.length>2)return false;
+  let images=0;
+  for(const block of page){
+    const node=block?.node;
+    if(!node)return false;
+    const count=(node.tagName==='IMG'?1:(node.querySelectorAll?.('img').length||0));
+    if(count>1)return false;
+    images+=count;
+    if(images>1)return false;
+    const text=(node.textContent||'').trim();
+    if(count){
+      const caption=(node.querySelector?.('figcaption')?.textContent||'').trim();
+      if(text.length>100||(text&&(!caption||text!==caption)))return false;
+    }else if(!jfDeskIsCaption(node))return false;
+  }
+  return images===1;
+}
 function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -1986,6 +2087,10 @@ function jfDeskPagedRender(direction){
   const right=document.getElementById('jfSheetRight');
   const pageA=jfDeskPages[jfDeskPageIndex]||[];
   const pageB=twoPages?(jfDeskPages[jfDeskPageIndex+1]||[]):[];
+  // Pure photo pages receive an optical centre without altering page-engine
+  // measurements; a chapter ending with one photo no longer hugs the top.
+  left.parentElement.classList.toggle('jf-plate-only',jfDeskIsPlateOnlyPage(pageA));
+  right.parentElement.classList.toggle('jf-plate-only',jfDeskIsPlateOnlyPage(pageB));
   // One deterministic texture group per real two-page spread, not guessed parity.
   if(window.JFPaperTextures){
     const paper=window.JFPaperTextures,bookId=jfDeskBook?.id;
