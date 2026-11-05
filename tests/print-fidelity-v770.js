@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+'use strict';
+// Print layout contract: browser testing is separately required for glyph raster.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.join(__dirname,'..');
+const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
+const js=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
+const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
+const paper=fs.readFileSync(path.join(root,'src/client/scripts/98e-paper-textures.js'),'utf8');
+const marker='/* ===== v7.70 · 纸上墨韵';
+const index=css.indexOf(marker);
+assert(index>0,'v7.70 canonical typography section');
+const s=css.slice(index);
+assert(!s.includes('v7.69 · PRINT TYPE'),'v7.69 terminal overrides consolidated');
+assert(s.includes('.jfReader.paged #jfPageView .jfSheetBody{'),'shared paged measurement and painting selector');
+assert(js.includes("jfMeasureHost.className='jfPageMeasure jfSheetBody'"),'measurement host uses same body class');
+assert(js.includes("holder.className='jfSheetBody'"),'book-wide census shares typography');
+assert(js.includes("view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]"),'font control applies to book');
+assert(s.includes("font-family:var(--jf-read-family,"),'user font choice retained');
+assert(s.includes("line-height:1.76")&&s.includes("letter-spacing:0;"),'controlled body rhythm');
+assert(s.includes('letter-spacing:normal!important;'),'EPUB paragraph letter spacing neutralized');
+assert(s.includes('text-align:justify')&&s.includes('text-align-last:auto'),'normal Chinese printed text');
+assert(s.includes("color:#4d3b29")&&s.includes('text-shadow:none'),'crisp warm ink without haze');
+assert(s.includes('mix-blend-mode:multiply'),'ink interacts with photographed paper');
+assert(s.includes(":not(:has(img,picture,svg,canvas,video,object))"),'photo-owning blocks excluded from pigment blend');
+assert(s.includes("img:not([data-jf-plate='done'])"),'only unkeyed photographs get subtle edge blending');
+assert(s.includes('.jfSheetBody>.jfPrintImprint{'),'CIP rights and metadata still formatted separately');
+assert(engine.includes('range.cloneContents()')&&engine.includes('wrapper=el.cloneNode(false)'),'pagination split preserves inline HTML');
+assert(js.includes('jfDeskPageForAnchor(jfDeskPages,number'),'reading anchor restore stays intact');
+assert(paper.includes('textures.length!==16'),'all 16 approved paired WebPs intact');
+assert(!s.includes('filter:blur(')&&!s.includes('background-image:url('),'no fake paper/font filters');
+const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+assert.equal(pkg.version,'7.70.0');
+console.log('PASS v7.70: font parity, text rhythm, photo exclusion, CIP, anchor and 16 WebPs');

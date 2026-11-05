@@ -2634,12 +2634,12 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 }
 
 
-/* ===== v7.69 · PRINT TYPE / measured ink on photographed paper =============
-   The page engine measures clones in .jfPageMeasure.jfSheetBody. Always target
-   BOTH that host and the visible .jfSheetBody with the same geometry styles.
-   Avoid blur, texture-masking glyphs and per-letter animation: a genuine
-   printed look comes from Song type, compact leading and ink interacting
-   with the scanned fibre under it. */
+/* ===== v7.70 · 纸上墨韵 · print-density and rhythm ==========================
+   An EPUB "book" should not look like translucent UI letters pasted over
+   a photograph. Printed Chinese needs solid warm ink and a predictable Song
+   face; the scanned page provides the irregular fibre, not noisy CSS text.
+   All layout rules address .jfSheetBody, shared by the hidden pagination
+   probe and both visible leaves. No changes to ink/figures in other readers. */
 .jfReader.paged #jfPageView .jfSheetBody{
   font-family:var(--jf-read-family,
     'Source Han Serif SC','Noto Serif CJK SC','Noto Serif SC',
@@ -2649,73 +2649,94 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   font-kerning:normal;
   font-optical-sizing:auto;
   font-variant-east-asian:normal;
-  line-height:1.72;
-  letter-spacing:.002em;
+  line-height:1.76;
+  letter-spacing:0;
+  word-spacing:normal;
   text-align:justify;
   text-align-last:auto;
-  text-justify:inter-ideograph;
+  text-justify:auto;
+  line-break:strict;
   word-break:normal;
   overflow-wrap:break-word;
-  line-break:strict;
   hyphens:none;
 }
+/* Remove inherited EPUB letter spacing from normal paragraphs only, preserving
+   deliberate heading typography and inline bold/emphasis. The same selector
+   is active in both the measurement host and the visible sheet. */
+.jfReader.paged #jfPageView .jfSheetBody>p,
+.jfReader.paged #jfPageView .jfSheetBody>p :is(span,font,em,strong,b,i){
+  letter-spacing:normal!important;
+  word-spacing:normal!important;
+}
 .jfReader.paged #jfPageView .jfSheetBody>p{
-  margin:0 0 .48em;
+  margin:0 0 .54em;
   orphans:2;widows:2;
 }
 .jfReader.paged #jfPageView .jfSheetBody>h1,
 .jfReader.paged #jfPageView .jfSheetBody>h2,
 .jfReader.paged #jfPageView .jfSheetBody>h3{
-  font-weight:550;
+  font-weight:600;
   letter-spacing:.012em;
   line-height:1.48;
-  margin:.95em 0 .5em;
+  margin:.88em 0 .55em;
+  text-align:start;
 }
 .jfReader.paged #jfPageView .jfSheetBody>h1:first-child,
 .jfReader.paged #jfPageView .jfSheetBody>h2:first-child,
 .jfReader.paged #jfPageView .jfSheetBody>h3:first-child{margin-top:0}
+/* Photographic plates are atomic to the pagination engine. This rule only
+   adjusts surrounding whitespace, not their size, decode, blend or pixels. */
 .jfReader.paged #jfPageView .jfSheetBody>figure{
-  margin:.82em 0 .7em;
+  margin:.92em 0 .76em;
 }
 .jfReader.paged #jfPageView .jfSheetBody figcaption{
-  font-size:.78em;
-  font-weight:400;
-  line-height:1.57;
-  letter-spacing:.008em;
+  font-size:.80em;
+  line-height:1.54;
   text-indent:0;
-  margin:.52em auto 0;
+  letter-spacing:normal;
+  margin:.5em auto 0;
+  font-weight:400;
+  text-align:center;
 }
-/* The warm text has a slightly translucent print-density so paper variation
-   is seen THROUGH the ink. Multiply affects only text-bearing blocks; never
-   apply it to figures, plate images, SVGs or the whole sheet. */
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody{
-  color:rgba(67,52,36,.93);
+  /* Opaque printing pigment restores crisp strokes: paper grain belongs in
+     the photographed background, not in semi-transparent font antialiasing. */
+  color:#4d3b29;
   text-rendering:optimizeLegibility;
-  text-shadow:.13px .18px 0 rgba(46,32,19,.10);
+  text-shadow:none;
 }
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody >
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody>
   :is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table):not(:has(img,picture,svg,canvas,video,object)){
   mix-blend-mode:multiply;
 }
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody figcaption{
-  color:rgba(94,76,54,.87);
-  opacity:1;
+  color:#79644a;
   mix-blend-mode:multiply;
+  opacity:1;
   text-shadow:none;
 }
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody
-  :is(strong,b){font-weight:600}
-/* CIP/edition blocks keep their separate metadata rhythm and left alignment.
-   This remains in the measurement host as well as in the visible leaf. */
 .jfReader.paged #jfPageView .jfSheetBody>.jfPrintImprint{
+  text-align:start;
+  text-justify:auto;
+  text-indent:0!important;
   font-size:.94em;
-  line-height:1.69;
-  letter-spacing:0;
-  margin-bottom:.42em;
+  line-height:1.71;
+  letter-spacing:normal!important;
+  margin:0 0 .44em;
 }
 .jfReader.paged #jfPageView .jfSheetBody>.jfPrintImprintLead{
-  letter-spacing:.012em;
-  margin-bottom:.66em;
+  letter-spacing:.012em!important;
+  margin-bottom:.65em;
 }
-/* Keep the original printed photographs (already pixel-keyed and blended by
-   v7.60) untouched. Do not add a new overlay across text or photos. */
+/* The photo keying done in jfDeskKnockOutPlates is asynchronous, and images
+   without a successfully keyed pale backing remain opaque. Lightly feather
+   the outermost 1.5% of those only, avoiding box-like scan boundaries.
+   Do NOT feather successfully alpha-keyed plates; preserve their silhouettes. */
+@supports (mask-image:linear-gradient(black,transparent)){
+  .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody img:not([data-jf-plate='done']){
+    -webkit-mask-image:linear-gradient(to right,transparent 0%,#000 1.6%,#000 98.4%,transparent 100%);
+    mask-image:linear-gradient(to right,transparent 0%,#000 1.6%,#000 98.4%,transparent 100%);
+  }
+}
+/* Explicitly keep the designated WebP 16-image paper on its own pseudolayer:
+   no background replacement, image raster modification or extra overlays. */
