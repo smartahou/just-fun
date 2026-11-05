@@ -84,7 +84,7 @@ def main():
                 page.on('pageerror', lambda e: errors.append(str(e)))
                 page.goto(url, wait_until='domcontentloaded')
                 page.wait_for_function("typeof jfDeskOpenReader === 'function'")
-                page.evaluate('(id) => jfDeskOpenReader(id, 0)', book['id'])
+                page.evaluate('(id) => jfDeskOpenReader(id, 1)', book['id'])
                 page.wait_for_function("() => jfDeskOutline?.format === 'EPUB'")
                 assert page.evaluate("() => jfDeskOutline.toc.length") == 2
                 assert page.evaluate("() => jfDeskOutline.annotations.length") == 1
