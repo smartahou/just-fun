@@ -2773,3 +2773,47 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 }
 /* Explicitly keep the designated WebP 16-image paper on its own pseudolayer:
    no background replacement, image raster modification or extra overlays. */
+
+/* ===== v7.72 · inline historic glyphs & two-photo plates ====================
+   A rare character stored as an EPUB bitmap is not a photographic illustration.
+   Source DOM is tagged before pagination (after image decode); all page blocks,
+   font measurement, visible sheets and anchors use exactly that same markup.
+   Keep it on the baseline as a single Chinese character, never display:block. */
+.jfReader.paged #jfPageView .jfSheetBody img.jfInlineGlyph{
+  display:inline-block!important;
+  position:static!important;
+  width:auto!important;
+  height:1em!important;
+  max-width:1.25em!important;
+  max-height:1.04em!important;
+  min-width:0!important;
+  margin:0 .025em!important;
+  padding:0!important;
+  vertical-align:-.11em!important;
+  object-fit:contain!important;
+  mix-blend-mode:multiply!important;
+  filter:none!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+/* Pages consisting entirely of two photo/caption groups are optically centred
+   within the existing inner book margin. Ordinary text+picture spreads and
+   chapter endings keep their original layout. Safe centring never overflows
+   the book's inner content box when the two plates nearly fill it. */
+.jfReader.paged #jfPageView .jfSheet.jf-plate-gallery .jfSheetBody{
+  display:flex;
+  flex-direction:column;
+  justify-content:safe center;
+  align-items:stretch;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-plate-gallery .jfSheetBody > *{
+  flex:0 0 auto;
+  max-width:100%;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-plate-gallery .jfSheetBody > :is(figure,p,div){
+  width:100%;
+  margin-top:.38em;
+  margin-bottom:.38em;
+}

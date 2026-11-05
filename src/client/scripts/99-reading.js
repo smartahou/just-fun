@@ -1798,7 +1798,45 @@ function jfDeskDecorateImprintBlock(node,chapter,isImprint,originalIndex){
     node.classList.add('jfPrintImprintLead');
   return node;
 }
+// v7.72 · Some EPUBs use tiny raster images for an uncommon Han character.
+// Their <img> has no trusted width/height (the EPUB sanitizer removes those),
+// and the regular book-photo rule display:block centred them like giant plates.
+// Require small square intrinsic pixels *and* text on both sides in one paragraph.
+// Never rewrite text or the EPUB image: the entire paragraph stays atomic in the
+// page engine so a glyph cannot be duplicated/dropped at a Range split.
+function jfDeskIsInlineGlyphShape(width,height,before,after){
+  if(!Number.isFinite(width)||!Number.isFinite(height)||
+     width<8||height<8||width>160||height>160)return false;
+  const ratio=width/height;
+  if(ratio<.58||ratio>1.72)return false;
+  const left=String(before||'').replace(/[\s\u00a0\u3000]/g,'');
+  const right=String(after||'').replace(/[\s\u00a0\u3000]/g,'');
+  if(left.length<2||right.length<1||left.length+right.length<7)return false;
+  return /[\u3400-\u9fff]/.test(left+right);
+}
+function jfDeskMarkInlineGlyphs(root){
+  if(!root?.querySelectorAll||!document.createRange)return;
+  for(const img of root.querySelectorAll('img')){
+    if(img.classList?.contains('jfInlineGlyph'))continue;
+    if(img.closest?.('figure,figcaption,table,pre'))continue;
+    const paragraph=img.closest?.('p,li,blockquote');
+    if(!paragraph||paragraph.querySelectorAll('img').length!==1)continue;
+    try{
+      const range=document.createRange();
+      range.selectNodeContents(paragraph);range.setEndBefore(img);
+      const before=range.toString();
+      range.selectNodeContents(paragraph);range.setStartAfter(img);
+      const after=range.toString();
+      if(!jfDeskIsInlineGlyphShape(img.naturalWidth,img.naturalHeight,before,after))continue;
+      img.classList.add('jfInlineGlyph');
+      img.dataset.jfInlineGlyph='1';
+    }catch{} // invalid book DOM must never stop the reader
+  }
+}
 function jfDeskBlocksFor(sec){
+  // This runs after image decode in both normal paging and the book census.
+  // The same inline-vs-plate classification is copied into measured blocks.
+  jfDeskMarkInlineGlyphs(sec.el);
   const raw=Array.prototype.slice.call(sec.el.children);
   const blocks=[];
   const imprint=jfDeskIsImprintChapter(sec.n,sec.el.textContent);
@@ -1806,7 +1844,7 @@ function jfDeskBlocksFor(sec){
   for(let k=0;k<raw.length;k++){
     const node=raw[k];
     const next=raw[k+1];
-    const carriesImage=node.querySelector&&node.querySelector('img');
+    const carriesImage=node.querySelector&&node.querySelector('img:not(.jfInlineGlyph)');
     if(next&&carriesImage&&jfDeskIsCaption(next)){
       const wrap=document.createElement('figure');
       wrap.appendChild(document.importNode(node,true));
@@ -2013,6 +2051,9 @@ function jfDeskPalePlateEdges(px,w,h){
 const jfDeskPlateDone=new WeakSet();
 function jfDeskKnockOutPlate(img){
   if(!img||jfDeskPlateDone.has(img))return;
+  // Small character bitmaps must stay legible and in the text flow. Do not
+  // transform their URL into a full-page processed photograph.
+  if(img.classList?.contains('jfInlineGlyph')){img.dataset.jfPlate='glyph';return;}
   if(!img.naturalWidth||!img.complete)return;
   if(img.dataset.jfPlate==='skip')return;
   jfDeskPlateDone.add(img);
@@ -2068,6 +2109,7 @@ function jfDeskIsPlateOnlyPage(page){
   for(const block of page){
     const node=block?.node;
     if(!node)return false;
+    if(node.classList?.contains('jfInlineGlyph')||node.querySelector?.('img.jfInlineGlyph'))return false;
     const count=(node.tagName==='IMG'?1:(node.querySelectorAll?.('img').length||0));
     if(count>1)return false;
     images+=count;
@@ -2080,6 +2122,29 @@ function jfDeskIsPlateOnlyPage(page){
   }
   return images===1;
 }
+// Two genuine photographs plus their short captions form an illustrated
+// plate, not a prose page. This is a paint-only classification after measured
+// pagination. Never center a page with ordinary narrative or glyph bitmaps.
+function jfDeskIsPlateGalleryPage(page){
+  if(!Array.isArray(page)||page.length<2||page.length>4)return false;
+  let pictures=0;
+  for(const block of page){
+    const node=block?.node;
+    if(!node||node.classList?.contains('jfInlineGlyph')||
+       node.querySelector?.('img.jfInlineGlyph'))return false;
+    const count=(node.tagName==='IMG'?1:(node.querySelectorAll?.('img').length||0));
+    if(count>1)return false;
+    if(count===0){
+      if(!jfDeskIsCaption(node))return false;
+      continue;
+    }
+    const content=(node.textContent||'').trim();
+    const caption=(node.querySelector?.('figcaption')?.textContent||'').trim();
+    if(content.length>100||(content&&(!caption||content!==caption)))return false;
+    pictures++;
+  }
+  return pictures===2;
+}
 function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -2091,6 +2156,8 @@ function jfDeskPagedRender(direction){
   // measurements; a chapter ending with one photo no longer hugs the top.
   left.parentElement.classList.toggle('jf-plate-only',jfDeskIsPlateOnlyPage(pageA));
   right.parentElement.classList.toggle('jf-plate-only',jfDeskIsPlateOnlyPage(pageB));
+  left.parentElement.classList.toggle('jf-plate-gallery',jfDeskIsPlateGalleryPage(pageA));
+  right.parentElement.classList.toggle('jf-plate-gallery',jfDeskIsPlateGalleryPage(pageB));
   // One deterministic texture group per real two-page spread, not guessed parity.
   if(window.JFPaperTextures){
     const paper=window.JFPaperTextures,bookId=jfDeskBook?.id;
