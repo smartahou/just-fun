@@ -377,6 +377,9 @@ async function jfDeskOpenReader(bookId,chapter){
 // Excerpt offsets stay per-chapter: the anchor is computed inside the section that
 // owns the selection, which keeps the stored format compatible with older notes.
 let jfDeskFlow=[],jfDeskFlowBusy=false,jfDeskBackfillBusy=false;
+// While a saved position is being restored only the restore routine may prepend
+// chapters. Anything else inserts content above the anchor and moves the reader.
+let jfDeskRestoring=false,jfDeskRestoreTimer=0;
 // Cover/blank EPUB front matter stays in the archive and continuous scroll,
 // but should not be a page of the simulated paper book.
 function jfDeskPaperOmittedChapter(n){
@@ -438,7 +441,8 @@ async function jfDeskFlowAppend(n){
   if(jfDeskPaged)jfDeskPagedLayout(true,'append');
   return true;
 }
-async function jfDeskFlowPrepend(n){
+async function jfDeskFlowPrepend(n,{keepScroll=false,fromRestore=false}={}){
+  if(jfDeskRestoring&&!fromRestore)return false;
   if(jfDeskPaperOmittedChapter(n))return false;
   const html=await jfDeskFlowFetchOnce(n);
   if(html===false)return false;
@@ -447,7 +451,8 @@ async function jfDeskFlowPrepend(n){
   const before=jfReadCenter.scrollHeight,top=jfReadCenter.scrollTop;
   jfReadText.prepend(sec);
   jfDeskFlow.unshift({n,el:sec});
-  jfReadCenter.scrollTop=top+(jfReadCenter.scrollHeight-before);
+  // The restore routine places the reader itself; compensating here would fight it.
+  if(!keepScroll)jfReadCenter.scrollTop=top+(jfReadCenter.scrollHeight-before);
   // Wait until the page list has been atomically replaced before a boundary
   // navigation uses it; the old fire-and-forget path raced the next click.
   if(jfDeskPaged)await jfDeskPagedLayout(true,'prepend');
@@ -477,6 +482,14 @@ function jfDeskFlowVisible(){
 }
 async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null){
   number=jfDeskPaperFirstReadable(number);
+  // A plain open must keep prefetching immediately or the reader cannot scroll;
+  // only restoring a stored offset needs the lock.
+  const restoring=Number.isFinite(scroll)&&scroll>0;
+  if(restoring){
+    jfDeskRestoring=true;
+    clearTimeout(jfDeskRestoreTimer);
+    jfDeskRestoreTimer=setTimeout(()=>{jfDeskRestoring=false;},2600);
+  }
   const epoch=++jfDeskEpoch;
   jfDeskFlowReset();
   jfReadText.replaceChildren();
@@ -514,9 +527,42 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null){
   // Prefetch used to run before this and inserted sections mid-measurement,
   // which is what produced the visible jump on every open.
   jfReadCenter.style.visibility='hidden';
-  const settle=()=>{
+  const settle=async()=>{
     if(epoch!==jfDeskEpoch)return;
     const box=jfReadCenter.getBoundingClientRect();
+    if(restoring){
+      // The saved offset is only reachable if the content above it exists. Mount
+      // previous chapters until the column is tall enough, then place the reader.
+      let prev=number-1,guard=0;
+      while(jfReadCenter.scrollHeight<jfReadCenter.clientHeight+scroll+8&&prev>=0&&guard<10){
+        guard++;
+        if(jfDeskPaperOmittedChapter(prev)){prev--;continue;}
+        await jfDeskFlowPrepend(prev,{keepScroll:true,fromRestore:true});
+        if(epoch!==jfDeskEpoch)return;
+        prev--;
+      }
+      jfReadCenter.scrollTop=scroll;
+      jfReadCenter.style.visibility='';
+      jfDeskProgressSignature='';jfDeskUpdateProgress();
+      // Illustrations finish decoding after the first placement and can shorten
+      // the column again, so re-assert the offset once the layout has settled.
+      const reassert=()=>{
+        if(epoch!==jfDeskEpoch)return;
+        if(Math.abs(jfReadCenter.scrollTop-scroll)>6)jfReadCenter.scrollTop=scroll;
+      };
+      setTimeout(reassert,260);
+      setTimeout(reassert,900);
+      setTimeout(()=>{if(epoch===jfDeskEpoch)jfDeskRestoring=false;},700);
+      (async()=>{
+        for(let i=1;i<=JF_FLOW_AHEAD;i++){
+          const n=number+i;
+          if(n>=jfDeskOutline.chapters.length)break;
+          if(jfDeskBook?.id!==bookId)break;
+          await jfDeskFlowAppend(n);
+        }
+      })().catch(()=>{});
+      return;
+    }
     const r=first.getBoundingClientRect();
     jfReadCenter.scrollTop=Math.max(0,jfReadCenter.scrollTop+(r.top-box.top)+ratio*r.height);
     jfReadCenter.style.visibility='';
@@ -533,6 +579,7 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null){
   requestAnimationFrame(()=>requestAnimationFrame(settle));
 }
 function jfDeskFlowOnScroll(){
+  if(jfDeskRestoring)return;
   if(jfDeskPaged||jfReadMaskEnabled||!jfDeskFlow.length||jfDeskFlowBusy)return;
   const total=jfDeskOutline?.chapters.length||0;
   if(!total)return;

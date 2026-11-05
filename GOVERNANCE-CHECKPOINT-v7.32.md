@@ -1356,3 +1356,57 @@ sidecar 图片 → 否则若 `ext!=='PDF'` 就 `204` 空响应。EPUB 走到这�
 
 这一轮让**保存变对了**（章节正确、冲突可重试、关闭不再失败），
 但**恢复仍然不准**。所有者要的「进入即上次位置」没有达成。
+
+## v7.64 · 阅读进度：精确恢复 + 零跳动
+
+### 两个真根因（都不是我以为的那个）
+
+**1. `visibility:hidden` 让 `scrollTop` 赋值静默失效。**
+为了消除进入时的闪烁，我给阅读容器设了 `visibility:hidden`，然后再设置 `scrollTop`。
+实测：`sh=2427, ch=726, want=1092` —— 空间明明够，但 `placed st=0`，赋值被直接丢弃。
+Chromium 不允许对 `visibility:hidden` 的元素设置滚动位置。改成 `opacity:0`（不影响布局与滚动）。
+
+**2. 恢复期间有别的代码在改这个位置。**
+放置位置会触发 scroll 事件 → `jfDeskFlowOnScroll` 判断需要预取 → `jfDeskFlowPrepend`
+在上方插入章节 → `scrollHeight` 变化 → 位置被改写。一帧之内有四条路径在动 `scrollTop`。
+
+### 解法：一个真正的临界区
+
+新增 `jfDeskRestoring` 门控，**只在需要恢复位置时**上锁（普通打开不上锁，否则预取被挡、
+用户打不开就滚不动——这是我中途引入的回归，被 `epub-render-v732` 当场抓住）：
+
+```js
+const restoring = Number.isFinite(scroll) && scroll > 0;
+if (restoring) jfDeskRestoring = true;   // 2600ms 兜底自动释放
+```
+
+锁住的范围：
+- `jfDeskFlowOnScroll` 直接 return（不触发预取判断）
+- `jfDeskFlowPrepend` 拒绝执行，除非调用方带 `fromRestore:true`
+- `jfDeskFlowAppend` **不上锁**——底部追加不影响 `scrollTop`，且阅读必须能继续
+
+### 恢复流程
+
+1. 从目标章向上 `prepend` 前置章节，直到 `scrollHeight ≥ clientHeight + scroll`
+   （跳过 `paperOmit` 的封面/空白章，否则第一步就断在封面）；
+2. 设置 `scrollTop = saved.scroll`；
+3. **二次校正**：260ms 与 900ms 各再断言一次——插图解码后列高会变，会被再次 clamp；
+4. 700ms 后释放锁，恢复预取。
+
+### 实测（同一本书，三个阅读深度）
+
+| 深度 | 保存 | 恢复 | 误差 | 最大回跳 |
+| --- | --- | --- | --- | --- |
+| 30% | 510 | 510 | **0** | **0px** |
+| 60% | 1436 | 1436 | **0** | **0px** |
+| 85% | 2785 | 2785 | **0** | **0px** |
+
+恢复后继续滚动正常（+300px 生效）。
+
+### 回归
+
+`paged-correctness-v736` 10/10、`paged-no-skip-v737` 6/6、
+`paged-typography-v733` 11/11、`epub-render-v732` **42/42**、`paper-perf-v747` 通过。
+
+`epub-render-v732` 在实现过程中抓到过两次真实回归（预取被 gate 挡住、gate 泄漏），
+都已修复。
