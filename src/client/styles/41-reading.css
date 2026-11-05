@@ -2693,9 +2693,8 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   text-rendering:optimizeLegibility;
   text-shadow:.13px .18px 0 rgba(46,32,19,.10);
 }
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody>
-  :is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table)
-  :not(:has(img,picture,svg,canvas,video,object)){
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody >
+  :is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table):not(:has(img,picture,svg,canvas,video,object)){
   mix-blend-mode:multiply;
 }
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody figcaption{

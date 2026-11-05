@@ -21,6 +21,7 @@ assert(print.includes('margin:0 0 .48em'),'traditional paragraph rhythm');
 assert(print.includes('text-align:justify')&&print.includes('text-align-last:auto'),'Chinese print justification');
 assert(print.includes('color:rgba(67,52,36,.93)'),'warm translucent printed pigment');
 assert(print.includes('mix-blend-mode:multiply'),'paper fibres interact with text');
+assert(print.includes(':is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table):not(:has('),'text-only exclusion attaches to the block itself, not a descendant');
 assert(print.includes(':not(:has(img,picture,svg,canvas,video,object))'),'photographs never subject to text-only blending');
 assert(print.includes('.jfSheetBody figcaption{'),'captions have book-specific typographic rhythm');
 assert(print.includes('.jfSheetBody>.jfPrintImprint{'),'CIP overrides preserved');
