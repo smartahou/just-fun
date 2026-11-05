@@ -1,4 +1,4 @@
-// v7.48 · Paired antique-paper spread renderer; exactly 8 left/right WebP pairs.
+// v7.53 · User-approved 8 matched left/right WebP pairs. Render originals, no radial wash.
 (function(){
   'use strict';
   const textures=__JUSTFUN_PAPER_SPREAD_ASSETS__;
@@ -88,7 +88,7 @@
         const side=n?'right':'left';
         rules+='.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="'
           +String(i+1).padStart(2,'0')+'"][data-paper-side="'+side+'"]::after'
-          +'{background-image:radial-gradient(ellipse 90% 84% at 50% 48%,rgba(246,246,242,.94) 0%,rgba(245,245,240,.88) 45%,rgba(246,242,231,.36) 80%,rgba(246,242,231,.03) 100%),url("'+textures[i*2+n]+'")!important;}';
+          +'{background-image:url("'+textures[i*2+n]+'")!important;}';
       }
     }
     el.textContent=rules;document.head.appendChild(el);
