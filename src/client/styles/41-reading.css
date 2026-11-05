@@ -2915,3 +2915,55 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged #jfPageView .jfSheetBody .jfGlyphSeamSpace{
   display:none!important;
 }
+
+/* ===== v7.77 · EPUB empty-spacer isolation / verified source collision =====
+   The app's own 00-foundation.css uses a generic .empty{padding:70px}
+   for full-screen empty-state UI. The user's original Daoguang EPUB uses
+   137 <div class="empty"></div> between ordinary paragraphs. The global
+   70px *each side* leaks into its book text, creating ~140px blank holes.
+   Limit overrides strictly to the EPUB reader; preserve all other app UI.
+   The same .jfSheetBody rule is applied to the page-engine's invisible probe
+   and the rendered paper sheets, keeping height estimates exactly aligned. */
+.jfReader.paged #jfPageView .jfSheetBody > :is(p,div).jfPrintQuietBreak{
+  display:block!important;
+  box-sizing:border-box!important;
+  margin:0 0 .43em!important;
+  padding:0!important;
+  border:0!important;
+  height:.62em!important;
+  min-height:0!important;
+  max-height:.62em!important;
+  overflow:hidden!important;
+  line-height:.62!important;
+  background:none!important;
+  color:inherit!important;
+  text-align:initial!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody > :is(p,div).jfPrintRedundantBlank{
+  display:none!important;
+  padding:0!important;
+  margin:0!important;
+}
+/* Defensive fallback if an EPUB spacer has not yet been tagged (e.g. while
+   opening): never allow application empty-state padding inside book content. */
+.jfReader.paged #jfPageView .jfSheetBody div.empty{
+  padding:0!important;
+  min-height:0!important;
+  text-align:initial!important;
+  color:inherit!important;
+}
+/* Continuous EPUB reading must be isolated as well; never affect the actual
+   empty-state placeholders elsewhere in Just Fun. */
+.jfReader .jfReadHtml div.empty{
+  box-sizing:border-box!important;
+  display:block;
+  padding:0!important;
+  margin:.08em 0 .62em!important;
+  height:.62em!important;
+  min-height:0!important;
+  max-height:.62em!important;
+  background:none!important;
+  color:inherit!important;
+  text-align:initial!important;
+  overflow:hidden!important;
+}

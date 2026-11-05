@@ -2055,8 +2055,14 @@ function jfDeskGlyphInkForSource(img){
 // in an otherwise continuous printed page. Retain the first quiet break and
 // conceal redundant consecutive blanks ONLY on page-engine clones. Their source
 // text is untouched, so reading-progress offsets remain stable.
+// v7.77 · The uploaded Daoguang EPUB uses <div class="empty"></div> to
+// signal a modest section pause (137 occurrences). It collides with the
+// application's *unscoped* .empty{padding:70px} UI placeholder rule, making
+// a single book spacer 140px high. Treat only literal empty EPUB spacers as
+// paragraph separators, without touching page-break divs or figure wrappers.
 function jfDeskIsBookBlank(node){
-  if(node?.tagName!=='P')return false;
+  const tag=node?.tagName;
+  if(tag!=='P' && !(tag==='DIV'&&node.classList?.contains('empty')))return false;
   if((node.textContent||'').replace(/[\s\u00a0\u3000\u200b\ufeff]/g,'')!=='')return false;
   if(node.querySelector?.('img,svg,picture,object,video,hr,table'))return false;
   return true;
