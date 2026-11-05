@@ -200,9 +200,13 @@ function jfReadingUpdate(body){
       ? body.offset : undefined;
     const scroll=Number.isFinite(body.scroll)&&body.scroll>=0&&body.scroll<=100000000
       ? Math.round(body.scroll) : undefined;
+    const anchorY=Number.isFinite(body.anchorY)&&body.anchorY>=-1000&&body.anchorY<=3000
+      ? Math.round(body.anchorY) : undefined;
+    const mode=body.mode==='paged'?'paged':body.mode==='flow'?'flow':undefined;
     d.progress[id]={chapter:body.chapter,ratio:body.ratio,updatedAt:Date.now(),
       ...(total===undefined?{}:{total}),...(offset===undefined?{}:{offset}),
-      ...(scroll===undefined?{}:{scroll})};
+      ...(scroll===undefined?{}:{scroll}),...(anchorY===undefined?{}:{anchorY}),
+      ...(mode===undefined?{}:{mode})};
   } else if(body.action==='note'){
     const n=body.note;
     if(!n||typeof n!=='object')throw jfReaderError(400,'笔记数据无效');

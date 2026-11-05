@@ -6,7 +6,7 @@
 .jfReadIcon{width:38px;height:38px;flex:none;display:grid;place-items:center;background:transparent;border:1px solid transparent;border-radius:11px;color:#acbfca;cursor:pointer;font:500 16px/1 system-ui}.jfReadIcon:hover{border-color:#95d5cf48;color:#e3ffff;background:#8fd7cc14}
 .jfReaderIdentity{min-width:0;display:flex;flex-direction:column;gap:3px;flex:1}.jfReaderIdentity span{font-size:9px;letter-spacing:.2em;color:#7495a4}.jfReaderIdentity strong{font-size:14px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jfReaderTools{display:flex;gap:2px;align-items:center}
-.jfReadCenter{min-height:0;flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#4d6874 transparent;scroll-behavior:smooth}
+.jfReadCenter{min-height:0;flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#4d6874 transparent;scroll-behavior:auto}
 .jfReadText{font-family:'Noto Serif SC','Songti SC','SimSun',serif;line-height:2.06;font-size:18px;font-weight:400;letter-spacing:.025em;white-space:pre-wrap;overflow-wrap:anywhere;max-width:780px;padding:clamp(36px,6vw,84px) clamp(24px,5vw,70px) 130px;margin:auto;color:inherit;outline:0;box-sizing:content-box;user-select:text}
 .jfReadText::selection,.jfReadText *::selection{background:#7cb4a47c}
 .jfReader.paper{background:#ece6d9;color:#27322e}.jfReader.paper .jfReaderHeader,.jfReader.paper .jfReadFooter{background:#e2ddd0;color:#293a34;border-color:#85927e33}.jfReader.paper .jfReadIcon,.jfReader.paper .jfReadFooter button,.jfReader.paper .jfReadFooter select{color:#36473d}.jfReader.paper .jfReaderIdentity span{color:#687d72}
@@ -2548,3 +2548,9 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 /* No physical two-page binding on a single-leaf layout. */
 .jfReader.paged #jfPageView.single .jfSheet>.jfSheetCurl,
 .jfReader.paged #jfPageView.single .jfSpineShade{display:none!important}
+
+/* v7.65 · programmatic opening/restore is never animated or briefly shown
+   at a stale position. Explicit keyboard/user-initiated smooth scrolling may
+   still request behavior:'smooth' in JavaScript. */
+.jfReader .jfReadCenter{scroll-behavior:auto!important}
+.jfReader .jfReadCenter.jf-reading-opening{opacity:0;pointer-events:none}

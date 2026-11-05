@@ -320,6 +320,8 @@ async function jfDeskOpenReader(bookId,chapter){
   jfDeskSession++;
   jfDeskInflight.clear();
   jfBooksHideDetail();
+  jfDeskRestoring=true;
+  jfReadCenter.classList.add('jf-reading-opening');
   jfReader.hidden=false;
   jfReadText.textContent='正在打开这本书…';
   jfReadText.hidden=false;document.getElementById('jfReadPdf').hidden=true;document.getElementById('jfPdfPages').hidden=true;document.getElementById('jfReadError').hidden=true;
@@ -334,6 +336,26 @@ async function jfDeskOpenReader(bookId,chapter){
     document.getElementById('jfReadFormat').textContent=outline.format+' / JUST FUN';
     const select=document.getElementById('jfReadChapters');select.replaceChildren();
     for(let i=0;i<outline.chapters.length;i++){const option=document.createElement('option');option.value=String(i);option.textContent=outline.chapters[i].title;select.append(option);}
+    // A saved paper-book position belongs to the paper-book layout. Do not
+    // interpret its chapter-local page offset as a continuous scrollTop.
+    const savedMode=jfDeskWorkspace.progress[bookId]?.mode;
+    jfDeskPaged=outline.format==='EPUB'&&savedMode==='paged';
+    jfReader.classList.toggle('paged',jfDeskPaged);
+    jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
+    const pagedButton=document.getElementById('jfReadPaged');
+    if(pagedButton){
+      pagedButton.setAttribute('aria-pressed',String(jfDeskPaged));
+      pagedButton.classList.toggle('active',jfDeskPaged);
+    }
+    // Discard page references from the previous book before measuring this one.
+    ++jfDeskPageGen;++jfDeskCensusToken;
+    jfDeskPages=[];jfDeskPageIndex=0;jfDeskPagesSig='';
+    jfDeskChapterPages.clear();jfDeskChapterPageCounts.clear();
+    if(jfDeskPaged){
+      const view=document.getElementById('jfPageView');
+      view.style.setProperty('--jf-read-font',jfDeskFont+'px');
+      view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
+    }
     jfReader.classList.toggle('jfPdfMode',!!outline.nativePdf);
     if(outline.nativePdf){
       jfReadText.hidden=true;
@@ -354,7 +376,9 @@ async function jfDeskOpenReader(bookId,chapter){
         if(epoch!==jfDeskEpoch)return;
         jfPdfJsError(bookId,pdfError);
       }
-      // Keep PDF.js scroll position restored by jfPdfJsPage; do not force scroll back to zero.
+      // PDF.js has positioned its page; reveal without a second scroll.
+      jfDeskRestoring=false;
+      jfReadCenter.classList.remove('jf-reading-opening');
     }else{
       document.getElementById('jfReadFooter').hidden=false;
       const saved=jfDeskWorkspace.progress[bookId];
@@ -364,11 +388,14 @@ async function jfDeskOpenReader(bookId,chapter){
       const start=explicit?chapter:(saved?.chapter??0);
       const ratio=explicit?0:(saved?.ratio||0);
       const savedScroll=explicit?null:(Number.isFinite(saved?.scroll)?saved.scroll:null);
+      const savedAnchorY=explicit?null:(Number.isFinite(saved?.anchorY)?saved.anchorY:null);
       await jfDeskShowChapter(Math.max(0,Math.min(outline.chapters.length-1,start)),ratio,
-        explicit?null:(saved?.offset??null),savedScroll);
+        explicit?null:(saved?.offset??null),savedScroll,savedAnchorY);
     }
-    document.getElementById('jfReadBack').focus();
-  }catch(e){if(epoch!==jfDeskEpoch)return;jfReadText.hidden=true;document.getElementById('jfReadError').hidden=false;
+    document.getElementById('jfReadBack').focus({preventScroll:true});
+  }catch(e){if(epoch!==jfDeskEpoch)return;
+    jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+    jfReadText.hidden=true;document.getElementById('jfReadError').hidden=false;
     document.getElementById('jfReadError').textContent='打开失败：'+e.message;}
 }
 // ---- v7.32 continuous EPUB reading -------------------------------------------
@@ -480,17 +507,13 @@ function jfDeskFlowVisible(){
   }
   return null;
 }
-async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null){
+async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null,anchorY=null){
   number=jfDeskPaperFirstReadable(number);
-  // A plain open must keep prefetching immediately or the reader cannot scroll;
-  // only restoring a stored offset needs the lock.
-  const restoring=Number.isFinite(scroll)&&scroll>0;
-  if(restoring){
-    jfDeskRestoring=true;
-    clearTimeout(jfDeskRestoreTimer);
-    jfDeskRestoreTimer=setTimeout(()=>{jfDeskRestoring=false;},2600);
-  }
   const epoch=++jfDeskEpoch;
+  const bookId=jfDeskBook.id;
+  jfDeskRestoring=true;
+  clearTimeout(jfDeskRestoreTimer);
+  jfReadCenter.classList.add('jf-reading-opening');
   jfDeskFlowReset();
   jfReadText.replaceChildren();
   jfReadText.hidden=false;
@@ -498,85 +521,106 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null){
   jfDeskChapter=number;
   jfReadRawToDisplay=null;
   jfReadHtml='';
-  const bookId=jfDeskBook.id;
   const first=jfDeskFlowSection(number,'<p class="jfEpubPending">正在载入…</p>');
   jfReadText.append(first);
   jfDeskFlow.push({n:number,el:first});
+  const alive=()=>epoch===jfDeskEpoch&&jfDeskBook?.id===bookId&&!jfReader.hidden;
+  const finish=()=>{
+    if(!alive())return;
+    jfDeskRestoring=false;
+    jfReadCenter.classList.remove('jf-reading-opening');
+    jfDeskProgressSignature='';
+    jfDeskUpdateProgress();
+  };
   try{
     const html=await jfDeskFlowFetch(number);
-    if(epoch!==jfDeskEpoch||jfDeskBook?.id!==bookId)return;
+    if(!alive())return;
     first.innerHTML=html||'<p></p>';
   }catch(e){
-    if(epoch!==jfDeskEpoch)return;
+    if(!alive())return;
     first.innerHTML='<p class="jfEpubPending">章节无法打开：'+String(e.message||e)+'</p>';
+    finish();
     return;
   }
   jfReadRawText=first.textContent;
   jfReadVisualText=jfReadRawText;
   jfReadText.classList.add('jfReadHtml');
-  // The section was mounted with a placeholder before the fetch resolved, so any
-  // cached pagination for it describes the placeholder, not the chapter.
   if(typeof jfDeskChapterPages!=='undefined')jfDeskChapterPages.delete(number);
-  if(jfDeskPaged)jfDeskPagedLayout(true);
   for(const id of ['jfReadPrev','jfReadNext'])document.getElementById(id).disabled=false;
   document.getElementById('jfReadChapters').value=String(number);
-  // Restore without letting the reader see the intermediate layout:
-  //   1) hide the column while the anchor is being resolved,
-  //   2) wait two frames so images and fonts have settled,
-  //   3) place the anchor, show the column, THEN prefetch neighbours.
-  // Prefetch used to run before this and inserted sections mid-measurement,
-  // which is what produced the visible jump on every open.
-  jfReadCenter.style.visibility='hidden';
-  const settle=async()=>{
-    if(epoch!==jfDeskEpoch)return;
-    const box=jfReadCenter.getBoundingClientRect();
-    if(restoring){
-      // The saved offset is only reachable if the content above it exists. Mount
-      // previous chapters until the column is tall enough, then place the reader.
-      let prev=number-1,guard=0;
-      while(jfReadCenter.scrollHeight<jfReadCenter.clientHeight+scroll+8&&prev>=0&&guard<10){
-        guard++;
-        if(jfDeskPaperOmittedChapter(prev)){prev--;continue;}
-        await jfDeskFlowPrepend(prev,{keepScroll:true,fromRestore:true});
-        if(epoch!==jfDeskEpoch)return;
-        prev--;
-      }
-      jfReadCenter.scrollTop=scroll;
-      jfReadCenter.style.visibility='';
-      jfDeskProgressSignature='';jfDeskUpdateProgress();
-      // Illustrations finish decoding after the first placement and can shorten
-      // the column again, so re-assert the offset once the layout has settled.
-      const reassert=()=>{
-        if(epoch!==jfDeskEpoch)return;
-        if(Math.abs(jfReadCenter.scrollTop-scroll)>6)jfReadCenter.scrollTop=scroll;
-      };
-      setTimeout(reassert,260);
-      setTimeout(reassert,900);
-      setTimeout(()=>{if(epoch===jfDeskEpoch)jfDeskRestoring=false;},700);
-      (async()=>{
-        for(let i=1;i<=JF_FLOW_AHEAD;i++){
-          const n=number+i;
-          if(n>=jfDeskOutline.chapters.length)break;
-          if(jfDeskBook?.id!==bookId)break;
-          await jfDeskFlowAppend(n);
-        }
-      })().catch(()=>{});
-      return;
+  // Keep the first paint hidden; awaiting the frame also means callers cannot
+  // inadvertently remove the opening guard before placement is complete.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  if(!alive())return;
+  if(jfDeskPaged){
+    await jfDeskPagedLayout(false,'restore');
+    if(!alive())return;
+    const valid=Number.isSafeInteger(offset)&&offset>=0;
+    jfDeskPageIndex=jfDeskPageForAnchor(jfDeskPages,number,
+      valid?offset:Math.round(Math.max(0,ratio)*Math.max(1,first.textContent.length)),
+      jfDeskPagedGeometry().two?2:1);
+    jfDeskPagedRender();
+    jfReadCenter.scrollTo({top:0,behavior:'instant'});
+    finish();
+  }else{
+    // A trailing short chapter needs following content for its last paragraph
+    // to be scrollable to the top. Mount one neighbour before measuring.
+    if(number+1<jfDeskOutline.chapters.length){
+      await jfDeskFlowAppend(number+1);
+      if(!alive())return;
     }
-    const r=first.getBoundingClientRect();
-    jfReadCenter.scrollTop=Math.max(0,jfReadCenter.scrollTop+(r.top-box.top)+ratio*r.height);
-    jfReadCenter.style.visibility='';
-    jfDeskProgressSignature='';jfDeskUpdateProgress();
-    (async()=>{
-      for(let i=1;i<=JF_FLOW_AHEAD;i++){
-        const n=number+i;
-        if(n>=jfDeskOutline.chapters.length)break;
-        if(jfDeskBook?.id!==bookId)break;
-        await jfDeskFlowAppend(n);
+    try{
+      if(document.fonts?.ready){
+        await Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,350))]);
       }
-    })().catch(()=>{});
-  };
-  requestAnimationFrame(()=>requestAnimationFrame(settle));
+    }catch{}
+    if(!alive())return;
+    const valid=Number.isSafeInteger(offset)&&offset>=0;
+    const targetY=Number.isFinite(anchorY)?Math.max(-200,Math.min(500,anchorY)):16;
+    const place=()=>{
+      if(!alive())return;
+      const box=jfReadCenter.getBoundingClientRect();
+      const range=valid?jfDeskRangeAtOffset(first,offset):null;
+      const rect=range?.getClientRects()?.[0]||null;
+      const section=first.getBoundingClientRect();
+      // Anchor text first; ratio is a fallback for old progress records,
+      // scrollTop a last-resort fallback when neither anchor nor ratio exists.
+      const absoluteTop=rect
+        ?jfDeskRestoreScrollTarget(jfReadCenter.scrollTop,rect.top,box.top,targetY)
+        :Number.isFinite(ratio)
+          ?jfDeskRestoreScrollTarget(jfReadCenter.scrollTop,section.top,box.top,
+             -Math.max(0,Math.min(1,ratio))*section.height)
+          :Math.max(0,scroll||0);
+      jfReadCenter.scrollTo({top:absoluteTop,behavior:'instant'});
+    };
+    place();
+    finish();
+    // A late image decode can change paragraph geometry. Correct the anchor
+    // only if the user has not started their own scrolling in the meantime.
+    let interrupted=false;
+    const interrupt=()=>{interrupted=true;};
+    for(const type of ['wheel','touchstart','pointerdown','keydown'])
+      jfReadCenter.addEventListener(type,interrupt,{passive:true});
+    const release=()=>{
+      for(const type of ['wheel','touchstart','pointerdown','keydown'])
+        jfReadCenter.removeEventListener(type,interrupt);
+    };
+    const reassert=()=>{
+      if(!alive()||interrupted)return;
+      place();
+    };
+    setTimeout(reassert,200);
+    setTimeout(reassert,650);
+    setTimeout(()=>{reassert();release();},1200);
+  }
+  // Prefetch happens only after the initial anchor has been placed.
+  (async()=>{
+    for(let i=1;i<=JF_FLOW_AHEAD;i++){
+      const n=number+i;
+      if(!alive()||n>=jfDeskOutline.chapters.length)break;
+      await jfDeskFlowAppend(n);
+    }
+  })().catch(()=>{});
 }
 function jfDeskFlowOnScroll(){
   if(jfDeskRestoring)return;
@@ -598,12 +642,12 @@ function jfDeskFlowOnScroll(){
     jfDeskFlowPrepend(minN-1).catch(()=>{}).finally(()=>{jfDeskFlowBusy=false;});
   }
 }
-async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null){
+async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null,anchorY=null){
   if(jfDeskOutline?.nativePdf)return jfDeskShowPdfPage(number);
   if(!jfDeskBook||!jfDeskOutline||number<0||number>=jfDeskOutline.chapters.length)return;
   number=jfDeskPaperFirstReadable(number);
   // EPUB reads as one continuous document; TXT and the mask mode keep the paged path.
-  if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio,offset,scroll);
+  if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio,offset,scroll,anchorY);
   const epoch=++jfDeskEpoch;
   try{
     const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+number);
@@ -623,11 +667,14 @@ async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null){
     const chapterSelect=document.getElementById('jfReadChapters');chapterSelect.value=String(number);
     document.getElementById('jfReadPrev').disabled=number===0;
     document.getElementById('jfReadNext').disabled=number===jfDeskOutline.chapters.length-1;
-    jfReadCenter.scrollTop=0;
+    jfReadCenter.scrollTo({top:0,behavior:'instant'});
     requestAnimationFrame(()=>{if(epoch!==jfDeskEpoch)return;
-      jfReadCenter.scrollTop=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight)*ratio;
+      jfReadCenter.scrollTo({top:Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight)*ratio,behavior:'instant'});
+      jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
       jfDeskProgressSignature='';jfDeskUpdateProgress();});
-  }catch(e){if(epoch!==jfDeskEpoch)return;jfReadText.textContent='章节无法打开：'+e.message;}
+  }catch(e){if(epoch!==jfDeskEpoch)return;
+    jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+    jfReadText.textContent='章节无法打开：'+e.message;}
 }
 // One definition of "where the reader is", used by both the progress saver and
 // the close handler. They previously computed ratio differently — chapter-local
@@ -653,64 +700,85 @@ function jfDeskRangeAtOffset(root,offset){
   }
   return null;
 }
-function jfDeskOffsetInSection(section,viewportTop){
+function jfDeskCaretInSection(section,viewportTop){
   try{
     const box=section.getBoundingClientRect();
-    // Sample inside the text column, not in the page padding: at x=left+8 the
-    // caret resolves to the section element itself and the offset would be 0.
-    const inset=Math.min(80,Math.max(16,(box.width||200)*0.12));
-    const range=document.caretRangeFromPoint(
-      Math.round(box.left+inset),Math.round(viewportTop)+3);
-    if(!range||!section.contains(range.startContainer))return null;
-    const prefix=document.createRange();
-    prefix.selectNodeContents(section);
-    prefix.setEnd(range.startContainer,range.startOffset);
-    return prefix.toString().length;
-  }catch{return null;}
+    const x=box.left+Math.min(80,Math.max(16,(box.width||200)*.12));
+    for(const dy of [5,20,42,68]){
+      const y=Math.min(viewportTop+dy,jfReadCenter.getBoundingClientRect().bottom-3);
+      const range=document.caretRangeFromPoint(Math.round(x),Math.round(y));
+      if(!range||!section.contains(range.startContainer))continue;
+      const prefix=document.createRange();
+      prefix.selectNodeContents(section);
+      prefix.setEnd(range.startContainer,range.startOffset);
+      const rect=range.getClientRects()?.[0];
+      return {offset:prefix.toString().length,
+        anchorY:rect?Math.round(rect.top-viewportTop):Math.round(y-viewportTop)};
+    }
+  }catch{}
+  return null;
+}
+function jfDeskRestoreScrollTarget(currentTop,anchorTop,viewportTop,anchorY){
+  return Math.max(0,Math.round(currentTop+(anchorTop-viewportTop)-anchorY));
 }
 function jfDeskCurrentPosition(){
-  let chapter=jfDeskChapter,ratio=0,offset=null;
+  // Printed-book pages are a separate rendering surface. The scroll container
+  // is stationary at zero and is NOT a representation of the visible page.
+  if(jfDeskPaged&&jfDeskPages.length){
+    const first=jfDeskPages[jfDeskPageIndex]?.[0];
+    if(first){
+      const chapter=first.chapter;
+      const offset=Number.isSafeInteger(first.offset)?first.offset:0;
+      const source=jfDeskFlow.find(x=>x.n===chapter)?.el;
+      const length=Math.max(1,source?.textContent?.length||1);
+      return {chapter,ratio:Math.max(0,Math.min(1,offset/length)),
+        offset,anchorY:null,scroll:null,mode:'paged'};
+    }
+  }
+  let chapter=jfDeskChapter,ratio=0,offset=null,anchorY=null;
   if(jfDeskFlow.length){
-    const vis=jfDeskFlowVisible();
-    if(vis){
-      chapter=vis.item.n;
-      const h=vis.r.height||1;
-      ratio=Math.min(1,Math.max(0,(vis.box.top-vis.r.top)/h));
-      offset=jfDeskOffsetInSection(vis.item.el,vis.box.top);
+    const visible=jfDeskFlowVisible();
+    if(visible){
+      chapter=visible.item.n;
+      ratio=Math.max(0,Math.min(1,(visible.box.top-visible.r.top)/Math.max(1,visible.r.height)));
+      const caret=jfDeskCaretInSection(visible.item.el,visible.box.top);
+      offset=caret?.offset??null;anchorY=caret?.anchorY??null;
     }
   }else{
     const max=Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight);
     ratio=max?Math.min(1,jfReadCenter.scrollTop/max):0;
   }
-  // Absolute scroll offset as the primary anchor. Chapter order never changes,
-  // so this is exact whenever the same chapters are mounted, and it needs no
-  // interpretation. ratio/offset stay for older records and as a fallback.
-  return {chapter,ratio,offset,scroll:Math.round(jfReadCenter.scrollTop)};
+  return {chapter,ratio,offset,anchorY,scroll:Math.round(jfReadCenter.scrollTop),mode:'flow'};
 }
-
 function jfDeskUpdateProgress(){
-  if(!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf||jfReader.hidden)return;
-  if(jfDeskPaged){
-    const page=jfDeskPages[jfDeskPageIndex];
-    const chapter=(page&&page[0]?page[0].chapter:jfDeskChapter);
-    const frac=page&&page.length?Math.min(.99,(jfDeskPageIndex/Math.max(1,jfDeskPages.length))):0;
-    const pct=Math.min(100,Math.round(((chapter+frac)/Math.max(1,jfDeskOutline.chapters.length))*100));
-    document.getElementById('jfReadProgress').textContent=pct+'%';
-    document.getElementById('jfReadProgressFill').style.width=pct+'%';
-    return;
-  }
+  if(!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf||jfReader.hidden||jfDeskRestoring)return;
   const here=jfDeskCurrentPosition();
   const chapter=here.chapter,ratio=here.ratio;
-  jfDeskChapter=chapter;
-  const pct=Math.round((chapter+ratio)/jfDeskOutline.chapters.length*100);
-  document.getElementById('jfReadProgress').textContent=pct+'%';
-  document.getElementById('jfReadProgressFill').style.width=pct+'%';
-  const sig=jfDeskBook.id+':'+jfDeskChapter+':'+Math.round(ratio*100);
+  if(jfDeskPaged){
+    const page=jfDeskPages[jfDeskPageIndex];
+    const fraction=page&&page.length?Math.min(.99,jfDeskPageIndex/Math.max(1,jfDeskPages.length)):0;
+    const pct=Math.min(100,Math.round(((chapter+fraction)/Math.max(1,jfDeskOutline.chapters.length))*100));
+    document.getElementById('jfReadProgress').textContent=pct+'%';
+    document.getElementById('jfReadProgressFill').style.width=pct+'%';
+  }else{
+    jfDeskChapter=chapter;
+    const pct=Math.round((chapter+ratio)/jfDeskOutline.chapters.length*100);
+    document.getElementById('jfReadProgress').textContent=pct+'%';
+    document.getElementById('jfReadProgressFill').style.width=pct+'%';
+  }
+  const sig=jfDeskBook.id+':'+here.mode+':'+chapter+':'+
+    (here.offset===null?'r'+Math.round(ratio*1000):'o'+Math.floor(here.offset/12))+
+    ':s'+Math.floor((here.scroll||0)/24);
   if(sig===jfDeskProgressSignature)return;
   jfDeskProgressSignature=sig;
   clearTimeout(jfDeskProgressTimer);
-  const bookId=jfDeskBook.id,total=jfDeskOutline.chapters.length;
-  jfDeskProgressTimer=setTimeout(()=>{jfDeskMutate({action:'progress',bookId,chapter,ratio,offset:here.offset,scroll:here.scroll,total}).catch(e=>{jfDeskMessage(e.message,true);});},900);
+  const bookId=jfDeskBook.id,total=jfDeskOutline.chapters.length,session=jfDeskSession;
+  jfDeskProgressTimer=setTimeout(()=>{
+    if(jfDeskRestoring||jfReader.hidden||jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
+    jfDeskMutate({action:'progress',bookId,chapter,ratio,
+      offset:here.offset,anchorY:here.anchorY,scroll:here.scroll,
+      mode:here.mode,total}).catch(e=>jfDeskMessage(e.message,true));
+  },900);
 }
 async function jfDeskCloseReader(){
   if(jfReader.hidden)return await jfDeskCloseNotes();
@@ -718,11 +786,14 @@ async function jfDeskCloseReader(){
   if(!await jfDeskCloseNotes())return false;
   clearTimeout(jfDeskProgressTimer);
   const book=jfDeskBook;
-  if(book&&!jfDeskOutline?.nativePdf){
+  if(book&&!jfDeskOutline?.nativePdf&&!jfDeskRestoring){
     const here=jfDeskCurrentPosition();
-    try{await jfDeskMutate({action:'progress',bookId:book.id,chapter:here.chapter,ratio:here.ratio,offset:here.offset,scroll:here.scroll,total:jfDeskOutline.chapters.length});}
+    try{await jfDeskMutate({action:'progress',bookId:book.id,chapter:here.chapter,ratio:here.ratio,
+      offset:here.offset,anchorY:here.anchorY,scroll:here.scroll,
+      mode:here.mode,total:jfDeskOutline.chapters.length});}
     catch(e){jfDeskMessage('阅读位置未保存：'+e.message,true);return false;}
   }
+  jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
   jfReadMaskEnabled=false;jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
   document.getElementById('jfPdfPages').hidden=true;
   document.getElementById('jfReadPdf').removeAttribute('src');
@@ -1777,6 +1848,20 @@ async function jfDeskPagedLayout(keepPage,reason){
   }
   jfDeskPagedRender();
 }
+function jfDeskPageForAnchor(pages,chapter,offset,step=1){
+  let found=-1,first=-1;
+  const position=Number.isSafeInteger(offset)?Math.max(0,offset):0;
+  for(let i=0;i<pages.length;i++){
+    const blocks=pages[i]||[];
+    for(const block of blocks){
+      if(block.chapter!==chapter)continue;
+      if(first<0)first=i;
+      if((block.offset||0)<=position)found=i;
+    }
+  }
+  const at=found>=0?found:first>=0?first:0;
+  return Math.floor(at/Math.max(1,step))*Math.max(1,step);
+}
 function jfDeskCurrentAnchor(){
   const page=jfDeskPages[jfDeskPageIndex];
   const first=page&&page[0];
@@ -2061,6 +2146,7 @@ function jfDeskPageTurn(delta){
   return true;
 }
 async function jfDeskPagedToggle(){
+  const position=jfDeskCurrentPosition();
   jfDeskPaged=!jfDeskPaged;
   jfReader.classList.toggle('paged',jfDeskPaged);
   jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
@@ -2074,8 +2160,8 @@ async function jfDeskPagedToggle(){
     jfReadText.style.removeProperty('--jf-page-gap');
     await jfDeskSetPref({theme:jfDeskPagedPrevTheme||'dark'});
   }
-  await jfDeskShowChapter(Math.max(0,jfDeskChapter),0);
-  if(jfDeskPaged)jfDeskPagedLayout(false);
+  await jfDeskShowChapter(Math.max(0,position.chapter),position.ratio,position.offset,
+    null,position.anchorY);
   jfDeskMessage(jfDeskPaged?'纸书翻页：← → 或点击页面左右两侧':'已返回连续滚动');
 }
 
@@ -2108,7 +2194,7 @@ document.getElementById('jfReadNotes').addEventListener('click',jfDeskOpenNotes)
 document.getElementById('jfReadMask').addEventListener('click',jfReadToggleMask);
 document.getElementById('jfReadExcerpt').addEventListener('click',jfDeskExcerpt);
 let jfDeskFlowScrollAt=0;
-jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden)return;
+jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden||jfDeskRestoring)return;
   jfDeskImmersiveOnScroll();
   if(jfDeskOutline?.nativePdf){jfPdfJsOnScroll();return;}
   if(jfDeskPaged){jfDeskUpdateProgress();return;}
