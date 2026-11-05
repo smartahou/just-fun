@@ -2455,200 +2455,96 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   box-shadow:none!important;
 }
 
-/* ===== v7.61 · the fold is a gap between two sheets, not a painted line ===
-/* What was wrong: a 1px near-black stroke down the middle, and a .34 white
-   reflection beside it. Together they read as a glowing tube, not a fold.
-   A real gutter is: two paper edges → a few px of shadowed gap → the same
-   mirrored on the other side, with the pages darkening as they curl in. */
-.jfReader.paged #jfPageView .jfSpineShade{
-  width:76px!important;
-  filter:blur(.35px);
+/* ===== v7.61 · optical curl on each physical leaf =======================
+   v7.59 painted a 26px / .80 dark bar. v7.60 made the line 42px wide and
+   restored a 2px near-black pseudo-element, still a drawn crease.
+   The old '.jfSheet background-image' curvature was HIDDEN under the approved
+   old-paper WebP (.jfSheet::after): the page could not visually curl.
+   Now an absolute, non-interactive leaf layer sits above the WebP, BELOW ink.
+   No paper asset edits, reflow, extra texture decode, animation or CSS blur. */
+.jfReader.paged #jfPageView .jfSheet{
+  isolation:isolate;
+}
+.jfReader.paged #jfPageView .jfSheet::after{
+  z-index:0!important;
+}
+.jfReader.paged #jfPageView .jfSheet>.jfSheetCurl{
+  display:block;
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:clamp(46px,11%,80px);
+  z-index:1;
+  pointer-events:none;
+  background-repeat:no-repeat;
+  filter:none;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='left']>.jfSheetCurl{
+  right:0;
+  left:auto;
   background:
-    /* the gap itself: 5px, deepest at 50%, never fully black */
+    radial-gradient(ellipse 86% 24% at 100% 0%,
+      rgba(43,29,15,.065),rgba(43,29,15,0) 94%),
+    radial-gradient(ellipse 86% 24% at 100% 100%,
+      rgba(43,29,15,.075),rgba(43,29,15,0) 94%),
     linear-gradient(90deg,
-      rgba(28,18,8,0) 46.2%,
-      rgba(32,21,11,.22) 47.6%,
-      rgba(30,19,9,.44) 48.6%,
-      rgba(24,15,7,.56) 49.6%,
-      rgba(22,14,6,.58) 50%,
-      rgba(24,15,7,.56) 50.4%,
-      rgba(30,19,9,.44) 51.4%,
-      rgba(32,21,11,.22) 52.4%,
-      rgba(28,18,8,0) 53.8%)!important,
-    /* the paper curling down towards the fold */
-    linear-gradient(90deg,
-      rgba(44,30,15,0) 0%,
-      rgba(44,30,15,.035) 14%,
-      rgba(42,28,14,.085) 28%,
-      rgba(38,25,12,.16) 39%,
-      rgba(34,22,10,.25) 46%,
-      rgba(34,22,10,.25) 54%,
-      rgba(38,25,12,.16) 61%,
-      rgba(42,28,14,.085) 72%,
-      rgba(44,30,15,.035) 86%,
-      rgba(44,30,15,0) 100%)!important,
-    /* a hairline of light on each paper edge, 1px, very low */
-    linear-gradient(90deg,
-      rgba(255,250,238,0) 44.8%,
-      rgba(255,250,238,.16) 45.6%,
-      rgba(255,250,238,0) 46.4%,
-      rgba(255,250,238,0) 53.6%,
-      rgba(255,250,238,.13) 54.4%,
-      rgba(255,250,238,0) 55.2%)!important;
-  mix-blend-mode:multiply!important;
+      rgba(37,25,14,0) 0%,
+      rgba(37,25,14,.015) 20%,
+      rgba(35,24,13,.045) 40%,
+      rgba(33,22,12,.095) 63%,
+      rgba(31,20,11,.165) 84%,
+      rgba(29,19,10,.235) 100%);
 }
-/* The bright reflection was the biggest contributor to the glow. Retire it. */
-.jfReader.paged #jfPageView .jfSpineShade::after{display:none!important}
-.jfReader.paged #jfPageView .jfSpineShade::before{display:none!important}
-
-/* ===== v7.62 · no stroke at all: just the pooled shadow of two leaves ====
-/* Every previous attempt drew a line down the middle and then tried to blur
-   it. A fold has no line: it is the place where two sheets curl away and the
-   light stops reaching. So this version drops the crease stroke entirely and
-   paints one wide, soft pool that spans both inner margins. */
+.jfReader.paged #jfPageView .jfSheet[data-side='right']>.jfSheetCurl{
+  left:0;
+  right:auto;
+  background:
+    radial-gradient(ellipse 86% 24% at 0% 0%,
+      rgba(43,29,15,.055),rgba(43,29,15,0) 94%),
+    radial-gradient(ellipse 86% 24% at 0% 100%,
+      rgba(43,29,15,.065),rgba(43,29,15,0) 94%),
+    linear-gradient(270deg,
+      rgba(37,25,14,0) 0%,
+      rgba(37,25,14,.012) 20%,
+      rgba(35,24,13,.040) 40%,
+      rgba(33,22,12,.085) 63%,
+      rgba(31,20,11,.145) 84%,
+      rgba(29,19,10,.215) 100%);
+}
+/* The main ink and folio paint over the physical curl but not under it. */
+.jfReader.paged #jfPageView .jfSheet>.jfSheetBody{z-index:2!important}
+.jfReader.paged #jfPageView .jfSheet::before{z-index:3!important}
+/* The center is a translucent occlusion pool — not a black/white stroke. */
 .jfReader.paged #jfPageView .jfSpineShade{
-  width:150px!important;
-  filter:blur(3px);
-  background:radial-gradient(ellipse 46% 96% at 50% 50%,
-      rgba(24,15,6,.38) 0%,
-      rgba(28,18,8,.30) 30%,
-      rgba(33,22,11,.20) 52%,
-      rgba(38,27,15,.11) 72%,
-      rgba(42,31,18,.04) 88%,
-      rgba(44,33,20,0) 100%)!important;
-  mix-blend-mode:multiply!important;
-}
-/* The two leaves darken as they approach the fold: this is what makes the
-   pool read as curvature rather than a smudge. Applied to the sheet itself,
-   under the type, so nothing is ever painted over the text. */
-.jfReader.paged #jfPageView .jfSheet[data-side='left']{
-  background-image:linear-gradient(270deg,
-    rgba(44,30,15,.20) 0%,
-    rgba(46,32,17,.13) 4%,
-    rgba(48,34,19,.075) 11%,
-    rgba(50,36,21,.035) 20%,
-    rgba(52,38,23,.012) 32%,
-    rgba(54,40,25,0) 46%)!important;
-}
-.jfReader.paged #jfPageView .jfSheet[data-side='right']{
-  background-image:linear-gradient(90deg,
-    rgba(44,30,15,.20) 0%,
-    rgba(46,32,17,.13) 4%,
-    rgba(48,34,19,.075) 11%,
-    rgba(50,36,21,.035) 20%,
-    rgba(52,38,23,.012) 32%,
-    rgba(54,40,25,0) 46%)!important;
-}
-
-/* ===== v7.59 · narrow and deep ===========================================
-   v7.58 spread the gutter over 150px, which read as fog rather than a fold.
-   A closed gutter is narrow: the two leaves actually meet, so the shadow is
-   20-30px at most and it is DARK at the centre. The per-leaf shading is also
-   pulled back to the first few percent, so the page itself stays clean. */
-.jfReader.paged #jfPageView .jfSpineShade{
-  width:26px!important;
-  filter:blur(1.1px);
-  background:radial-gradient(ellipse 34% 100% at 50% 50%,
-      rgba(10,6,2,.80) 0%,
-      rgba(14,9,3,.68) 26%,
-      rgba(18,12,5,.48) 46%,
-      rgba(24,16,7,.26) 66%,
-      rgba(30,21,10,.10) 84%,
-      rgba(34,25,13,0) 100%)!important;
-  mix-blend-mode:multiply!important;
-}
-/* Curl only in the last ~7% of the page: no wide grey veil over the type. */
-.jfReader.paged #jfPageView .jfSheet[data-side='left']{
-  background-image:linear-gradient(270deg,
-    rgba(36,23,10,.30) 0%,
-    rgba(40,26,12,.17) 1.6%,
-    rgba(44,30,15,.075) 4%,
-    rgba(48,34,18,.022) 7.5%,
-    rgba(52,38,22,0) 13%)!important;
-}
-.jfReader.paged #jfPageView .jfSheet[data-side='right']{
-  background-image:linear-gradient(90deg,
-    rgba(36,23,10,.30) 0%,
-    rgba(40,26,12,.17) 1.6%,
-    rgba(44,30,15,.075) 4%,
-    rgba(48,34,18,.022) 7.5%,
-    rgba(52,38,22,0) 13%)!important;
-}
-
-/* ===== v7.60 · believable book gutter / 更真实的书脊阴影 ================
-   目标不是画一条「灰中线」，而是做出纸页向书脊内凹的遮光：
-   1) 宽度 42px，避免像中间糊了一条灰布；
-   2) 中心折缝深到 .70，但只占极窄区域；
-   3) 上下端各加一道椭圆压暗，模拟书脊端部遮挡；
-   4) 右侧保留 6px 的极弱反光，像纸页卷向中缝时接到的一点光。 */
-.jfReader.paged #jfPageView .jfSpineShade{
+  width:28px!important;
   top:calc(50% - var(--jf-page-h) / 2 + 1px)!important;
   height:calc(var(--jf-page-h) - 2px)!important;
   bottom:auto!important;
-  width:42px!important;
-  border-radius:0!important;
+  z-index:4!important;
   box-shadow:none!important;
   filter:none!important;
   opacity:1!important;
   mix-blend-mode:normal!important;
   background:
-    radial-gradient(ellipse 62% 14% at 50% 2%,
-      rgba(30,19,10,.22) 0%,
-      rgba(30,19,10,.10) 48%,
-      rgba(30,19,10,0) 100%),
-    radial-gradient(ellipse 62% 14% at 50% 98%,
-      rgba(30,19,10,.24) 0%,
-      rgba(30,19,10,.10) 48%,
-      rgba(30,19,10,0) 100%),
-    radial-gradient(ellipse 74% 82% at 50% 50%,
-      rgba(22,14,7,.28) 0%,
-      rgba(24,15,8,.16) 28%,
-      rgba(30,20,11,.07) 58%,
-      rgba(36,25,14,0) 100%),
+    radial-gradient(ellipse 70% 12% at 50% 0%,
+      rgba(32,21,12,.055),rgba(32,21,12,0) 100%),
+    radial-gradient(ellipse 70% 12% at 50% 100%,
+      rgba(32,21,12,.065),rgba(32,21,12,0) 100%),
     linear-gradient(90deg,
-      rgba(20,13,6,0) 0%,
-      rgba(27,18,9,.04) 20%,
-      rgba(31,21,11,.14) 36%,
-      rgba(22,14,7,.34) 45%,
-      rgba(15,9,4,.58) 48.7%,
-      rgba(10,6,2,.70) 50%,
-      rgba(15,9,4,.58) 51.3%,
-      rgba(24,16,8,.30) 55%,
-      rgba(255,250,238,.09) 64%,
-      rgba(255,250,238,0) 74%,
-      rgba(20,13,6,0) 100%)!important;
+      rgba(29,19,11,0) 0%,
+      rgba(29,19,11,.035) 20%,
+      rgba(28,18,10,.075) 39%,
+      rgba(26,17,9,.115) 50%,
+      rgba(28,18,10,.070) 61%,
+      rgba(29,19,11,.030) 80%,
+      rgba(29,19,11,0) 100%)!important;
 }
-/* 真实折缝最深的那条极细「缝」 */
-.jfReader.paged #jfPageView .jfSpineShade::before{
-  display:block!important;
-  content:''!important;
-  position:absolute!important;
-  top:0!important;
-  bottom:0!important;
-  left:calc(50% - 1px)!important;
-  width:2px!important;
-  transform:none!important;
-  background:linear-gradient(180deg,
-    rgba(8,5,2,0) 0%,
-    rgba(8,5,2,.36) 7%,
-    rgba(8,5,2,.54) 18%,
-    rgba(8,5,2,.62) 50%,
-    rgba(8,5,2,.54) 82%,
-    rgba(8,5,2,.36) 93%,
-    rgba(8,5,2,0) 100%)!important;
-}
-/* 纸页卷向书脊时接到的一点窄反光，不要太宽、太亮 */
+.jfReader.paged #jfPageView .jfSpineShade::before,
 .jfReader.paged #jfPageView .jfSpineShade::after{
-  display:block!important;
-  content:''!important;
-  position:absolute!important;
-  top:0!important;
-  bottom:0!important;
-  left:calc(50% + 2px)!important;
-  width:6px!important;
-  background:linear-gradient(90deg,
-    rgba(255,250,238,.15) 0%,
-    rgba(255,250,238,.06) 40%,
-    rgba(255,250,238,0) 100%)!important;
-  opacity:.92!important;
+  display:none!important;
+  content:none!important;
+  background:none!important;
 }
+/* No physical two-page binding on a single-leaf layout. */
+.jfReader.paged #jfPageView.single .jfSheet>.jfSheetCurl,
+.jfReader.paged #jfPageView.single .jfSpineShade{display:none!important}
