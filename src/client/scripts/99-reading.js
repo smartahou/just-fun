@@ -320,6 +320,10 @@ async function jfDeskOpenReader(bookId,chapter){
   jfDeskSession++;
   jfDeskInflight.clear();
   jfBooksHideDetail();
+  jfDeskSyncImmersive(false);
+  // A previous popover must not remain open when another book is loaded.
+  document.getElementById('jfReadTypographyPanel').hidden=true;
+  document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded','false');
   jfDeskRestoring=true;
   jfReadCenter.classList.add('jf-reading-opening');
   jfReader.hidden=false;
@@ -784,6 +788,8 @@ function jfDeskUpdateProgress(){
 }
 async function jfDeskCloseReader(){
   if(jfReader.hidden)return await jfDeskCloseNotes();
+  // Never leave during a mode transition: its per-book setting must be durable.
+  if(jfDeskPagedSwitchPromise)await jfDeskPagedSwitchPromise;
   // Never leave the reader if a note is not durably saved.
   if(!await jfDeskCloseNotes())return false;
   clearTimeout(jfDeskProgressTimer);
@@ -796,6 +802,9 @@ async function jfDeskCloseReader(){
     catch(e){jfDeskMessage('阅读位置未保存：'+e.message,true);return false;}
   }
   jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+  jfDeskSyncImmersive(false);
+  document.getElementById('jfReadTypographyPanel').hidden=true;
+  document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded','false');
   jfReadMaskEnabled=false;jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
   document.getElementById('jfPdfPages').hidden=true;
   document.getElementById('jfReadPdf').removeAttribute('src');
@@ -1470,7 +1479,7 @@ document.getElementById('jfReadSide').addEventListener('change',e=>jfDeskSetPref
 // Opt-in only. The continuous reader stays the default; this mode lays the text
 // out as viewport-height columns and turns pages by scrolling one column at a
 // time, so there is never vertical scrolling.
-let jfDeskPaged=false,jfDeskPageIndex=0,jfDeskPagedPrevTheme='dark';
+let jfDeskPaged=false,jfDeskPageIndex=0,jfDeskPagedSwitchPromise=null;
 
 // A wide window shows a two-page spread; a narrow one shows a single page.
 // The turn step is therefore the whole visible spread, not one column.
@@ -2148,23 +2157,52 @@ function jfDeskPageTurn(delta){
   return true;
 }
 async function jfDeskPagedToggle(){
+  if(jfDeskPagedSwitchPromise)return jfDeskPagedSwitchPromise;
+  if(jfReader.hidden||jfDeskRestoring||!jfDeskBook||!jfDeskOutline||jfDeskOutline.nativePdf)return false;
+  const bookId=jfDeskBook.id,session=jfDeskSession;
+  const oldMode=jfDeskPaged;
   const position=jfDeskCurrentPosition();
-  jfDeskPaged=!jfDeskPaged;
-  jfReader.classList.toggle('paged',jfDeskPaged);
-  jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
-  const btn=document.getElementById('jfReadPaged');
-  if(btn){btn.setAttribute('aria-pressed',String(jfDeskPaged));btn.classList.toggle('active',jfDeskPaged);}
-  if(jfDeskPaged){
-    jfDeskPagedPrevTheme=jfDeskPrefs.theme;
-    await jfDeskSetPref({theme:'paper'});
-  }else{
-    jfReadText.style.removeProperty('--jf-page-w');
-    jfReadText.style.removeProperty('--jf-page-gap');
-    await jfDeskSetPref({theme:jfDeskPagedPrevTheme||'dark'});
+  const task=(async()=>{
+    jfDeskPaged=!oldMode;
+    jfReader.classList.toggle('paged',jfDeskPaged);
+    // Paper-book is a VIEW MODE, not a global theme preference. Switching one
+    // book must not silently switch every other book into the paper theme.
+    jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
+    const btn=document.getElementById('jfReadPaged');
+    if(btn){btn.setAttribute('aria-pressed',String(jfDeskPaged));btn.classList.toggle('active',jfDeskPaged);}
+    if(!jfDeskPaged){
+      jfReadText.style.removeProperty('--jf-page-w');
+      jfReadText.style.removeProperty('--jf-page-gap');
+    }
+    await jfDeskShowChapter(Math.max(0,position.chapter),position.ratio,position.offset,
+      null,position.anchorY);
+    if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return false;
+    if(jfDeskPaged&&!jfDeskPages.length)throw Error('纸书页尚未准备完成，无法保存阅读模式');
+    const here=jfDeskCurrentPosition();
+    // Save immediately, even if the user changes the view and closes without
+    // turning/scrolling. The existing Workspace progress is already per book.
+    await jfDeskMutate({action:'progress',bookId,chapter:here.chapter,
+      ratio:here.ratio,offset:here.offset,anchorY:here.anchorY,scroll:here.scroll,
+      mode:jfDeskPaged?'paged':'flow',total:jfDeskOutline.chapters.length});
+    if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return false;
+    jfDeskMessage(jfDeskPaged?'纸书翻页：← → 或点击页面左右两侧':'已返回连续滚动');
+    return true;
+  })();
+  jfDeskPagedSwitchPromise=task;
+  try{return await task;}
+  catch(error){
+    if(jfDeskSession===session&&jfDeskBook?.id===bookId){
+      jfDeskPaged=oldMode;
+      jfReader.classList.toggle('paged',oldMode);
+      jfReader.classList.toggle('paper',oldMode||jfDeskPrefs.theme==='paper');
+      const btn=document.getElementById('jfReadPaged');
+      if(btn){btn.setAttribute('aria-pressed',String(oldMode));btn.classList.toggle('active',oldMode);}
+      jfDeskMessage('阅读模式切换失败：'+(error.message||error),true);
+    }
+    return false;
+  }finally{
+    if(jfDeskPagedSwitchPromise===task)jfDeskPagedSwitchPromise=null;
   }
-  await jfDeskShowChapter(Math.max(0,position.chapter),position.ratio,position.offset,
-    null,position.anchorY);
-  jfDeskMessage(jfDeskPaged?'纸书翻页：← → 或点击页面左右两侧':'已返回连续滚动');
 }
 
 document.getElementById('jfReadTheme').addEventListener('click',()=>jfDeskSetPref({theme:jfDeskPrefs.theme==='paper'?'dark':'paper'}));
@@ -2174,15 +2212,19 @@ document.getElementById('jfReadImmersive').addEventListener('click',jfDeskImmers
 // Hides the header/footer chrome; scrolling down keeps it hidden, scrolling up
 // (or hovering the top strip) brings it back, matching the PDF reader habit.
 let jfDeskImmersive=false,jfDeskImmersiveLast=0;
-async function jfDeskImmersiveToggle(){
-  jfDeskImmersive=!jfDeskImmersive;
+function jfDeskSyncImmersive(enabled){
+  jfDeskImmersive=!!enabled;
   const btn=document.getElementById('jfReadImmersive');
   if(btn){btn.setAttribute('aria-pressed',String(jfDeskImmersive));btn.classList.toggle('active',jfDeskImmersive);}
   jfReader.classList.toggle('immersive-hidden',jfDeskImmersive);
   jfDeskImmersiveLast=jfReadCenter.scrollTop;
-  jfDeskMessage(jfDeskImmersive?'沉浸阅读：向下滚动隐藏页眉页脚，向上滚动恢复':'已退出沉浸阅读');
-  // The text box changes height, so pages must be re-measured behind the busy layer.
-  await jfDeskPagedRelayoutWithBusy('immersive');
+}
+async function jfDeskImmersiveToggle(){
+  if(jfReader.hidden)return;
+  jfDeskSyncImmersive(!jfDeskImmersive);
+  jfDeskMessage(jfDeskImmersive?'沉浸阅读：按 Esc 返回普通阅读':'已退出沉浸阅读');
+  // Only paper-book geometry needs re-measuring; continuous mode is untouched.
+  if(jfDeskPaged)await jfDeskPagedRelayoutWithBusy('immersive');
 }
 function jfDeskImmersiveOnScroll(){
   if(!jfDeskImmersive||jfReader.hidden)return;
@@ -2242,6 +2284,10 @@ document.addEventListener('keydown',event=>{
     if(!document.getElementById('jfPdfQuoteChooser').hidden){jfDeskQuoteDismiss();event.stopImmediatePropagation();event.preventDefault();return;}
     if(!document.getElementById('jfPdfCapturePanel').hidden||jfPdfJsState.capture){jfPdfJsCaptureClear();event.stopImmediatePropagation();event.preventDefault();return;}
     if(!jfNotesPanel.hidden){if(document.body.classList.contains('jfNotesMode')){document.querySelector('[data-media-kind=books]').click();}else jfDeskCloseNotes();event.stopImmediatePropagation();event.preventDefault();}
+    else if(!jfReader.hidden&&jfDeskImmersive){
+      // First Escape exits immersive reading without closing the book.
+      jfDeskImmersiveToggle();event.stopImmediatePropagation();event.preventDefault();return;
+    }
     else if(!jfReader.hidden){jfDeskCloseReader();event.stopImmediatePropagation();event.preventDefault();}
   }
 },true);
