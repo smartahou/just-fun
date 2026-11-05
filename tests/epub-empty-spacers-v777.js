@@ -22,7 +22,7 @@ function el(tag,text='',classes=[],media=false){
 assert(blank(el('DIV','',['empty'])),'real EPUB div.empty is a deliberate blank');
 assert(blank(el('P','\n \u3000')),'old P-only empty handling retained');
 assert(!blank(el('DIV','')), 'anonymous empty div might carry a page break');
-assert(!blank(el('DIV','','empty')),'plain div is not a source spacer');
+assert(!blank(el('DIV','',[])),'plain div is not a source spacer');
 assert(!blank(el('DIV','真实正文',['empty'])),'text-bearing div.empty is not suppressed');
 assert(!blank(el('DIV','',['empty'],true)),'image or other media cannot be hidden');
 assert(!blank(el('H2','',['empty'])),'chapter headings remain untouched');
