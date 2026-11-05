@@ -365,6 +365,7 @@ document.getElementById('jfPdfZoomOut').addEventListener('click',()=>jfDeskPdfSc
 document.getElementById('jfPdfZoomIn').addEventListener('click',()=>jfDeskPdfScale(jfDeskPdfZoom+.15));
 document.getElementById('jfPdfFit').addEventListener('click',()=>jfDeskPdfScale(1));
 async function jfDeskOpenReader(bookId,chapter){
+  window.JFEpubPaperTabs?.sync({enabled:false});
   jfDeskPdfClear();jfDeskPdfInfo=null;jfDeskPdfZoom=1;
   jfReadRawText='';jfReadRawToDisplay=null;jfReadVisualText='';jfReadMaskEnabled=false;jfReadHtml='';
   document.getElementById('jfReadExcerpt').disabled=false;
@@ -491,7 +492,8 @@ function jfDeskFlowSection(n,html){
   return sec;
 }
 async function jfDeskFlowFetch(n){
-  const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+n);
+  const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+n+
+    (jfDeskPaged?'&paper=1':''));
   return data.html||'';
 }
 // One in-flight fetch per (book, chapter). Without this, two concurrent callers
@@ -819,7 +821,9 @@ function jfDeskUpdateProgress(){
   if(jfDeskPaged){
     const page=jfDeskPages[jfDeskPageIndex];
     const fraction=page&&page.length?Math.min(.99,jfDeskPageIndex/Math.max(1,jfDeskPages.length)):0;
-    const pct=Math.min(100,Math.round(((chapter+fraction)/Math.max(1,jfDeskOutline.chapters.length))*100));
+    const visibleBefore=jfDeskOutline.chapters.slice(0,chapter).filter(x=>!x.paperOmit).length;
+    const visibleTotal=Math.max(1,jfDeskOutline.chapters.filter(x=>!x.paperOmit).length);
+    const pct=Math.min(100,jfDeskStackState?.progress??Math.round((visibleBefore+fraction)/visibleTotal*100));
     document.getElementById('jfReadProgress').textContent=pct+'%';
     document.getElementById('jfReadProgressFill').style.width=pct+'%';
   }else{
@@ -861,6 +865,7 @@ async function jfDeskCloseReader(){
     catch(e){jfDeskMessage('阅读位置未保存：'+e.message,true);return false;}
   }
   jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+  window.JFEpubPaperTabs?.sync({enabled:false});
   jfDeskSyncImmersive(false);
   document.getElementById('jfReadTypographyPanel').hidden=true;
   document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded','false');
@@ -2442,6 +2447,25 @@ window.JFReaderGlyphAudit=()=>{
   return {version:'7.73',pictures,abnormalText,
     note:'If anomalous glyphs remain, inspect their source element and EPUB dimensions rather than guessing CSS.'};
 };
+async function jfDeskPaperGotoToc(item){
+  if(!jfDeskPaged||jfDeskOutline?.format!=='EPUB'||!item?.available||
+     !Number.isSafeInteger(item.chapter)||item.chapter<0)return;
+  const currentBook=jfDeskBook?.id,session=jfDeskSession;
+  await jfDeskShowChapter(item.chapter,0,null);
+  if(!jfDeskPaged||jfDeskBook?.id!==currentBook||jfDeskSession!==session)return;
+  const id=String(item.fragment||'');
+  if(!id)return;
+  const at=jfDeskPages.findIndex(page=>page.some(block=>{
+    const node=block.node;
+    if(node.id===id)return true;
+    for(const el of node.querySelectorAll?.('[id]')||[])if(el.id===id)return true;
+    return false;
+  }));
+  if(at<0)return; // Invalid fragment degrades to correct chapter, never random page.
+  const step=jfDeskPagedGeometry().two&&jfDeskPages.length>1?2:1;
+  jfDeskPageIndex=Math.floor(at/step)*step;
+  jfDeskPagedRender();
+}
 function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -2511,11 +2535,12 @@ function jfDeskPagedRender(direction){
   // finishes. Before then use the *readable chapter* position, never the local
   // mounted-window array index or an unreliable extrapolated total.
   const exactProgress=book.exact&&exactNumber&&totalSheets>0;
-  const firstReadable=jfDeskPaperFirstReadable(0);
-  const readableChapters=Math.max(1,book.chapters-firstReadable);
+  const readingChapters=jfDeskOutline.chapters;
+  const readableBefore=readingChapters.slice(0,chapterOfPage).filter(x=>!x.paperOmit).length;
+  const readableChapters=Math.max(1,readingChapters.filter(x=>!x.paperOmit).length);
   const chapterFraction=chapterPages.length?inChapter/chapterPages.length:0;
   let progress=Math.max(0,Math.min(1,
-    (chapterOfPage-firstReadable+chapterFraction)/readableChapters));
+    (readableBefore+chapterFraction)/readableChapters));
   if(exactProgress){
     const pagesBetween=Math.max(1,totalSheets-Math.min(totalSheets,geo.two?2:1));
     progress=Math.max(0,Math.min(1,readPages/pagesBetween));
@@ -2569,6 +2594,13 @@ function jfDeskPagedRender(direction){
     clearTimeout(jfDeskTurnTimer);
   }
   jfDeskUpdateProgress();
+  window.JFEpubPaperTabs?.sync({
+    enabled:jfDeskPaged&&jfDeskOutline?.format==='EPUB',
+    bookId:jfDeskBook?.id,toc:jfDeskOutline?.toc,
+    annotations:jfDeskOutline?.annotations,
+    left,right,currentChapter:jfDeskChapter,
+    navigate:jfDeskPaperGotoToc
+  });
 }
 let jfDeskTurnTimer=0;
 // Page counts behind each stack thickness; diagnostics only.
@@ -2625,7 +2657,9 @@ function jfDeskPagedPrefetch(){
   if(!jfDeskFlow.length)return;
   const totalChapters=jfDeskOutline?.chapters.length||0;
   let maxN=-1;for(const item of jfDeskFlow)if(item.n>maxN)maxN=item.n;
-  if(maxN>=0&&maxN<totalChapters-1)jfDeskFlowAppend(maxN+1).catch(()=>{});
+  let next=maxN+1;
+  while(next<totalChapters&&jfDeskPaperOmittedChapter(next))next++;
+  if(next<totalChapters)jfDeskFlowAppend(next).catch(()=>{});
 }
 function jfDeskPageTurn(delta){
   if(!jfDeskPaged||jfReader.hidden)return false;
@@ -2677,6 +2711,7 @@ async function jfDeskPagedToggle(){
   const oldMode=jfDeskPaged;
   const position=jfDeskCurrentPosition();
   const task=(async()=>{
+    window.JFEpubPaperTabs?.sync({enabled:false});
     jfDeskPaged=!oldMode;
     jfReader.classList.toggle('paged',jfDeskPaged);
     window.JFPaperTextures?.syncButton();
