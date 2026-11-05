@@ -2574,3 +2574,81 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
     rgba(48,34,18,.022) 7.5%,
     rgba(52,38,22,0) 13%)!important;
 }
+
+/* ===== v7.60 · believable book gutter / 更真实的书脊阴影 ================
+   目标不是画一条「灰中线」，而是做出纸页向书脊内凹的遮光：
+   1) 宽度 42px，避免像中间糊了一条灰布；
+   2) 中心折缝深到 .70，但只占极窄区域；
+   3) 上下端各加一道椭圆压暗，模拟书脊端部遮挡；
+   4) 右侧保留 6px 的极弱反光，像纸页卷向中缝时接到的一点光。 */
+.jfReader.paged #jfPageView .jfSpineShade{
+  top:calc(50% - var(--jf-page-h) / 2 + 1px)!important;
+  height:calc(var(--jf-page-h) - 2px)!important;
+  bottom:auto!important;
+  width:42px!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  background:
+    radial-gradient(ellipse 62% 14% at 50% 2%,
+      rgba(30,19,10,.22) 0%,
+      rgba(30,19,10,.10) 48%,
+      rgba(30,19,10,0) 100%),
+    radial-gradient(ellipse 62% 14% at 50% 98%,
+      rgba(30,19,10,.24) 0%,
+      rgba(30,19,10,.10) 48%,
+      rgba(30,19,10,0) 100%),
+    radial-gradient(ellipse 74% 82% at 50% 50%,
+      rgba(22,14,7,.28) 0%,
+      rgba(24,15,8,.16) 28%,
+      rgba(30,20,11,.07) 58%,
+      rgba(36,25,14,0) 100%),
+    linear-gradient(90deg,
+      rgba(20,13,6,0) 0%,
+      rgba(27,18,9,.04) 20%,
+      rgba(31,21,11,.14) 36%,
+      rgba(22,14,7,.34) 45%,
+      rgba(15,9,4,.58) 48.7%,
+      rgba(10,6,2,.70) 50%,
+      rgba(15,9,4,.58) 51.3%,
+      rgba(24,16,8,.30) 55%,
+      rgba(255,250,238,.09) 64%,
+      rgba(255,250,238,0) 74%,
+      rgba(20,13,6,0) 100%)!important;
+}
+/* 真实折缝最深的那条极细「缝」 */
+.jfReader.paged #jfPageView .jfSpineShade::before{
+  display:block!important;
+  content:''!important;
+  position:absolute!important;
+  top:0!important;
+  bottom:0!important;
+  left:calc(50% - 1px)!important;
+  width:2px!important;
+  transform:none!important;
+  background:linear-gradient(180deg,
+    rgba(8,5,2,0) 0%,
+    rgba(8,5,2,.36) 7%,
+    rgba(8,5,2,.54) 18%,
+    rgba(8,5,2,.62) 50%,
+    rgba(8,5,2,.54) 82%,
+    rgba(8,5,2,.36) 93%,
+    rgba(8,5,2,0) 100%)!important;
+}
+/* 纸页卷向书脊时接到的一点窄反光，不要太宽、太亮 */
+.jfReader.paged #jfPageView .jfSpineShade::after{
+  display:block!important;
+  content:''!important;
+  position:absolute!important;
+  top:0!important;
+  bottom:0!important;
+  left:calc(50% + 2px)!important;
+  width:6px!important;
+  background:linear-gradient(90deg,
+    rgba(255,250,238,.15) 0%,
+    rgba(255,250,238,.06) 40%,
+    rgba(255,250,238,0) 100%)!important;
+  opacity:.92!important;
+}
