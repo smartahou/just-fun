@@ -35,4 +35,41 @@ const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.
 assert(engine.includes("if(!images[i].classList.contains('jfInlineGlyph'))return true;"),'real photos remain atomic');
 assert(engine.includes('if(imageCount!==sourceImages)continue;'),'glyph images preserved at Range split');
 assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'7.73.0');
-console.log('PASS v7.73: inline glyph and cross-paragraph context, metadata, safety and offsets');
+// Real clone-only bridge regression: 2 lost glyphs from an EPUB paragraph chain
+// must be retained exactly once, and visible text offsets remain byte-for-byte.
+function node(tag,children=[],attrs={}){
+  const values=new Set(attrs.classes||[]);
+  return {
+    tagName:tag,childNodes:children,
+    dataset:{...(attrs.dataset||{})},
+    naturalWidth:attrs.width||0,naturalHeight:attrs.height||0,
+    classList:{contains(k){return values.has(k);},add(k){values.add(k);}},
+    get textContent(){return tag==='TEXT'?attrs.text:(this.childNodes||[]).map(c=>c.textContent).join('');},
+    querySelectorAll(sel){
+      return sel==='img'?this.childNodes.flatMap(c=>c.tagName==='IMG'?[c]:(c.querySelectorAll?.('img')||[])):[];
+    },
+    querySelector(sel){return sel==='img'?this.querySelectorAll('img')[0]||null:null;},
+    appendChild(n){this.childNodes.push(n);return n;}
+  };
+}
+const words=s=>node('TEXT',[],{text:s});
+const glyph=()=>node('IMG',[],{width:44,height:48,
+  dataset:{jfGlyphBridge:'1',jfInlineGlyph:'1'},classes:['jfInlineGlyph']});
+const p=s=>node('P',[words(s)]);
+const original=[p('密诏藏于'),node('P',[glyph()]),p('匣，再将'),node('P',[glyph()]),p('匣放回乾清宫。')];
+function duplicate(el){
+  if(el.tagName==='TEXT')return words(el.textContent);
+  return node(el.tagName,el.childNodes.map(duplicate),{
+    width:el.naturalWidth,height:el.naturalHeight,dataset:el.dataset,
+    classes:el.classList.contains('jfInlineGlyph')?['jfInlineGlyph']:[]});
+}
+const merge=vm.runInNewContext(src+'\njfDeskMergeGlyphBlocks',{
+  document:{importNode:duplicate}
+});
+const result=merge(original,0);
+assert(result&&result.count===2&&result.end===4,'consecutive split glyph paragraphs are rejoined');
+assert.equal(result.node.textContent,original.map(n=>n.textContent).join(''),
+  'no content bytes lost across a 5-part EPUB paragraph');
+assert.equal(result.node.querySelectorAll('img').length,2,'both rare-character bitmaps preserved');
+assert.equal(original[0].querySelectorAll('img').length,0,'original EPUB nodes were not mutated');
+console.log('PASS v7.73: inline glyph recognition, 2-glyph DOM bridge, metadata and page integrity');
