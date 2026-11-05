@@ -15,8 +15,8 @@ function session(initial){
   const state={...initial},classes=new Set(),rules=new Map(),props={};
   const storage={getItem:k=>Object.hasOwn(state,k)?state[k]:null,setItem:(k,v)=>{state[k]=String(v);}};
   const readerEl={classList:{toggle(k,on){if(on)classes.add(k);else classes.delete(k);}},dataset:{}};
-  const button={setAttribute(k,v){props[k]=v;},title:'',getAttribute:k=>props[k]};
-  const select={};
+  const button={setAttribute(k,v){props[k]=v;},title:'',getAttribute:k=>props[k],addEventListener(){}};
+  const select={addEventListener(){}};
   const doc={
     getElementById(id){return id==='jfReader'?readerEl:
       id==='jfReadPaperAged'?button:id==='jfReadPaperWear'?select:rules.get(id)||null;},
