@@ -2632,3 +2632,91 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody :is(a,em,strong){
   color:inherit;
 }
+
+
+/* ===== v7.69 · PRINT TYPE / measured ink on photographed paper =============
+   The page engine measures clones in .jfPageMeasure.jfSheetBody. Always target
+   BOTH that host and the visible .jfSheetBody with the same geometry styles.
+   Avoid blur, texture-masking glyphs and per-letter animation: a genuine
+   printed look comes from Song type, compact leading and ink interacting
+   with the scanned fibre under it. */
+.jfReader.paged #jfPageView .jfSheetBody{
+  font-family:var(--jf-read-family,
+    'Source Han Serif SC','Noto Serif CJK SC','Noto Serif SC',
+    'Songti SC',STSong,'SimSun',serif);
+  font-size:var(--jf-read-font,18px);
+  font-weight:400;
+  font-kerning:normal;
+  font-optical-sizing:auto;
+  font-variant-east-asian:normal;
+  line-height:1.72;
+  letter-spacing:.002em;
+  text-align:justify;
+  text-align-last:auto;
+  text-justify:inter-ideograph;
+  word-break:normal;
+  overflow-wrap:break-word;
+  line-break:strict;
+  hyphens:none;
+}
+.jfReader.paged #jfPageView .jfSheetBody>p{
+  margin:0 0 .48em;
+  orphans:2;widows:2;
+}
+.jfReader.paged #jfPageView .jfSheetBody>h1,
+.jfReader.paged #jfPageView .jfSheetBody>h2,
+.jfReader.paged #jfPageView .jfSheetBody>h3{
+  font-weight:550;
+  letter-spacing:.012em;
+  line-height:1.48;
+  margin:.95em 0 .5em;
+}
+.jfReader.paged #jfPageView .jfSheetBody>h1:first-child,
+.jfReader.paged #jfPageView .jfSheetBody>h2:first-child,
+.jfReader.paged #jfPageView .jfSheetBody>h3:first-child{margin-top:0}
+.jfReader.paged #jfPageView .jfSheetBody>figure{
+  margin:.82em 0 .7em;
+}
+.jfReader.paged #jfPageView .jfSheetBody figcaption{
+  font-size:.78em;
+  font-weight:400;
+  line-height:1.57;
+  letter-spacing:.008em;
+  text-indent:0;
+  margin:.52em auto 0;
+}
+/* The warm text has a slightly translucent print-density so paper variation
+   is seen THROUGH the ink. Multiply affects only text-bearing blocks; never
+   apply it to figures, plate images, SVGs or the whole sheet. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody{
+  color:rgba(67,52,36,.93);
+  text-rendering:optimizeLegibility;
+  text-shadow:.13px .18px 0 rgba(46,32,19,.10);
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody>
+  :is(p,h1,h2,h3,h4,h5,h6,div,section,blockquote,address,li,ul,ol,dl,table)
+  :not(:has(img,picture,svg,canvas,video,object)){
+  mix-blend-mode:multiply;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody figcaption{
+  color:rgba(94,76,54,.87);
+  opacity:1;
+  mix-blend-mode:multiply;
+  text-shadow:none;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody
+  :is(strong,b){font-weight:600}
+/* CIP/edition blocks keep their separate metadata rhythm and left alignment.
+   This remains in the measurement host as well as in the visible leaf. */
+.jfReader.paged #jfPageView .jfSheetBody>.jfPrintImprint{
+  font-size:.94em;
+  line-height:1.69;
+  letter-spacing:0;
+  margin-bottom:.42em;
+}
+.jfReader.paged #jfPageView .jfSheetBody>.jfPrintImprintLead{
+  letter-spacing:.012em;
+  margin-bottom:.66em;
+}
+/* Keep the original printed photographs (already pixel-keyed and blended by
+   v7.60) untouched. Do not add a new overlay across text or photos. */

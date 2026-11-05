@@ -46,7 +46,14 @@ let jfDeskWorkspace={revision:0,progress:{},notes:[]},jfDeskChain=Promise.resolv
 let jfDeskActiveNote=null,jfDeskDirty=false,jfDeskSaveTimer=null,jfDeskProgressTimer=null,jfDeskProgressSignature='';
 let jfDeskSaveFailed=false,jfDeskEditorVersion=0,jfDeskSaveInFlight=null,jfDeskDraft=null,jfDeskSelectedQuote=null;
 let jfDeskPrefs={font:18,theme:'dark',side:22,family:'serif'};
-const jfReadFamilyMap={serif:"'Noto Serif SC','Songti SC','SimSun',serif",sans:"'Noto Sans SC','Microsoft YaHei',sans-serif",kai:"'Kaiti SC','KaiTi','STKaiti',serif",mono:"'Sarasa Mono SC','Microsoft YaHei UI',monospace"};
+// v7.69 · A print serif is the native reading default. Prefer a true
+// Chinese Song/Ming face; no remote font fetch and no font-synthesis trickery.
+const jfReadFamilyMap={
+  serif:"'Source Han Serif SC','Noto Serif CJK SC','Noto Serif SC','Songti SC',STSong,'SimSun',serif",
+  sans:"'Noto Sans SC','Microsoft YaHei',sans-serif",
+  kai:"'Kaiti SC','KaiTi','STKaiti',serif",
+  mono:"'Sarasa Mono SC','Microsoft YaHei UI',monospace"
+};
 function jfApplyTextReadingPrefs(){
   jfDeskFont=jfDeskPrefs.font;
   jfReadText.style.fontSize=jfDeskFont+'px';
