@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.78.1 / Current version: v7.78.1** · 持续迭代 / Actively evolving
+**当前版本：v7.78.2 / Current version: v7.78.2** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.78.2 · EPUB 旧书目录抽签与笺注方案 A（增量开发）**：仅在 EPUB 沉浸旧纸模式识别 EPUB3 nav/EPUB2 NCX 目录，验证后的独立导航 spine 页不计入正文页数；书右缘「目」签展开可折叠章节列表并支持章节及 fragment 跳转。有效脚注/endnote 与锚点链接、明确注释标题及双向唯一编号关系被保守转换为当前双页「笺」签；已匹配的编号和注释正文只从纸书渲染副本移除，普通 EPUB 连续阅读仍保留原样。笺注明确按真实左右页标记汇总，避免全章串注；内嵌笺注按用户操作短暂定位真实正文。不猜测无法确认的 [数字]，保留评析/辑评。用户端需实际操作确认视觉与不同 EPUB 兼容性。详见 `GOVERNANCE-CHECKPOINT-v7.78.2.md`。
 
 **v7.78.1 · 旧纸外缘浮膜热修复**：修正 v7.52 意外重新启用的旧式内嵌 `.jfSheetStack` 书口做旧层。这层半透明装饰覆盖于真实纸张 WebP 外缘，造成左右书页出现独立竖向“膜”。恢复 v7.43 已废止它的设计；外侧独立 `.jfBookPile` 继续呈现阅读进度，保留书脊光影、纸纹、正文与分页，不修改图片母版。
 
