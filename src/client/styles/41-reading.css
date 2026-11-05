@@ -2539,3 +2539,38 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
     rgba(52,38,23,.012) 32%,
     rgba(54,40,25,0) 46%)!important;
 }
+
+/* ===== v7.59 · narrow and deep ===========================================
+   v7.58 spread the gutter over 150px, which read as fog rather than a fold.
+   A closed gutter is narrow: the two leaves actually meet, so the shadow is
+   20-30px at most and it is DARK at the centre. The per-leaf shading is also
+   pulled back to the first few percent, so the page itself stays clean. */
+.jfReader.paged #jfPageView .jfSpineShade{
+  width:26px!important;
+  filter:blur(1.1px);
+  background:radial-gradient(ellipse 34% 100% at 50% 50%,
+      rgba(10,6,2,.80) 0%,
+      rgba(14,9,3,.68) 26%,
+      rgba(18,12,5,.48) 46%,
+      rgba(24,16,7,.26) 66%,
+      rgba(30,21,10,.10) 84%,
+      rgba(34,25,13,0) 100%)!important;
+  mix-blend-mode:multiply!important;
+}
+/* Curl only in the last ~7% of the page: no wide grey veil over the type. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left']{
+  background-image:linear-gradient(270deg,
+    rgba(36,23,10,.30) 0%,
+    rgba(40,26,12,.17) 1.6%,
+    rgba(44,30,15,.075) 4%,
+    rgba(48,34,18,.022) 7.5%,
+    rgba(52,38,22,0) 13%)!important;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  background-image:linear-gradient(90deg,
+    rgba(36,23,10,.30) 0%,
+    rgba(40,26,12,.17) 1.6%,
+    rgba(44,30,15,.075) 4%,
+    rgba(48,34,18,.022) 7.5%,
+    rgba(52,38,22,0) 13%)!important;
+}
