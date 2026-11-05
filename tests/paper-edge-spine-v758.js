@@ -1,0 +1,25 @@
+'use strict';
+// v7.58 regression: paper edge and binding shadow (run with Node.js).
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const css=fs.readFileSync(path.join(__dirname,'..','src','client','styles','41-reading.css'),'utf8');
+const foldStart=css.indexOf('/* ===== v7.58 · the gutter');
+const foldEnd=css.indexOf('/* ===== v7.59',foldStart);
+assert(foldStart>=0&&foldEnd>foldStart,'fold style section exists');
+const fold=css.slice(foldStart,foldEnd);
+assert(!fold.includes(')!important,'),'!important cannot appear between CSS background layers');
+assert.match(fold,/width:54px!important/);
+assert.match(fold,/radial-gradient\(ellipse 58% 74%/);
+assert.match(fold,/transparent 100%\)!important;/);
+const edgeStart=css.indexOf('/* ===== v7.58.0 · continuous photographed edges');
+assert(edgeStart>=0,'edge fix exists');
+const edge=css.slice(edgeStart);
+assert.match(edge,/background-size:calc\(100% \+ 8px\) calc\(100% \+ 8px\)!important/);
+assert.match(edge,/box-shadow:none!important/);
+assert.match(edge,/\.jfSheet>\.jfSheetStack\s*\{\s*border:0!important/);
+assert(!css.includes('inset 1px 0 0 rgba(255,251,242,.55)'),'do not restore white inset highlights');
+assert(!css.includes('inset -1px 0 0 rgba(255,251,242,.55)'),'do not restore right white inset');
+const source=fs.readFileSync(path.join(__dirname,'..','src','client','scripts','98e-paper-textures.js'),'utf8');
+assert.match(source,/textures\.length!==16/,'8 approved pairs remain mapped');
+console.log('paper-edge-spine-v758: PASS (source invariants; visual browser QA still required)');

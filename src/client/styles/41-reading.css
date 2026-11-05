@@ -2256,21 +2256,12 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged #jfPageView .jfSheet[data-side='right']::after{
   border-radius:0 5px 5px 0!important;
 }
-/* A cut edge catches light: 1px of pale paper along the fore-edge only,
-   never around the gutter, so the fold still reads as a fold. */
-.jfReader.paged #jfPageView .jfSheet[data-side='left']{
-  box-shadow:inset 1px 0 0 rgba(255,251,242,.55),
-             inset 0 1px 0 rgba(255,251,242,.28),
-             inset 0 -1px 0 rgba(120,96,64,.16),
-             0 1px 2px rgba(52,38,22,.16),
-             0 4px 10px rgba(0,0,0,.12);
-}
+/* Aged paper edges are already baked into the approved photographs.
+   Drawing inset white highlights on the sheet adds an artificial white frame.
+   Keep only a restrained shadow cast onto the dark reading desk. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left'],
 .jfReader.paged #jfPageView .jfSheet[data-side='right']{
-  box-shadow:inset -1px 0 0 rgba(255,251,242,.55),
-             inset 0 1px 0 rgba(255,251,242,.28),
-             inset 0 -1px 0 rgba(120,96,64,.16),
-             0 1px 2px rgba(52,38,22,.16),
-             0 4px 10px rgba(0,0,0,.12);
+  box-shadow:0 1px 2px rgba(52,38,22,.18),0 5px 12px rgba(0,0,0,.13);
 }
 
 /* ===== v7.56 · images print into the paper; restore the fold shadow ===== */
@@ -2380,12 +2371,12 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
       rgba(18,11,4,.55) 49.4%,
       rgba(14,9,3,.62) 50%,
       rgba(18,11,4,.55) 50.6%,
-      rgba(18,11,4,0) 53.4%)!important,
+      rgba(18,11,4,0) 53.4%),
     radial-gradient(ellipse 58% 74% at 50% 50%,
       rgba(26,17,8,.42) 0%,
       rgba(30,20,10,.28) 46%,
       rgba(34,24,13,.12) 74%,
-      rgba(38,28,16,0) 100%)!important,
+      rgba(38,28,16,0) 100%),
     linear-gradient(90deg,
       transparent 0%,
       rgba(42,33,22,.07) 18%,
@@ -2401,8 +2392,8 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged #jfPageView .jfSpineShade::after{
   display:block!important;content:''!important;
   position:absolute!important;top:0!important;bottom:0!important;
-  left:calc(50% + 1px)!important;width:12px!important;
-  background:linear-gradient(90deg,rgba(255,250,238,.34),rgba(255,250,238,0))!important;
+  left:calc(50% + 1px)!important;width:7px!important;
+  background:linear-gradient(90deg,rgba(255,250,238,.12),rgba(255,250,238,0))!important;
 }
 /* Leave ::before alone; the crease is now part of the background stack. */
 .jfReader.paged #jfPageView .jfSpineShade::before{display:none!important}
@@ -2445,4 +2436,21 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 /* Keyed plates already carry alpha; multiply would darken their ink twice. */
 .jfReader.paged .jfPageView .jfSheetBody img[data-jf-plate='done']{
   mix-blend-mode:normal!important;
+}
+
+/* ===== v7.58.0 · continuous photographed edges, no CSS white frame ===== */
+/* The 16 approved WebPs contain the page silhouette. Their 1–3px scan rim
+   becomes conspicuously pale on the dark reading desk when stretched exactly
+   to the sheet bounds. Centered 4px overscan hides only that raster rim,
+   without touching the sources, page boxes, text or folio geometry. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{
+  background-size:calc(100% + 8px) calc(100% + 8px)!important;
+  background-position:center center!important;
+  box-shadow:none!important;
+}
+/* v7.52 reused the old inner stack and inadvertently restored its white
+   border-left. The separate outer pile already conveys reading progress. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet>.jfSheetStack{
+  border:0!important;
+  box-shadow:none!important;
 }
