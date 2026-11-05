@@ -2454,3 +2454,88 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   border:0!important;
   box-shadow:none!important;
 }
+
+/* ===== v7.61 · the fold is a gap between two sheets, not a painted line ===
+/* What was wrong: a 1px near-black stroke down the middle, and a .34 white
+   reflection beside it. Together they read as a glowing tube, not a fold.
+   A real gutter is: two paper edges → a few px of shadowed gap → the same
+   mirrored on the other side, with the pages darkening as they curl in. */
+.jfReader.paged #jfPageView .jfSpineShade{
+  width:76px!important;
+  filter:blur(.35px);
+  background:
+    /* the gap itself: 5px, deepest at 50%, never fully black */
+    linear-gradient(90deg,
+      rgba(28,18,8,0) 46.2%,
+      rgba(32,21,11,.22) 47.6%,
+      rgba(30,19,9,.44) 48.6%,
+      rgba(24,15,7,.56) 49.6%,
+      rgba(22,14,6,.58) 50%,
+      rgba(24,15,7,.56) 50.4%,
+      rgba(30,19,9,.44) 51.4%,
+      rgba(32,21,11,.22) 52.4%,
+      rgba(28,18,8,0) 53.8%)!important,
+    /* the paper curling down towards the fold */
+    linear-gradient(90deg,
+      rgba(44,30,15,0) 0%,
+      rgba(44,30,15,.035) 14%,
+      rgba(42,28,14,.085) 28%,
+      rgba(38,25,12,.16) 39%,
+      rgba(34,22,10,.25) 46%,
+      rgba(34,22,10,.25) 54%,
+      rgba(38,25,12,.16) 61%,
+      rgba(42,28,14,.085) 72%,
+      rgba(44,30,15,.035) 86%,
+      rgba(44,30,15,0) 100%)!important,
+    /* a hairline of light on each paper edge, 1px, very low */
+    linear-gradient(90deg,
+      rgba(255,250,238,0) 44.8%,
+      rgba(255,250,238,.16) 45.6%,
+      rgba(255,250,238,0) 46.4%,
+      rgba(255,250,238,0) 53.6%,
+      rgba(255,250,238,.13) 54.4%,
+      rgba(255,250,238,0) 55.2%)!important;
+  mix-blend-mode:multiply!important;
+}
+/* The bright reflection was the biggest contributor to the glow. Retire it. */
+.jfReader.paged #jfPageView .jfSpineShade::after{display:none!important}
+.jfReader.paged #jfPageView .jfSpineShade::before{display:none!important}
+
+/* ===== v7.62 · no stroke at all: just the pooled shadow of two leaves ====
+/* Every previous attempt drew a line down the middle and then tried to blur
+   it. A fold has no line: it is the place where two sheets curl away and the
+   light stops reaching. So this version drops the crease stroke entirely and
+   paints one wide, soft pool that spans both inner margins. */
+.jfReader.paged #jfPageView .jfSpineShade{
+  width:150px!important;
+  filter:blur(3px);
+  background:radial-gradient(ellipse 46% 96% at 50% 50%,
+      rgba(24,15,6,.38) 0%,
+      rgba(28,18,8,.30) 30%,
+      rgba(33,22,11,.20) 52%,
+      rgba(38,27,15,.11) 72%,
+      rgba(42,31,18,.04) 88%,
+      rgba(44,33,20,0) 100%)!important;
+  mix-blend-mode:multiply!important;
+}
+/* The two leaves darken as they approach the fold: this is what makes the
+   pool read as curvature rather than a smudge. Applied to the sheet itself,
+   under the type, so nothing is ever painted over the text. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left']{
+  background-image:linear-gradient(270deg,
+    rgba(44,30,15,.20) 0%,
+    rgba(46,32,17,.13) 4%,
+    rgba(48,34,19,.075) 11%,
+    rgba(50,36,21,.035) 20%,
+    rgba(52,38,23,.012) 32%,
+    rgba(54,40,25,0) 46%)!important;
+}
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  background-image:linear-gradient(90deg,
+    rgba(44,30,15,.20) 0%,
+    rgba(46,32,17,.13) 4%,
+    rgba(48,34,19,.075) 11%,
+    rgba(50,36,21,.035) 20%,
+    rgba(52,38,23,.012) 32%,
+    rgba(54,40,25,0) 46%)!important;
+}
