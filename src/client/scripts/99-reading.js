@@ -1666,6 +1666,51 @@ function jfDeskStackForProgress(value){
     Math.round((3.2+25.8*Math.pow(portion,.78))*10)/10;
   return {read:thickness(p),unread:thickness(1-p)};
 }
+// Plates are scanned on a cream backing that is close to — but not equal to —
+// the sheet colour. No blend mode can hide that difference: multiply keeps it,
+// darken keeps whichever side is darker. The only honest fix is to key the
+// backing out at the pixel level, once per image, and keep the result.
+const jfDeskPlateDone=new WeakSet();
+function jfDeskKnockOutPlate(img){
+  if(!img||jfDeskPlateDone.has(img))return;
+  if(!img.naturalWidth||!img.complete)return;
+  if(img.dataset.jfPlate==='skip')return;
+  jfDeskPlateDone.add(img);
+  try{
+    const maxW=1600;
+    const scale=Math.min(1,maxW/img.naturalWidth);
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.naturalWidth*scale));
+    c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(img,0,0,c.width,c.height);
+    const frame=ctx.getImageData(0,0,c.width,c.height);
+    const px=frame.data;
+    const total=px.length/4;
+    let pale=0;
+    for(let i=0;i<px.length;i+=4){
+      if(0.299*px[i]+0.587*px[i+1]+0.114*px[i+2]>230)pale++;
+    }
+    // Only plates with a large pale field are keyed; photos that bleed to the
+    // edge keep their own tone, and line art on white is exactly the target.
+    if(pale/total<0.22){img.dataset.jfPlate='skip';return;}
+    for(let i=0;i<px.length;i+=4){
+      const l=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+      if(l>=234){px[i+3]=0;}
+      else if(l>212){px[i+3]=Math.round((234-l)/22*255);}
+    }
+    ctx.putImageData(frame,0,0);
+    img.src=c.toDataURL('image/webp',0.94);
+    img.dataset.jfPlate='done';
+  }catch(error){
+    img.dataset.jfPlate='skip';
+  }
+}
+function jfDeskKnockOutPlates(root){
+  if(!root||!root.querySelectorAll)return;
+  for(const img of root.querySelectorAll('img:not([data-jf-plate])'))jfDeskKnockOutPlate(img);
+}
+
 function jfDeskPagedRender(direction){
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -1688,6 +1733,9 @@ function jfDeskPagedRender(direction){
   right.replaceChildren(...pageB.map(x=>x.node));
   const first=pageA[0]||pageB[0];
   if(first)jfDeskChapter=first.chapter;
+  // Key out the cream backing of scanned plates before the eye sees it.
+  jfDeskKnockOutPlates(left);
+  jfDeskKnockOutPlates(right);
   // Folio and running head: page numbers follow the book, the head follows the chapter.
   const leftSheet=left.parentElement, rightSheet=right.parentElement;
 

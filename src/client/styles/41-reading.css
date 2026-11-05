@@ -2321,3 +2321,128 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   content:'';position:absolute;top:0;bottom:0;left:calc(50% + 2px);width:9px;
   background:linear-gradient(90deg,rgba(255,250,238,.22),rgba(255,250,238,0));
 }
+
+/* ===== v7.57 · kill my own halo, force the fold back =================== */
+/* v7.54 added inset highlight lines around each sheet. On a dark desk those
+   read as a white frame around the page, which is exactly what the owner
+   reported. Remove every inset highlight; keep only the cast shadow. */
+.jfReader.paged #jfPageView .jfSheet[data-side='left'],
+.jfReader.paged #jfPageView .jfSheet[data-side='right']{
+  box-shadow:0 1px 2px rgba(52,38,22,.18),0 5px 12px rgba(0,0,0,.13)!important;
+}
+/* The fold gradient I added in v7.56 lost the cascade to a later !important
+   rule. Same selector specificity as the winner, declared last, forced. */
+.jfReader.paged #jfPageView .jfSpineShade{
+  background:linear-gradient(90deg,
+    transparent 0%,
+    rgba(42,33,22,.06) 23%,
+    rgba(37,28,19,.17) 39%,
+    rgba(30,22,13,.34) 47%,
+    rgba(22,15,8,.44) 50%,
+    rgba(30,22,13,.34) 53%,
+    rgba(37,28,19,.17) 61%,
+    rgba(42,33,22,.06) 77%,
+    transparent 100%)!important;
+}
+/* 1px crease, dark and continuous, fading only at the very ends. */
+.jfReader.paged #jfPageView .jfSpineShade::before{
+  display:block!important;
+  content:''!important;
+  position:absolute!important;
+  top:0!important;bottom:0!important;left:50%!important;width:1px!important;
+  transform:translateX(-50%)!important;
+  background:linear-gradient(180deg,
+    rgba(16,10,3,0) 0%,
+    rgba(16,10,3,.52) 8%,
+    rgba(16,10,3,.58) 92%,
+    rgba(16,10,3,0) 100%)!important;
+}
+/* A sliver of bounce just right of the crease: light catching the curl. */
+.jfReader.paged #jfPageView .jfSpineShade::after{
+  display:block!important;
+  content:''!important;
+  position:absolute!important;
+  top:0!important;bottom:0!important;left:calc(50% + 2px)!important;width:10px!important;
+  background:linear-gradient(90deg,rgba(255,250,238,.30),rgba(255,250,238,0))!important;
+}
+
+/* ===== v7.58 · the gutter has to be a shadow, not a grey stripe ========
+   .44 over #f4f0e7 computes to about rgb(146,140,130): mid grey, which reads
+   as a painted line. A fold is dark because light cannot reach into it, so
+   the centre goes to .62 and the falloff is carried by a radial pool that is
+   deeper at top and bottom than in the middle. Width 30px -> 54px so the
+   gradient has room to be a gradient instead of an edge. */
+.jfReader.paged #jfPageView .jfSpineShade{
+  width:54px!important;
+  background:
+    linear-gradient(90deg,
+      rgba(18,11,4,0) 46.6%,
+      rgba(18,11,4,.55) 49.4%,
+      rgba(14,9,3,.62) 50%,
+      rgba(18,11,4,.55) 50.6%,
+      rgba(18,11,4,0) 53.4%)!important,
+    radial-gradient(ellipse 58% 74% at 50% 50%,
+      rgba(26,17,8,.42) 0%,
+      rgba(30,20,10,.28) 46%,
+      rgba(34,24,13,.12) 74%,
+      rgba(38,28,16,0) 100%)!important,
+    linear-gradient(90deg,
+      transparent 0%,
+      rgba(42,33,22,.07) 18%,
+      rgba(34,25,14,.20) 36%,
+      rgba(26,18,9,.34) 47%,
+      rgba(20,13,6,.46) 50%,
+      rgba(26,18,9,.34) 53%,
+      rgba(34,25,14,.20) 64%,
+      rgba(42,33,22,.07) 82%,
+      transparent 100%)!important;
+}
+/* A hair of light on the right of the crease: the curl catching the light. */
+.jfReader.paged #jfPageView .jfSpineShade::after{
+  display:block!important;content:''!important;
+  position:absolute!important;top:0!important;bottom:0!important;
+  left:calc(50% + 1px)!important;width:12px!important;
+  background:linear-gradient(90deg,rgba(255,250,238,.34),rgba(255,250,238,0))!important;
+}
+/* Leave ::before alone; the crease is now part of the background stack. */
+.jfReader.paged #jfPageView .jfSpineShade::before{display:none!important}
+
+/* ===== v7.59 · plates: darken instead of multiply ====================== */
+/* multiply keeps the sheet tone through pure white, but the scans are not
+   pure white (they are a pale cream), so the rectangle stayed visible.
+   darken takes the darker of ink and paper per pixel: any plate pixel that
+   is brighter than the sheet disappears into the sheet, which is the actual
+   requirement. Ink is darker than paper, so the image itself is untouched. */
+.jfReader.paged .jfPageView .jfSheetBody img,
+.jfReader.paged .jfPageView .jfSheetBody picture,
+.jfReader.paged .jfPageView .jfSheetBody svg{
+  mix-blend-mode:darken!important;
+}
+/* Slight lift so mid-tones of the photograph do not sink into the aged sheet. */
+.jfReader.paged .jfPageView .jfSheetBody img{
+  filter:brightness(1.06) contrast(1.02);
+}
+
+/* ===== v7.60 · plates: lift the cream backing to white, then multiply ==== */
+/* Neither multiply nor darken can hide a backing that is CLOSE to the sheet
+   tone but not equal to it: multiply keeps the difference, and darken keeps
+   whichever is darker (the scan). The only CSS-level way out is to push the
+   near-white backing past 255 so it becomes pure white, and let multiply turn
+   pure white into the sheet colour. Contrast pulls ink back after the lift. */
+.jfReader.paged .jfPageView .jfSheetBody img,
+.jfReader.paged .jfPageView .jfSheetBody picture,
+.jfReader.paged .jfPageView .jfSheetBody svg{
+  mix-blend-mode:multiply!important;
+}
+.jfReader.paged .jfPageView .jfSheetBody img{
+  filter:brightness(1.17) contrast(1.14) saturate(1.02);
+}
+
+/* v7.60b — the keying is done in pixels now, so drop the filter stack. */
+.jfReader.paged .jfPageView .jfSheetBody img{
+  filter:none!important;
+}
+/* Keyed plates already carry alpha; multiply would darken their ink twice. */
+.jfReader.paged .jfPageView .jfSheetBody img[data-jf-plate='done']{
+  mix-blend-mode:normal!important;
+}
