@@ -162,6 +162,30 @@ async function jfBookCover(req,res,id){
       fs.createReadStream(image).on('error',()=>res.destroy()).pipe(res);return;
     }
   }
+  // EPUB carries its own cover inside the archive. There is no sidecar image and
+  // no page to rasterise, so read the entry the OPF points at and serve it. The
+  // bytes are cached by id+size+mtime, the same key style used for PDF covers.
+  if(info.ext==='EPUB'&&stat.size>0&&stat.size<=100*1024*1024&&typeof jfReadingEpubCover==='function'){
+    const key='epub:'+info.id+':'+stat.size+':'+stat.mtimeMs;
+    if(jfBookCoverCache.has(key)){
+      const cached=jfBookCoverCache.get(key);
+      res.writeHead(200,{'Content-Type':cached.mime,'Content-Length':cached.data.length,
+        'Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff'});
+      res.end(cached.data);return;
+    }
+    try{
+      const buf=await fs.promises.readFile(file);
+      const extracted=jfReadingEpubCover(buf);
+      if(extracted&&extracted.data&&extracted.data.length){
+        const mime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp'}[extracted.ext]||'image/jpeg';
+        jfBookCoverCache.set(key,{mime,data:extracted.data});
+        if(jfBookCoverCache.size>30)jfBookCoverCache.delete(jfBookCoverCache.keys().next().value);
+        res.writeHead(200,{'Content-Type':mime,'Content-Length':extracted.data.length,
+          'Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff'});
+        res.end(extracted.data);return;
+      }
+    }catch{}
+  }
   if(info.ext!=='PDF'||stat.size===0||stat.size>100*1024*1024){res.writeHead(204);res.end();return;}
   const key=info.id+':'+stat.size+':'+stat.mtimeMs;
   if(jfBookCoverCache.has(key)){

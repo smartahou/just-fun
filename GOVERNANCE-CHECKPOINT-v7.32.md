@@ -1251,3 +1251,59 @@ v7.58 把暗池铺到 150px，整版看是一团**雾**：中央没有明确的�
 
 配方里的「可选」段（页面内凹 `linear-gradient(270deg, rgba(49,36,21,.12)...)`）
 本轮未加——所有者建议先看这条的效果，不够再加。
+
+## v7.62 · EPUB 书籍封面
+
+### 现象
+
+书架上 20 本书，EPUB 的六本（崩溃的帝国、道光皇帝、故宫藏影、汉语言文学、
+金冲及文丛、命运之上）显示为纯色卡片，没有封面图。
+
+### 根因（三层，逐层排除才找到）
+
+**第一层：封面路由直接判死。** `45-bookshelf.js` 的 `jfBookCover()` 逻辑是：
+sidecar 图片 → 否则若 `ext!=='PDF'` 就 `204` 空响应。EPUB 走到这里就结束了。
+
+**第二层：我一开始找错了数据源。** 第一版实现在 `30-media-library.js` 里遍历
+`catalog.items` 找 `originalExt==='epub'`，实测 `epubTotal=0`——EPUB 书根本不在
+`catalog.items` 里，它们在 `45-bookshelf.js` 独立的 `books` 数组里。那段代码是白写的，
+已删除。
+
+**第三层：正则里的 `\b` 被吃掉了。** 新增的 `jfReadingEpubCover()` 里写的是
+`/<rootfile\b[^>]*>/i`，但写入源码时 `\b` 变成了退格符 `\x08`。于是：
+
+- 正则实际是 `<rootfile\x08[^>]*>`，永远匹配失败；
+- 即使去掉退格符，`<rootfile[^>]*>` 也会先匹配到父标签 **`<rootfiles>`**，
+  那个标签没有 `full-path` 属性 → `opfPath` 为空 → 静默 `return null`。
+
+修复：改用 `/<rootfile(?:\s[^>]*)?>/i` 和 `/<item(?:\s[^>]*)?>/gi`，
+既躲开转义问题，又要求标签名后面必须是空白或直接结束。
+
+### 实现
+
+`46-reading-and-notes.js` 新增 `jfReadingEpubCover(buf)`：
+
+1. `META-INF/container.xml` → OPF 路径；
+2. OPF 里按优先级找封面：EPUB3 `properties="cover-image"` →
+   EPUB2 `<meta name="cover">` → 文件名含 `cover`/`封面` 的图片；
+3. 返回原始字节与扩展名。
+
+`45-bookshelf.js` 的 `jfBookCover()` 在「非 PDF 就 204」之前插入 EPUB 分支：
+读文件 → 提取 → 按 id+size+mtime 缓存（上限 30 条）→ 以正确的 Content-Type 返回，
+并带 `Cache-Control: private, max-age=86400`。
+
+### 验证
+
+| 书 | 字节 | Content-Type |
+| --- | --- | --- |
+| 崩溃的帝国 | 73,968 | image/jpeg |
+| 道光皇帝 | 114,366 | image/jpeg |
+| 中国仙道之究竟 | 246,606 | image/jpeg |
+
+`/api/books/cover?id=…` **3/3 返回真实 JPEG**。
+
+### 未完成的验证
+
+书架的视觉截图没有拿到：`.jfBooksWorkspace` 的打开入口在自动化里没触发成功
+（`#jfBooksGrid` 子元素为 0）。API 层已验证，但「页面上真的画出来」这一步
+**尚未用截图确认**——留给所有者第一次打开书架时目视核对。

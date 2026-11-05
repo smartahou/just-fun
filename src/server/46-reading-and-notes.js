@@ -488,6 +488,48 @@ function jfReadingHtmlEscape(v){
   return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+// Shelf cover for an EPUB: the archive carries it, ffmpeg cannot extract it.
+// Order of preference follows the spec: EPUB3 cover-image property, then the
+// EPUB2 <meta name="cover"> reference, then a file literally named cover.*.
+// Returns the raw image bytes so the media library can transcode it like any
+// other cover, keeping one thumbnail format for the whole shelf.
+function jfReadingEpubCover(buf){
+  try{
+    const zip=jfReaderZipIndex(buf);
+    const container=jfReadingTextDecode(zip.read('META-INF/container.xml'));
+    const opfPath=jfReadingAttr(container.match(/<rootfile(?:\s[^>]*)?>/i)?.[0]||'','full-path');
+    if(!opfPath||!zip.entries.has(opfPath))return null;
+    const opf=jfReadingTextDecode(zip.read(opfPath));
+    const base=require('node:path').posix.dirname(opfPath);
+    const items=[];
+    for(const tag of opf.match(/<item(?:\s[^>]*)?>/gi)||[]){
+      const href=jfReadingAttr(tag,'href');
+      if(!href)continue;
+      items.push({id:jfReadingAttr(tag,'id'),href,
+                  media:jfReadingAttr(tag,'media-type'),
+                  props:jfReadingAttr(tag,'properties')});
+    }
+    let target=items.find(x=>/(?:^|\s)cover-image(?:\s|$)/.test(x.props));
+    if(!target){
+      const meta=opf.match(/<meta\b[^>]*name\s*=\s*["']cover["'][^>]*>/i)?.[0];
+      if(meta){
+        const ref=jfReadingAttr(meta,'content');
+        if(ref)target=items.find(x=>x.id===ref);
+      }
+    }
+    if(!target){
+      target=items.find(x=>/^image\//i.test(x.media)&&
+        /(?:^|\/)(?:cover|front[-_]?cover|封面)[^/]*$/i.test(x.href));
+    }
+    if(!target)return null;
+    const path=require('node:path').posix.normalize(
+      require('node:path').posix.join(base,decodeURIComponent(target.href)));
+    if(!zip.entries.has(path))return null;
+    const ext=(/\.(jpe?g|png|webp|gif|bmp)$/i.exec(path)||[])[1]||'jpg';
+    return {data:zip.read(path),ext:ext.toLowerCase().replace('jpeg','jpg')};
+  }catch{return null;}
+}
+
 function jfReadingEpubAssetUrl(bookId,entry){
   return '/api/reading/epub-asset?id='+encodeURIComponent(bookId)+'&src='+encodeURIComponent(entry);
 }
