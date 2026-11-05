@@ -1054,3 +1054,41 @@ K = max(10, totalSheets * 0.3)
 
 原图从 4.3 MB 涨到 21.1 MB 后，`assets/` 目录的仓库体积增加约 17 MB。
 离线单文件不受影响（只内联转码后的 2.34 MB）。
+
+## v7.56 · 插图融入纸面 + 恢复中央折痕
+
+### 白色矩形
+
+**根因**：`.jfSheetBody img` 没有任何混合处理，扫描版明信片是白底 JPEG，
+直接贴在旧纸纹理上就是一张白卡片。
+
+**修复**：`mix-blend-mode:multiply`。白色与纸色相乘时保持纸色不变，
+相当于让白底「透明」，而墨色保留——这正是印刷图版落在纸上的物理表现。
+同时去掉 `box-shadow`（它给图片加了一圈亮边，加重了贴纸感）。
+
+实测：`imgBlend: multiply`、`imgBg: rgba(0,0,0,0)`，截图里白框消失
+（残留的极淡边界来自 JPEG 底色不是纯白，属于素材精度）。
+
+### 中央折痕
+
+**根因**：v7.53 把 `.jfSpineShade` 的中央暗度压到 `.16`，并且
+`.jfSpineShade::before`（1px 折线）和 `::after`（反光）都被 `display:none!important` 关掉了。
+三层折痕只剩下一层很淡的渐变，所以「阴影没了」。
+
+**修复**：按原设计恢复，不重做——
+
+- 中央暗度回到 `.32 / .38 / .32`（v7.52 的数值）；
+- `::before` 折线恢复：1px、`.42–.48`、两端淡出；
+- `::after` 反光恢复：折线右侧 9px、`.22` 递减。
+
+实测：`beforeDisplay: block`、`afterDisplay: block`，中央重新出现连续凹槽。
+
+### 回归
+
+`paper-perf-v747`（`textureRules: 16`、`samePageStable: true`）、
+`paged-correctness-v736` 10/10、`paged-no-skip-v737` 6/6。
+
+### 仍未完成
+
+- 插图底色不是纯白（扫描件），multiply 后仍有极淡的矩形边界；
+  要彻底消除需要预处理图片（改素材），或在 CSS 里做亮度归一化（会压暗墨色）。

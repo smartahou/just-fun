@@ -2272,3 +2272,52 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
              0 1px 2px rgba(52,38,22,.16),
              0 4px 10px rgba(0,0,0,.12);
 }
+
+/* ===== v7.56 · images print into the paper; restore the fold shadow ===== */
+/* Scanned plates are white-backed JPEGs. On an aged sheet they read as a
+   white card pasted on top. multiply keeps the ink and lets the paper's own
+   tone come through the white, which is how a printed plate actually sits. */
+.jfReader.paged .jfPageView .jfSheetBody img,
+.jfReader.paged .jfPageView .jfSheetBody picture,
+.jfReader.paged .jfPageView .jfSheetBody svg{
+  mix-blend-mode:multiply;
+  background-color:transparent;
+}
+/* A pasted plate existed in the old book too: keep a hairline separation but
+   drop the bright card edge that the raw JPEG carried. */
+.jfReader.paged .jfPageView .jfSheetBody img{
+  border:0;
+  box-shadow:none;
+  isolation:auto;
+}
+
+/* Fold shadow: v7.53 flattened the crease to .16 and killed both the hairline
+   and the reflection. Restore the earlier three-part fold (soft gradient +
+   hairline + faint bounce) without redesigning it. */
+.jfReader.paged .jfPageView .jfSpineShade{
+  background:linear-gradient(90deg,
+    transparent 0%,
+    rgba(42,33,22,.05) 26%,
+    rgba(37,28,19,.14) 42%,
+    rgba(30,22,13,.32) 49%,
+    rgba(26,19,11,.38) 50%,
+    rgba(30,22,13,.32) 51%,
+    rgba(37,28,19,.14) 58%,
+    rgba(42,33,22,.05) 74%,
+    transparent 100%);
+}
+.jfReader.paged .jfPageView .jfSpineShade::before{
+  display:block!important;
+  content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;
+  transform:translateX(-50%);
+  background:linear-gradient(180deg,
+    rgba(20,12,4,0) 0%,
+    rgba(20,12,4,.42) 10%,
+    rgba(20,12,4,.48) 90%,
+    rgba(20,12,4,0) 100%);
+}
+.jfReader.paged .jfPageView .jfSpineShade::after{
+  display:block!important;
+  content:'';position:absolute;top:0;bottom:0;left:calc(50% + 2px);width:9px;
+  background:linear-gradient(90deg,rgba(255,250,238,.22),rgba(255,250,238,0));
+}
