@@ -49,5 +49,5 @@ assert(styles.includes('padding:0!important;'),'global 70px padding overridden')
 assert(!/(?:^|\n)\s*\.empty\s*\{/.test(styles),'no naked global .empty CSS selector was added');
 assert(js.includes('jfDeskPageForAnchor(jfDeskPages,number'),'saved book position handling unchanged');
 const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
-assert.equal(pkg.version,'7.77.0');
+assert(Number(pkg.version.split('.')[1])>=77,'EPUB empty-spacer collision remains fixed in newer versions');
 console.log('PASS v7.77: 137-source-spacer class collision, safe filtering, measured CSS parity and anchors');

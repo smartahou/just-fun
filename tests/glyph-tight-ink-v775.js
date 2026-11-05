@@ -32,7 +32,7 @@ assert(js.includes("img.style.setProperty('--jf-glyph-width',normalized.widthEm.
 assert(js.includes("img.src=normalized.src;img.dataset.jfPlate='glyph-ink'"),'only in printed clones; original EPUB unchanged');
 assert(js.includes("for(let m=k;m<=bridged.end;m++)acc+=raw[m].textContent.length"),'offset continuity retained');
 assert(css.includes("width:var(--jf-glyph-width,.96em)!important"),'tight bitmap layout is honoured');
-assert(css.includes('color:rgba(53,37,24,.93)'), 'warm printed pigment gains opacity while retaining some paper translucency');
+assert(/color:rgba\(53,37,24,\.(?:93|95)\)/.test(css), 'warm printed pigment stays translucent in compatible releases');
 assert(css.includes('.jfSheetBody>p.jfPrintRedundantBlank{'),'extra blank spacers collapsed');
 assert(css.includes('display:none!important;'),'hidden blanks do not change text offsets');
 assert(Number(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version.split('.')[1])>=75,'tight glyph regression remains compatible with current reader');

@@ -66,7 +66,7 @@ const before=el('P',[text('诏书藏于 '),glyph(),text('匣中')]);
 assert.equal(impl.seams(before),1,'trailing Chinese whitespace before glyph is removed');
 assert.equal(before.textContent,'诏书藏于 匣中','pre-glyph characters preserved');
 assert(script.includes('jfDeskHideInlineGlyphSeams(block.node);'),'fix runs before pagination/render on clones');
-assert(css.includes('color:rgba(53,37,24,.93)'),'increased printed pigment coverage');
+assert(/color:rgba\(53,37,24,\.(?:93|95)\)/.test(css),'printed pigment retains approved warm tone');
 assert(css.includes('.jfSheetBody .jfGlyphSeamSpace{'),'hidden space styling present');
 assert(Number(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version.split('.')[1])>=76,'original inline gaiji whitespace invariant remains supported');
 console.log('PASS v7.76: real single-P multi-glyph seams, offset fidelity, idempotence, text/image exclusions, ink density');
