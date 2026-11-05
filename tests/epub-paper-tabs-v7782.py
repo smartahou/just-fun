@@ -111,7 +111,12 @@ def main():
                 # Programmatically activate the real TOC entry; it must navigate
                 # through jfDeskShowChapter and restore the mapped source chapter.
                 page.locator('.jfEpubTocJump').filter(has_text='下篇').first.evaluate('(b) => b.click()')
-                page.wait_for_function('() => jfDeskChapter === 2', timeout=20000)
+                # jfDeskChapter changes when navigation *starts*. Do not assert
+                # the old sheet before async chapter fetch and repagination finish.
+                page.wait_for_function("""() => jfDeskChapter === 2 &&
+                    jfDeskPages[jfDeskPageIndex]?.[0]?.chapter === 2 &&
+                    document.querySelector('.jfEpubNoteTab')?.hidden === true""",
+                    timeout=30000)
                 assert not page.locator('.jfEpubNoteTab').is_visible()
                 assert page.locator('.jfEpubTocTab').is_visible()
                 assert not errors, errors[:3]
