@@ -29,7 +29,7 @@ jobs:
         run: npm ci --no-audit --no-fund --registry=https://registry.npmjs.org/
       - name: Verify deterministic mapping and build exact binary assets
         run: |
-          node tests/paper-texture-v747.js
+          node tests/aged-paper-default-v768.js
           node tests/epub-paper-structure-v7782.js
           node scripts/build.js > dist-build.log
           node --check dist/douyin.js

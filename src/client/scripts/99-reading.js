@@ -504,14 +504,17 @@ function jfDeskFlowFetchOnce(n){
   if(!jfDeskBook||!jfDeskOutline)return Promise.resolve(false);
   if(!Number.isInteger(n)||n<0||n>=jfDeskOutline.chapters.length)return Promise.resolve(false);
   const bookId=jfDeskBook.id,session=jfDeskSession;
-  const key=bookId+'#'+n;
+  // The same chapter has distinct paper-only and original-flow HTML.
+  const mode=jfDeskPaged?'paper':'flow';
+  const key=bookId+'#'+n+'#'+mode;
   if(jfDeskInflight.has(key))return jfDeskInflight.get(key);
   if(jfDeskFlow.some(x=>x.n===n))return Promise.resolve(false);
   const task=(async()=>{
     try{
       const html=await jfDeskFlowFetch(n);
       // The reading session may have been replaced while the fetch was in flight.
-      if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return false;
+      if(jfDeskSession!==session||jfDeskBook?.id!==bookId||
+         (jfDeskPaged?'paper':'flow')!==mode)return false;
       if(jfDeskFlow.some(x=>x.n===n))return false;
       return html;
     }finally{jfDeskInflight.delete(key);}
