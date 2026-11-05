@@ -2703,7 +2703,10 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
      the photographed background, not in semi-transparent font antialiasing. */
   /* Genuine ink transmits a small part of the paper colour, preserving the
      photographed fibre through strokes without a floating drop-shadow. */
-  color:rgba(53,36,22,.87);
+  /* The previous .87 coverage looked too faint against photographic grain.
+     More pigment while retaining 7% translucency keeps paper visible within
+     strokes; no blurred shadow or additional overlay on the old WebPs. */
+  color:rgba(53,37,24,.93);
   text-rendering:optimizeLegibility;
   text-shadow:none;
 }
@@ -2903,5 +2906,12 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   overflow:hidden!important;
 }
 .jfReader.paged #jfPageView .jfSheetBody>p.jfPrintRedundantBlank{
+  display:none!important;
+}
+
+/* v7.76 · The same DOM applies to hidden pagination measurement and visible
+   book leaves. Don't use white-space:pre or alter word-spacing globally:
+   only verified inline gaiji seam bytes are hidden. */
+.jfReader.paged #jfPageView .jfSheetBody .jfGlyphSeamSpace{
   display:none!important;
 }

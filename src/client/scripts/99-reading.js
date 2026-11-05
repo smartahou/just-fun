@@ -1898,6 +1898,31 @@ function jfDeskHideGlyphSeamSpace(root,edge){
     hidden.appendChild(target);
   }
 }
+// v7.76 · Real-world EPUB inspection: a *single* paragraph may contain
+// character bitmap + "\n 匣" repeatedly. v7.74 only treated separate-p
+// bridges, so the visible gap survived even though the glyph was cropped.
+// This repairs the exact inline structure on PRINT CLONES. The white-space
+// bytes are retained as hidden text in jfGlyphSeamSpace to preserve bookmarks.
+function jfDeskHideInlineGlyphSeams(root){
+  if(!root?.querySelectorAll)return 0;
+  let hidden=0;
+  for(const glyph of root.querySelectorAll('img.jfInlineGlyph')){
+    const previous=glyph.previousSibling,following=glyph.nextSibling;
+    const before=previous?.nodeType===3?previous.nodeValue||'':'';
+    const after=following?.nodeType===3?following.nodeValue||'':'';
+    // Only adjacent, Chinese-sentence whitespace is layout detritus.
+    // ASCII prose, captions and meaningful paragraph breaks are untouched.
+    if(/[\u3400-\u9fff][ \t\r\n\u00a0\u3000\u200b\ufeff]+$/.test(before)){
+      jfDeskHideGlyphSeamSpace(previous,'end');
+      hidden++;
+    }
+    if(/^[ \t\r\n\u00a0\u3000\u200b\ufeff]+(?=[\u3400-\u9fff])/.test(after)){
+      jfDeskHideGlyphSeamSpace(following,'start');
+      hidden++;
+    }
+  }
+  return hidden;
+}
 function jfDeskMergeGlyphBlocks(raw,start){
   const source=raw[start];
   if(source?.tagName!=='P'||!(source.textContent||'').trim()||
@@ -2092,6 +2117,9 @@ function jfDeskBlocksFor(sec){
   // Only the paginated clones receive transparent ink; the source DOM and
   // all textContent lengths (used by saved offsets) remain unchanged.
   for(const block of blocks){
+    // Run on BOTH original single-paragraph glyphs and cross-P bridges.
+    // Must happen before the common measure/render page-engine receives blocks.
+    jfDeskHideInlineGlyphSeams(block.node);
     for(const img of block.node.querySelectorAll?.('img.jfInlineGlyph')||[]){
       const source=img.getAttribute('src')||img.src;
       const normalized=keyedGlyphs.get(source);
