@@ -31,5 +31,8 @@ assert(code.includes('for(let m=k;m<=bridged.end;m++)acc+=raw[m].textContent.len
 assert(code.includes('window.JFReaderGlyphAudit=()=>'),'read-only glyph diagnostic exists');
 assert(css.includes('.jfSheetBody p:has(img.jfInlineGlyph)'),'real line layout retained');
 assert(code.includes('jfDeskPageForAnchor(jfDeskPages,number'),'paper book anchors unaffected');
+const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
+assert(engine.includes("if(!images[i].classList.contains('jfInlineGlyph'))return true;"),'real photos remain atomic');
+assert(engine.includes('if(imageCount!==sourceImages)continue;'),'glyph images preserved at Range split');
 assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'7.73.0');
 console.log('PASS v7.73: inline glyph and cross-paragraph context, metadata, safety and offsets');

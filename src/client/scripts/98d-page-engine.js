@@ -68,7 +68,15 @@
   // <div><img></div> and bare <img>, not just <figure>; splitting such a block by
   // text offset would silently drop the image.
   function hasImage(el){
-    return el.tagName==='IMG'||!!(el.querySelector&&el.querySelector('img,picture,svg,object'));
+    // Inline character bitmaps are splittable text, while all ordinary photos
+    // and mixed figure paragraphs remain atomic.
+    if(el.tagName==='IMG')return !el.classList?.contains('jfInlineGlyph');
+    if(!el.querySelector)return false;
+    if(el.querySelector('picture,svg,object'))return true;
+    var images=el.querySelectorAll('img');
+    for(var i=0;i<images.length;i++)
+      if(!images[i].classList.contains('jfInlineGlyph'))return true;
+    return false;
   }
   function isFigure(el){
     return el.tagName==='FIGURE'||!!el.querySelector('figcaption')||hasImage(el);
@@ -112,11 +120,16 @@
     // or duplicated character is worse than pushing the whole block to the next
     // page. Step back a character at a time before giving up.
     var sourceLength=el.textContent.length;
+    var sourceImages=el.querySelectorAll?el.querySelectorAll('img').length:0;
     for(var attempt=0;attempt<4&&best>0;attempt++,best--){
       var headEl=sliceBlock(el,0,best);
       var tailEl=sliceBlock(el,best,walk.total);
       if(!headEl||!tailEl)continue;
       if(headEl.textContent.length+tailEl.textContent.length!==sourceLength)continue;
+      // The DOM Range must preserve every inline glyph exactly once, even
+      // when it spans a replaced image element at a text-node boundary.
+      var imageCount=headEl.querySelectorAll('img').length+tailEl.querySelectorAll('img').length;
+      if(imageCount!==sourceImages)continue;
       var headLines=measure(headEl,host)/lh;
       var tailLines=measure(tailEl,host)/lh;
       if(window.JF_DEBUG_SPLIT)console.info('[split] best',best,'headLines',headLines.toFixed(1),'tailLines',tailLines.toFixed(1));
