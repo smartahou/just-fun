@@ -62,11 +62,11 @@ assert.equal(r.dataset.paperGroup,undefined);
 paper.applySpread(l,r,'book-A',page(7),[],true);
 assert.equal(r.dataset.paperGroup,l.dataset.paperGroup);
 assert.equal(r.dataset.paperSide,'right');
-assert(styles[0].textContent.includes('radial-gradient('),'old-paper center correction missing');
+assert(!styles[0].textContent.includes('radial-gradient('),'approved WebP must not be covered by a whitening wash');
 assert(!styles[0].textContent.includes('data:image/svg+xml'),
   'No extra per-page SVG image composites should be present');
-assert(styles[0].textContent.includes('rgba(246,246,242,.94)'),
-  'Stronger pale-book center correction must be present');
+assert(styles[0].textContent.includes('{background-image:url('),
+  'approved WebP must render directly from the verified offline data URI');
 assert.equal((styles[0].textContent.match(/data:image\/webp/g)||[]).length,16,
   'All original 16 WebP leaves must remain in the paired CSS rules');
 paper.applySpread(l,r,'book-A',[],[],true);
@@ -74,7 +74,7 @@ assert.equal(l.dataset.paperGroup,undefined);
 (async()=>{
  const spreads=Array.from({length:8},(_,i)=>({left:page(i*2),right:page(i*2+1)}));
  await paper.warm('book-A',spreads);
- assert(paper.cacheSize()<=12,'bounded decoded image refs');
+ assert(paper.cacheLimit<=16&&paper.cacheSize()<=paper.cacheLimit,'bounded decoded image refs');
  button.click();
  assert.equal(paper.isEnabled(),false);
  assert.equal(stored.get('jf-reader-aged-paper'),'off');

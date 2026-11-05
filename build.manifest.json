@@ -86,6 +86,16 @@
       "assets/paper-spreads/spread-07-right.webp",
       "assets/paper-spreads/spread-08-left.webp",
       "assets/paper-spreads/spread-08-right.webp"
+    ],
+    "runtimeBundles": [
+      "assets/paper-spreads/runtime/group-01.json",
+      "assets/paper-spreads/runtime/group-02.json",
+      "assets/paper-spreads/runtime/group-03.json",
+      "assets/paper-spreads/runtime/group-04.json",
+      "assets/paper-spreads/runtime/group-05.json",
+      "assets/paper-spreads/runtime/group-06.json",
+      "assets/paper-spreads/runtime/group-07.json",
+      "assets/paper-spreads/runtime/group-08.json"
     ]
   }
 }

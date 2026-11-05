@@ -55,8 +55,20 @@ function build() {
   const paperMeta=JSON.parse(read(paper.manifest));
   if(paperMeta.pairs!==8||paperMeta.images!==16||paperMeta.assets?.length!==16)
     throw Error('Unexpected paper texture manifest');
+  // Source masters remain byte-for-byte as approved by the user. The offline
+  // runtime embeds visually faithful quality-83 WebP transcodes at the same
+  // 960x1440 dimensions; all 16 SHA-256 digests are checked before packaging.
+  // These small bundles are static assets. The reader never processes pixels.
+  if(!Array.isArray(paper.runtimeBundles)||paper.runtimeBundles.length!==8)
+    throw Error('Missing 8 optimized paper runtime bundles');
+  const runtime=paper.runtimeBundles.flatMap((rel,g)=>{
+    const group=JSON.parse(read(rel));
+    if(group.group!==g+1||group.assets?.length!==2)throw Error('Invalid runtime paper group '+rel);
+    return group.assets;
+  });
   const paperUrls=[];
-  const paperAssetHashes=[];
+  const paperAssetHashes=[],paperRuntimeHashes=[];
+  let paperRuntimeBytes=0;
   for(let i=0;i<16;i++){
     const rel=paper.files[i],spec=paperMeta.assets[i];
     if(rel!=='assets/paper-spreads/'+spec.file)throw Error('Paper asset ordering mismatch: '+rel);
@@ -66,8 +78,20 @@ function build() {
       throw Error('Invalid paper WebP '+rel);
     const digest=crypto.createHash('sha256').update(data).digest('hex');
     if(digest!==spec.sha256)throw Error('Paper texture SHA-256 mismatch: '+rel);
+    const small=runtime[i];
+    if(!small||small.file!==spec.file||small.sourceSha256!==digest)
+      throw Error('Paper runtime source identity mismatch: '+spec.file);
+    const optimized=Buffer.from(small.base64,'base64');
+    const optimizedDigest=crypto.createHash('sha256').update(optimized).digest('hex');
+    if(optimized.length!==small.bytes||optimizedDigest!==small.runtimeSha256||
+       optimized.toString('base64')!==small.base64||
+       !optimized.subarray(0,4).equals(Buffer.from('RIFF'))||
+       !optimized.subarray(8,12).equals(Buffer.from('WEBP')))
+      throw Error('Paper runtime WebP verification failed: '+spec.file);
     paperAssetHashes.push(digest);
-    paperUrls.push('data:image/webp;base64,'+data.toString('base64'));
+    paperRuntimeHashes.push(optimizedDigest);
+    paperRuntimeBytes+=optimized.length;
+    paperUrls.push('data:image/webp;base64,'+small.base64);
   }
   let injected=false;
   const browser=manifest.scripts.map(p=>{
@@ -152,6 +176,7 @@ function build() {
     cssBytes:Buffer.byteLength(style), cssSha256:hash(style),
     files:manifest.server.length+manifest.styles.length+manifest.scripts.length+2,
     paperTextures:paperUrls.length,paperTextureAssetsSha256:paperAssetHashes,
+    paperRuntimeAssetSha256:paperRuntimeHashes,paperRuntimeBytes,
     pdfjsVersion:pdfPkg.version,pdfjsAssets:Object.keys(pdfAssets).length,
     pdfjsModuleSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(pdfRoot,'build/pdf.min.mjs'))).digest('hex'),
     baselinePageIdentical:hash(html)===manifest.baselineRenderedHtmlSha256

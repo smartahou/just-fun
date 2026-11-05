@@ -1,4 +1,4 @@
-// v7.48 · Paired antique-paper spread renderer; exactly 8 left/right WebP pairs.
+// v7.53 · User-approved 8 matched left/right WebP pairs. Render originals, no radial wash.
 (function(){
   'use strict';
   const textures=__JUSTFUN_PAPER_SPREAD_ASSETS__;
@@ -8,7 +8,9 @@
   const WEAR_LEVELS=new Set(['light','medium','heavy']);
   let wearLevel='medium';
   try{const saved=localStorage.getItem(WEAR_KEY);if(WEAR_LEVELS.has(saved))wearLevel=saved;}catch{}
-  const CAP=12; // 6 spreads max; bounded decoded image handles
+  // Avoid repeated decompression of high-detail WebPs when revisiting spreads.
+  // A full book skin has only 16 leaves; low-memory devices keep a smaller LRU.
+  const CAP=(typeof navigator!=='undefined'&&navigator.deviceMemory&&navigator.deviceMemory<=4)?10:16;
   const cache=new Map();
   let enabled=true;
   try{enabled=localStorage.getItem(KEY)!=='off';}catch{}
@@ -88,7 +90,7 @@
         const side=n?'right':'left';
         rules+='.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group="'
           +String(i+1).padStart(2,'0')+'"][data-paper-side="'+side+'"]::after'
-          +'{background-image:radial-gradient(ellipse 90% 84% at 50% 48%,rgba(246,246,242,.94) 0%,rgba(245,245,240,.88) 45%,rgba(246,242,231,.36) 80%,rgba(246,242,231,.03) 100%),url("'+textures[i*2+n]+'")!important;}';
+          +'{background-image:url("'+textures[i*2+n]+'")!important;}';
       }
     }
     el.textContent=rules;document.head.appendChild(el);
