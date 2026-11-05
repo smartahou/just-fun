@@ -30,6 +30,7 @@ assert(client.includes("mode:'paged'"),'paper-book persists its own mode');
 assert(client.includes("jfDeskPageIndex=jfDeskPageForAnchor(jfDeskPages,number"),'paper-book reopens to stored page');
 assert(client.includes("if(jfReader.hidden||jfDeskRestoring)return"),'scroll events blocked during restore');
 assert(client.includes("if(book&&!jfDeskOutline?.nativePdf&&!jfDeskRestoring)"),'closing during restore keeps existing position');
+assert(client.includes("window.addEventListener(type,interrupt,{passive:true,capture:true})"),'user navigation cancels late restore on any focused element');
 assert(server.includes("const anchorY=Number.isFinite(body.anchorY)"),'server stores viewport offset');
 assert(server.includes("const mode=body.mode==='paged'"),'server stores mode');
 assert(css.includes(".jfReader .jfReadCenter{scroll-behavior:auto!important}"),'no CSS initiated open animation');

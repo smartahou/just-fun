@@ -599,11 +599,13 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null,anch
     // only if the user has not started their own scrolling in the meantime.
     let interrupted=false;
     const interrupt=()=>{interrupted=true;};
+    // Keyboard navigation is handled on document, so listening only on the
+    // scrolling element would miss it and snap back over a user's keypress.
     for(const type of ['wheel','touchstart','pointerdown','keydown'])
-      jfReadCenter.addEventListener(type,interrupt,{passive:true});
+      window.addEventListener(type,interrupt,{passive:true,capture:true});
     const release=()=>{
       for(const type of ['wheel','touchstart','pointerdown','keydown'])
-        jfReadCenter.removeEventListener(type,interrupt);
+        window.removeEventListener(type,interrupt,true);
     };
     const reassert=()=>{
       if(!alive()||interrupted)return;
