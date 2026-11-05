@@ -83,12 +83,12 @@ function jfEpubTocLinks(epub,source,html){
   return links;
 }
 function jfEpubNcxLinks(epub,source,xml){
-  const links=[],stack=[];
+  const links=[],stack=[];let ordinal=0;
   const tokens=/<navPoint\b[^>]*>|<\/navPoint\s*>|<navLabel\b[^>]*>[\s\S]*?<\/navLabel\s*>|<content\b[^>]*\/?>/gi;
   let m;
   while((m=tokens.exec(xml))){
     const tag=m[0];
-    if(/^<navPoint/i.test(tag)){stack.push({depth:stack.length,title:'',href:''});continue;}
+    if(/^<navPoint/i.test(tag)){stack.push({depth:stack.length,title:'',href:'',ordinal:ordinal++});continue;}
     if(/^<navLabel/i.test(tag)){
       if(stack.length)stack[stack.length-1].title=jfEpubPlain(tag,160);
       continue;
@@ -99,21 +99,75 @@ function jfEpubNcxLinks(epub,source,xml){
     }
     if(/^<\/navPoint/i.test(tag)&&stack.length){
       const item=stack.pop(),target=jfEpubResolve(epub,source,item.href);
-      if(item.title&&target)links.push({title:item.title,depth:Math.min(item.depth,12),
+      if(item.title&&target)links.push({order:item.ordinal,title:item.title,depth:Math.min(item.depth,12),
         href:item.href,file:target.file,fragment:target.fragment,
         chapter:target.chapter,available:target.available});
     }
     if(links.length>=800)break;
   }
-  // Nested NCX closes children first; recover source order using target offsets.
-  // The original DOM order is encoded by opening depth/position, stored here.
-  return links.reverse();
+  // NCX closes children before parents. Source opening order restores the tree.
+  return links.sort((a,b)=>a.order-b.order).map(({order,...entry})=>entry);
 }
 function jfEpubAddEdit(edits,file,start,end,replacement){
   if(!Number.isSafeInteger(start)||start<0||!Number.isSafeInteger(end)||end<=start)return;
   if(!edits.has(file))edits.set(file,[]);
   edits.get(file).push({start,end,replacement});
 }
+// Legacy printed notes: require an explicit 注释 heading, at least two
+// numbered definition paragraphs, and one unique earlier text occurrence per
+// number. No title/date/[2018] is ever stripped on the number alone.
+function jfEpubNumberedNotes(epub,file,html,annotations,edits){
+  const heading=/<(h[1-5]|p|div)\b[^>]*>\s*(?:【\s*注\s*释\s*】|注\s*释|脚\s*注)\s*<\/\1\s*>/gi;
+  let header;
+  while((header=heading.exec(html))){
+    const after=html.slice(heading.lastIndex,heading.lastIndex+18000);
+    const defs=[];
+    const re=/<(p|li)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi;
+    let m;
+    while((m=re.exec(after))){
+      const plain=jfEpubPlain(m[2],6000);
+      const x=/^[［\[【(（]\s*(\d{1,3})\s*[\]］】)）]\s*[.、:：]?\s*(.+)$/s.exec(plain);
+      if(!x)continue;
+      defs.push({number:x[1],text:x[2],start:heading.lastIndex+m.index,
+        end:heading.lastIndex+re.lastIndex});
+      if(defs.length>=100)break;
+    }
+    if(defs.length<2)continue;
+    // A body number is considered only when present in a real XHTML text
+    // segment before the annotation heading, not in an attribute or an href.
+    const refs=new Map();
+    const textParts=html.slice(0,header.index).matchAll(/>([^<]+)</g);
+    for(const part of textParts){
+      const text=part[1],base=part.index+1;
+      const numbers=/[［\[【]\s*(\d{1,3})\s*[\]］】]/g;
+      let n;
+      while((n=numbers.exec(text))){
+        const num=n[1],row={start:base+n.index,end:base+numbers.lastIndex,
+          excerpt:jfEpubPlain(html.slice(Math.max(0,base+n.index-160),base+n.index),40)};
+        if(!refs.has(num))refs.set(num,[]);
+        refs.get(num).push(row);
+      }
+    }
+    const existing=edits.get(file)||[];
+    const verified=defs.filter(d=>refs.get(d.number)?.length===1&&d.text.length>=2&&
+      !existing.some(e=>e.start<d.end&&e.end>d.start));
+    if(verified.length<2||verified.length/defs.length<.8)continue;
+    for(const def of verified){
+      const ref=refs.get(def.number)[0];
+      if(existing.some(e=>e.start<ref.end&&e.end>ref.start))continue;
+      const noteId=jfEpubHash(file+'#legacy-notes#'+def.number);
+      if(!annotations.has(noteId))annotations.set(noteId,{
+        id:noteId,text:def.text.slice(0,6000),excerpt:ref.excerpt,source:'verified-numbered'});
+      jfEpubAddEdit(edits,file,ref.start,ref.end,
+        '<span class="jfEpubNoteAnchor" data-jf-note-id="'+noteId+'"></span>');
+      jfEpubAddEdit(edits,file,def.start,def.end,'');
+    }
+    // Keep the heading if any definition could not be safely linked.
+    if(verified.length===defs.length)
+      jfEpubAddEdit(edits,file,header.index,heading.lastIndex,'');
+  }
+}
+
 function jfEpubEnhance(epub){
   const {zip,chapters,base}=epub,posix=require('node:path').posix;
   const files=new Map();
@@ -188,7 +242,8 @@ function jfEpubEnhance(epub){
       const numeric=/^[\[\]［］【】()（）\d\s¹²³⁴⁵⁶⁷⁸⁹⁰]+$/.test(label)&&/\d/.test(label);
       if(!noteSemantic&&!refSemantic&&!(hinted&&numeric))continue;
       if(!['aside','section','li','p','div'].includes(node.tag))continue;
-      const text=jfEpubPlain(node.inner,6000).replace(/^[\[［(（【]?\s*\d{1,4}\s*[\]］)）】]?\s*[.、:：]?\s*/,'');
+      const text=jfReadingHtmlToText(node.inner).trim().slice(0,6000)
+        .replace(/^[\[［(（【]?\s*\d{1,4}\s*[\]］)）】]?\s*[.、:：]?\s*/,'');
       if(text.length<2)continue;
       const identity=target.file+'#'+target.fragment,noteId=jfEpubHash(identity);
       const context=jfEpubPlain(html.slice(Math.max(0,ref.index-260),ref.index),100);
@@ -205,8 +260,10 @@ function jfEpubEnhance(epub){
       }
     }
   }
-  // Numerical note indices are deliberately not inferred from mere "[17]"
-  // occurrences. Absent a verifiable href/id relation, text remains visible.
+  // Conservative standalone numbered notes, never guesses from a lone [17].
+  for(const ch of chapters)if(annotations.size<900)
+    jfEpubNumberedNotes(epub,ch.file,get(ch.file),annotations,edits);
+  toc=toc.map(item=>chapters[item.chapter]?.paperOmit?{...item,available:false}:item);
   epub.toc=toc.slice(0,800);
   epub.annotations=[...annotations.values()];
   epub.paperEdits=edits;
