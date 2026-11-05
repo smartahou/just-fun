@@ -2649,7 +2649,7 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   font-kerning:normal;
   font-optical-sizing:auto;
   font-variant-east-asian:normal;
-  line-height:1.76;
+  line-height:1.69;
   letter-spacing:0;
   word-spacing:normal;
   text-align:justify;
@@ -2669,7 +2669,7 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   word-spacing:normal!important;
 }
 .jfReader.paged #jfPageView .jfSheetBody>p{
-  margin:0 0 .54em;
+  margin:0 0 .47em;
   orphans:2;widows:2;
 }
 .jfReader.paged #jfPageView .jfSheetBody>h1,
@@ -2706,8 +2706,10 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
   /* The previous .87 coverage looked too faint against photographic grain.
      More pigment while retaining 7% translucency keeps paper visible within
      strokes; no blurred shadow or additional overlay on the old WebPs. */
-  color:rgba(53,37,24,.93);
+  color:rgba(53,37,24,.95);
   text-rendering:optimizeLegibility;
+  /* Very mild print dot gain; not a blurred halo or a drop shadow. */
+  -webkit-text-stroke:.085px rgba(50,34,20,.12);
   text-shadow:none;
 }
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody>
@@ -2967,3 +2969,20 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   text-align:initial!important;
   overflow:hidden!important;
 }
+
+/* ===== v7.78 · paragraph composition and print rhythm ======================
+   A page-top paragraph is not necessarily the tail of the previous page:
+   the historic blanket ".jfSheetBody p:first-child{text-indent:0}" disabled
+   legitimate 2em indents on every new printed leaf. Preserve the indent for
+   a NEW paragraph; only Range-split tails get .jfPrintContinuation.
+   The same .jfSheetBody rules apply to the hidden measurement probe and both
+   visible paper leaves, so saved anchors are calculated with the new metrics. */
+.jfReader.paged #jfPageView .jfSheetBody > p:first-child:not(.jfPrintContinuation):not(.center):not(.jfPrintImprint):not(:has(img,picture,svg)){
+  text-indent:2em;
+}
+.jfReader.paged #jfPageView .jfSheetBody > p.jfPrintContinuation{
+  text-indent:0!important;
+}
+/* Superscript, centered illustrations and photographic captions retain their
+   existing EPUB/plate presentation. No changes to fonts, heading sizes,
+   raster images or the old-paper WebP backgrounds. */

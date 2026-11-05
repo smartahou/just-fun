@@ -198,21 +198,35 @@
       }
 
       if(window.JF_DEBUG_SPLIT)console.info('[page] used',Math.round(used),'pageH',Math.round(pageH),'blockH',Math.round(h),'curLen',cur.length);
-      var split=trySplit(el,pageH-used,host,lh);
+      // v7.78: The first probe measures a paragraph in isolation. Its margins
+      // and first-child indentation can differ by up to a line when assembled
+      // after the current column. Previously, a small composed overflow caused
+      // the ENTIRE next paragraph to move, leaving an avoidable page-end hole.
+      // Back off a fraction of a line, at most twice, and re-verify the REAL
+      // assembled column. Never relax the two-line widow/orphan invariant.
+      var split=null;
+      var available=Math.max(0,pageH-used);
+      for(var retry=0;retry<3&&available>=lh*MIN_LINES;retry++){
+        var proposal=trySplit(el,available,host,lh);
+        if(!proposal)break;
+        var projected=columnHeight(cur.concat([{
+          chapter:item.chapter,node:proposal.head,key:item.key,offset:item.offset
+        }]),host);
+        if(projected<=pageH-EPS){split=proposal;break;}
+        // Composition-only overflow: the next try must be genuinely shorter.
+        available-=Math.max(lh*.55,projected-pageH+EPS+lh*.12);
+      }
       if(split){
-        // Trust the assembled column, not the isolated fragment: margins collapse
-        // differently once the fragment sits next to its neighbours.
-        // A split inherits the block's start offset; the tail resumes exactly
-        // where the head's text ended. Losing this made every anchor resolve to 0.
+        // Preserve original block offsets and exact text/image conservation.
         var headOffset=item.offset||0;
         var tailOffset=headOffset+split.head.textContent.length;
         cur.push({chapter:item.chapter,node:split.head,key:(item.key||'')+'#1',offset:headOffset,split:true});
-        if(columnHeight(cur,host)<=pageH){
-          flush();
-          queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',offset:tailOffset,split:true});
-          continue;
-        }
-        cur.pop();
+        // Only a carried-over paragraph should start flush-left on the new
+        // page. A genuinely new paragraph at the top keeps its 2em indent.
+        if(split.tail.tagName==='P')split.tail.classList.add('jfPrintContinuation');
+        flush();
+        queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',offset:tailOffset,split:true});
+        continue;
       }
 
       if(cur.length){flush();queue.unshift(item);continue;}
