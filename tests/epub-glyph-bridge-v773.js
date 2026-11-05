@@ -34,7 +34,7 @@ assert(code.includes('jfDeskPageForAnchor(jfDeskPages,number'),'paper book ancho
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
 assert(engine.includes("if(!images[i].classList.contains('jfInlineGlyph'))return true;"),'real photos remain atomic');
 assert(engine.includes('if(imageCount!==sourceImages)continue;'),'glyph images preserved at Range split');
-assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'7.73.0');
+assert(Number(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version.split('.')[1])>=73,'glyph bridge remains compatible with current reader version');
 // Real clone-only bridge regression: 2 lost glyphs from an EPUB paragraph chain
 // must be retained exactly once, and visible text offsets remain byte-for-byte.
 function node(tag,children=[],attrs={}){

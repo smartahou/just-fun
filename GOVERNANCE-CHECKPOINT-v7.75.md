@@ -14,3 +14,9 @@
 - 新增 `tests/glyph-tight-ink-v775.js`，直接执行真实纯函数验证偏移包围框、宽高比限制与空段分类；对 CSS/JS 分页共用字形尺寸与字符 offset 保存设断言。
 - 此会话以 GitHub connector 写入；未在用户实际 EPUB 上运行本地浏览器及全量构建，因此只能证明代码逻辑与语法检查，不宣称这张截图已达到视觉完美。
 - 本地 `node tests/glyph-tight-ink-v775.js && node tests/print-glyph-ink-v774.js && npm run build`，验证第192–193页及纯正文/图文页，并用字号变化与关闭重开检查阅读锚点。
+
+## v7.75 质量门禁补充提交
+- 发现原 v7.73、v7.74 回归脚本硬编码当时的 `package.json.version`；新版本一发布就会把正常实现误报为失败。改为检查最低兼容小版本，仍保留各历史不变量。
+- v7.74 原测试对归一化结果的断言是 `img.src=normalized`，v7.75 实现使用 `{src,widthEm,cropped}` 元信息；改为验证 `img.src=normalized.src` 的克隆专用赋值。
+- 新增 `npm run test:reading-print` 一次运行 773/774/775 三组阅读链路验证。
+- 合成 100×100 像素图片的完整归一化/裁边模拟已确认：透明边框裁出 30×52 的实际字形、原始 URL 不变、相同输入命中缓存。

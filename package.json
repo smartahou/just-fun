@@ -8,7 +8,8 @@
     "pdfjs-dist": "6.4.299"
   },
   "scripts": {
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "test:reading-print": "node tests/epub-glyph-bridge-v773.js && node tests/print-glyph-ink-v774.js && node tests/glyph-tight-ink-v775.js"
   },
   "license": "MIT",
   "dependencies": {

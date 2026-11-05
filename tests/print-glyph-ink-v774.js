@@ -69,8 +69,8 @@ assert(css.includes('p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph)')
   'text paragraphs with only glyph images now participate in paper blending');
 assert(js.includes('const keyedGlyphs=new Map();'),'scanned paper-glyph normalization available');
 assert(js.includes("sec.el.querySelectorAll?.('img.jfInlineGlyph')||[]"),'older EPUB mocks without querySelectorAll remain safe');
-assert(js.includes("if(normalized){img.src=normalized;img.dataset.jfPlate='glyph-ink';}"),
-  'transparency applied only to cloned printer images');
+assert(js.includes("img.src=normalized.src;img.dataset.jfPlate='glyph-ink'"),
+  'transparent (and cropped) glyph applied only to cloned printer images');
 assert(js.includes("jfDeskPageForAnchor(jfDeskPages,number"),'reading anchor restore retained');
-assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'7.74.0');
+assert(Number(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version.split('.')[1])>=74,'v7.74 glyph ink regression remains valid on later releases');
 console.log('PASS v7.74: transparent warm glyph ink, clone-only seam removal, content offsets and ink blend');
