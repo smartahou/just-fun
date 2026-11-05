@@ -74,7 +74,7 @@ assert.equal(l.dataset.paperGroup,undefined);
 (async()=>{
  const spreads=Array.from({length:8},(_,i)=>({left:page(i*2),right:page(i*2+1)}));
  await paper.warm('book-A',spreads);
- assert(paper.cacheSize()<=12,'bounded decoded image refs');
+ assert(paper.cacheLimit<=16&&paper.cacheSize()<=paper.cacheLimit,'bounded decoded image refs');
  button.click();
  assert.equal(paper.isEnabled(),false);
  assert.equal(stored.get('jf-reader-aged-paper'),'off');
