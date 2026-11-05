@@ -45,9 +45,9 @@ jobs:
           sudo ln -sf "$CHROME" /usr/bin/chromium
       - name: Current paper-rendering regressions
         run: |
+          python tests/epub-paper-tabs-v7782.py
           python tests/paged-correctness-v736.py
           python tests/paged-no-skip-v737.py
-          python tests/epub-paper-tabs-v7782.py
           python tests/paper-perf-v747.py --expected-static --output dist/paper-performance-v754.json
       - name: Baseline comparison against prior v7.53
         continue-on-error: true
