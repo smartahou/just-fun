@@ -263,6 +263,16 @@ function jfEpubEnhance(epub){
   // Conservative standalone numbered notes, never guesses from a lone [17].
   for(const ch of chapters)if(annotations.size<900)
     jfEpubNumberedNotes(epub,ch.file,get(ch.file),annotations,edits);
+  // Exclude a whole note-only spine document only when ALL actual text
+  // disappears after removing linked notes. Preserve unlinked prose and 评析.
+  for(const ch of chapters){
+    if(ch.paperOmit)continue;
+    if(!(edits.get(ch.file)||[]).some(e=>e.replacement===''))continue;
+    const rest=jfEpubPaperXhtml({paperEdits:edits},ch.file,get(ch.file));
+    const visible=jfEpubPlain(rest,1000).replace(/\s/g,'');
+    if(!/<img\b/i.test(rest)&&/^(?:|【注释】|注释|脚注)$/.test(visible))
+      ch.paperOmit='notes-only';
+  }
   toc=toc.map(item=>chapters[item.chapter]?.paperOmit?{...item,available:false}:item);
   epub.toc=toc.slice(0,800);
   epub.annotations=[...annotations.values()];

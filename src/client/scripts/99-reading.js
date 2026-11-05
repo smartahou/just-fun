@@ -1639,16 +1639,17 @@ let jfDeskBookPages={total:0,exact:false,known:0,chapters:0};
 
 function jfDeskRecountBookPages(){
   const totalChapters=(jfDeskOutline&&jfDeskOutline.chapters)?jfDeskOutline.chapters.length:0;
-  let known=0,sum=0;
+  let known=0,knownReadable=0,omitted=0,sum=0;
   for(let n=0;n<totalChapters;n++){
-    const count=jfDeskPaperOmittedChapter(n)?0:jfDeskChapterPageCounts.get(n);
-    if(typeof count==='number'){known++;sum+=count;}
+    // Verified omitted sections are zero pages, not unknown counts.
+    if(jfDeskPaperOmittedChapter(n)){known++;omitted++;continue;}
+    const count=jfDeskChapterPageCounts.get(n);
+    if(typeof count==='number'){known++;knownReadable++;sum+=count;}
   }
   const exact=totalChapters>0&&known===totalChapters;
-  // When some chapters are unmeasured, extrapolate from the average of the ones
-  // we know. It is labelled "estimated" everywhere, never presented as exact.
-  const average=known?sum/known:0;
-  const total=exact?sum:Math.round(average*totalChapters);
+  const readable=Math.max(0,totalChapters-omitted);
+  const average=knownReadable?sum/knownReadable:0;
+  const total=exact?sum:Math.round(sum+average*Math.max(0,readable-knownReadable));
   jfDeskBookPages={total,exact,known,chapters:totalChapters};
   return jfDeskBookPages;
 }
