@@ -7,7 +7,9 @@ const helper=fs.readFileSync(path.join(root,'src/server/46g-epub-folios.js'),'ut
 const i=reader.indexOf('function jfReadingXmlDecode('),j=reader.indexOf('const JF_EPUB_ASSET_EXT',i);
 const k=reader.indexOf('function jfReadingEpubEntryName('),l=reader.indexOf('// EPUB chapters are re-emitted',k);
 assert(i>=0&&j>i&&k>=0&&l>k);
-const ctx={require,Buffer,jfReaderZlib:require('node:zlib'),jfReaderError:(status,message)=>Object.assign(new Error(message),{status})};
+const ctx={require,Buffer,jfReaderZlib:require('node:zlib'),
+  jfReadingTextDecode:value=>Buffer.isBuffer(value)?value.toString('utf8'):String(value),
+  jfReaderError:(status,message)=>Object.assign(new Error(message),{status})};
 vm.createContext(ctx);vm.runInContext(reader.slice(i,j)+'\n'+reader.slice(k,l)+'\n'+helper,ctx,{timeout:10000});
 function zip(files){
   let at=0;const data=[],dirs=[];
