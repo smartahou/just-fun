@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),crypto=require('node:crypto');
 const root=path.resolve(__dirname,'..');
 const assets=fs.readFileSync(path.join(root,'src/client/scripts/98e5-paper-tab-assets.js'),'utf8');
 const tabs=fs.readFileSync(path.join(root,'src/client/scripts/98f-epub-paper-tabs.js'),'utf8');
@@ -16,6 +16,12 @@ for(const name of ['toc','notes']){
   assert(bytes.length>1200,'not a placeholder sketch: '+name);
   assert.equal(bytes.toString('ascii',0,4),'RIFF');
   assert.equal(bytes.toString('ascii',8,12),'WEBP');
+  const expected={
+    toc:'7766956f18b1deb6dfc23c05e740f53c54141dc5a62477bcbf79fc455296fec0',
+    notes:'058f73e4efe68bcf5bc877317aaeeede6df0a56d20585a0a6521e5b6dd9c5772'
+  };
+  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),expected[name],
+    'actual user-supplied artwork bytes must survive JS source intact');
 }
 assert.notEqual(window.JFPaperTabImages.toc,window.JFPaperTabImages.notes,'supplied artwork differs');
 const index=manifest.scripts.indexOf('src/client/scripts/98f-epub-paper-tabs.js');
