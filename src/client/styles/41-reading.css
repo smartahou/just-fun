@@ -3320,3 +3320,35 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
    padding:17px 13px 14px 18px!important;
  }
 }
+
+
+/* ===== v7.83 · alpha-first photographic leaf silhouette ==================
+   The photographic WebP already includes worn edges, transparency and wear.
+   A solid cream .jfSheet fallback beneath that alpha created a pale second
+   rectangle around all four sides. The dark binding board then made an
+   additional visible lip. Remove those duplicate surfaces ONLY when a photo
+   is actually assigned; preserve the separate reading-progress side piles. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]{
+  background-color:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:has(.jfSheet[data-paper-group]) .jfBookBoard{
+  display:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{
+  background-position:center center!important;
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  opacity:1!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]>.jfSheetCurl,
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]>.jfSheetStack{
+  display:none!important;
+}
