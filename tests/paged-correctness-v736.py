@@ -213,7 +213,26 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-correctness-v736-'
                 timeout=40000)
             pg.wait_for_timeout(600)
             pg.locator('#jfReadPaged').click()
-            pg.wait_for_function("()=>jfDeskPages.length>0", timeout=60000)
+            try:
+                pg.wait_for_function("()=>jfDeskPages.length>0", timeout=60000)
+            except Exception:
+                diagnostic=pg.evaluate("""()=>{
+                  const view=document.getElementById('jfPageView');
+                  const out=document.getElementById('jfReadText');
+                  return {
+                    mode:jfDeskPaged,ready:jfDeskPages.length,generation:jfDeskPageGen,
+                    switchPending:!!jfDeskPagedSwitchPromise,
+                    rawCharacters:String(jfReadRawText||'').length,
+                    txtFlowSections:jfDeskFlow.length,
+                    textChars:out?.textContent.length||0,
+                    bookFormat:jfDeskOutline?.format,
+                    currentChapter:jfDeskChapter,
+                    readerHidden:document.getElementById('jfReader')?.hidden,
+                    className:view?.className
+                  };
+                }""")
+                print('TXT PAGINATION DIAGNOSTICS',json.dumps(diagnostic,ensure_ascii=False),flush=True)
+                raise
             pg.wait_for_timeout(800)
             tstate = pg.evaluate("""()=>{
               // TXT paragraphs are <p> elements, so the blank line between them is
