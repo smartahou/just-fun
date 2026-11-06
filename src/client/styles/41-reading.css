@@ -3352,3 +3352,56 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]>.jfSheetStack{
   display:none!important;
 }
+
+
+/* v7.83 · User-designed PNG bookmarks converted to tiny transparent WebPs.
+   Both art files are bundled into the offline JS entry and applied using CSS
+   variables on buttons. The click targets and aria labels remain native. */
+.jfReader.paged #jfPageView .jfEpubTocTab,
+.jfReader.paged #jfPageView .jfEpubNoteTab{
+  width:32px!important;
+  height:116px!important;
+  box-sizing:border-box!important;
+  border:0!important;
+  padding:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  clip-path:none!important;
+  background-color:transparent!important;
+  background-image:var(--jf-tab-image)!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  background-size:100% 100%!important;
+  color:transparent!important;
+  font-size:0!important;
+  letter-spacing:0!important;
+  text-shadow:none!important;
+  transform:none!important;
+  transition:none!important;
+  pointer-events:auto!important;
+  cursor:pointer;
+}
+.jfReader.paged #jfPageView .jfEpubTocTab{
+  top:21%!important;
+  left:calc(50% + var(--jf-page-w) - 2px)!important;
+}
+.jfReader.paged #jfPageView .jfEpubNoteTab{
+  top:calc(21% + 112px)!important;
+}
+.jfReader.paged #jfPageView .jfEpubTocTab:hover,
+.jfReader.paged #jfPageView .jfEpubNoteTab:hover{
+  background-color:transparent!important;
+  background-image:var(--jf-tab-image)!important;
+  filter:brightness(1.035);
+}
+.jfReader.paged #jfPageView #jfEpubTocTab[hidden],
+.jfReader.paged #jfPageView #jfEpubNoteTab[hidden]{display:none!important}
+@media(max-width:700px){
+  .jfReader.paged #jfPageView .jfEpubTocTab,
+  .jfReader.paged #jfPageView .jfEpubNoteTab{
+    width:27px!important;height:98px!important;
+  }
+  .jfReader.paged #jfPageView .jfEpubNoteTab{
+    top:calc(21% + 94px)!important;
+  }
+}
