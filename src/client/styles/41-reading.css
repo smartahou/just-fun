@@ -3493,3 +3493,18 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 /* No CSS-faked fore-edge in flow, plain paper, or single-page mode. */
 .jfReader.paged:not(.jf-aged-paper) #jfPageView .jfBookPile{display:none!important}
 .jfReader.paged.jf-aged-paper #jfPageView.single .jfBookPile{display:none!important}
+
+
+/* v7.89 · A stack must tuck UNDER the photographed front leaf, not sit next
+   to it like an independent flat wooden strip. 2px inset and softly recessed
+   top/bottom are physical overlap only; all leaf grain is pre-rendered. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile{
+  top:calc(50% - var(--jf-page-h)/2 + 2px)!important;
+  height:calc(var(--jf-page-h) - 4px)!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 3px)!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 3px)!important;
+}
