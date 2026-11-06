@@ -77,5 +77,6 @@ assert(css.includes('p:first-child:not(.jfPrintContinuation)'),'new page-top par
 assert(css.includes('p.jfPrintContinuation{'),'carried-over paragraphs start without an extra indent');
 assert(css.includes('color:rgba(53,37,24,.95)'),'denser but translucent paper pigment');
 assert(!engine.includes('available-=lh*MIN_LINES'),'never reduce below two-line split budget');
-assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'7.78.0');
+assert(/^(?:[8-9]|[1-9]\d+)\.|^7\.(?:7[8-9]|[8-9]\d)\./.test(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version),
+  'page-composition regression applies from v7.78 onward; later versions remain valid');
 console.log('PASS v7.78: assembled split rescue, exact offsets, 2-line rule, paper indent and ink');
