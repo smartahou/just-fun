@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.82.0 / Current version: v7.82.0** · 持续迭代 / Actively evolving
+**当前版本：v7.83.0 / Current version: v7.83.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.83 · 原图书签、罕字链路与真实纸边**：采用用户上传的两张纵向旧纸书签 PNG，经透明裁切与 WebP 缩小后作为原始图像内嵌在离线构建中，取代 CSS 仿制「目录」「笺注」标签；维持原抽屉交互。注释原文高亮仅选实际汉字，跳过逗号、句号等标点。修复《唐诗三百首新注》表格中 `kindle-cn-inline-image` 生僻字源类名被服务端 HTML 清理器丢失的问题，将语义作为 `data-jf-glyph-hint` 传到前端，沿用真实尺寸行内绘制。旧纸照片有 Alpha 透明轮廓，移除其下方实心浅色纸板及多余书板，恢复照片 100% 显示而非进一步放大裁切，继续保留侧面阅读进度纸堆。新增针对原图字节、无标点高亮、罕字语义传递的 Node 回归测试；真实 Windows 浏览器图像和四边 Alpha 效果仍需人工验收。
 
 **v7.82 · 诗歌排版、生僻字与纸签整体校正**：以用户《唐诗三百首新注》实书截图和源 EPUB 为基准：诗歌段落（`kindle-cn-poem-left` 等）取消误加的首行两字缩进；表格或诗文中的小尺寸 `kindle-cn-inline-image` 生僻字图片按一枚行内字形排版（原 EPUB 和其他照片不动）；“目／笺”书签改为完整竖排「目录／笺注」；抽屉保留右侧浮出但不再缩放书本和影响分页；NCX 目录卷目与子项按真实 depth 分组并用有效像素缩进；笺注改成核对过的“〔原书序号〕+解释”简洁清单；旧纸模式停用多余的纸面渐变和内部卷曲图层，略微内裁照片四边扫描透明边缘。新增真实节点模拟测试 `tests/epub-visual-fixes-v782.js`；GitHub Node CI 运行情况见版本检查点，Windows 实机截图仍需复核。
 
