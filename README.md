@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.81.0 / Current version: v7.81.0** · 持续迭代 / Actively evolving
+**当前版本：v7.82.0 / Current version: v7.82.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.82 · 诗歌排版、生僻字与纸签整体校正**：以用户《唐诗三百首新注》实书截图和源 EPUB 为基准：诗歌段落（`kindle-cn-poem-left` 等）取消误加的首行两字缩进；表格或诗文中的小尺寸 `kindle-cn-inline-image` 生僻字图片按一枚行内字形排版（原 EPUB 和其他照片不动）；“目／笺”书签改为完整竖排「目录／笺注」；抽屉保留右侧浮出但不再缩放书本和影响分页；NCX 目录卷目与子项按真实 depth 分组并用有效像素缩进；笺注改成核对过的“〔原书序号〕+解释”简洁清单；旧纸模式停用多余的纸面渐变和内部卷曲图层，略微内裁照片四边扫描透明边缘。新增真实节点模拟测试 `tests/epub-visual-fixes-v782.js`；GitHub Node CI 运行情况见版本检查点，Windows 实机截图仍需复核。
 
 **v7.81 · 旧纸目录与笺注实书修复**：针对用户实际上传的《唐诗三百首新注》增加 Calibre/Kindle `noteBack_N` ↔ `note_N` 双向链接和「【注释】」分段联合验证，确认后从纸书投影移走编号、注释段和完整已验证的标题；保留诗词、评析、辑评和不确定编号。对 EPUB2 NCX 指向的独立人工目录，新增“导航元数据 + 目录标题 + 至少八个有效不同目标链接”高置信排除。旧版覆盖右页的软件式抽屉改为书页外侧朴素泛黄纸笺，展开时临时等比缩放/退让整本书（不改纸页原本字号和分页数据），收起还原；修复纸笺点击误翻页与键盘干扰。详见 `GOVERNANCE-CHECKPOINT-v7.81.md`。
 
