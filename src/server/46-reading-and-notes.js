@@ -657,13 +657,20 @@ function jfReadingEpubPaperNotes(xhtml,entry,epub){
     if(!id||id.length>160)continue;
     let xml;
     try{xml=target===entry.file?xhtml:jfReadingTextDecode(epub.zip.read(target));}catch{continue;}
-    const candidates=xml.match(/<(aside|li|p|section|div)\b[^>]*>[\s\S]*?<\/\1\s*>/gi)||[];
-    const note=candidates.find(candidate=>{
-      const tag=candidate.match(/^<[^>]+>/)?.[0]||'';
-      return jfReadingAttr(tag,'id')===id &&
-        /\b(?:footnote|endnote|doc-footnote|doc-endnote)\b/i.test(
-          jfReadingAttr(tag,'epub:type')+' '+jfReadingAttr(tag,'role'));
-    });
+    // Search opening tags independently so a nested <li> under <section>
+    // is not swallowed by an outer non-overlapping regex match.
+    let note='';
+    for(const found of xml.matchAll(/<(aside|li|p|section|div)\b[^>]*>/gi)){
+      const tag=found[0],kind=found[1];
+      if(jfReadingAttr(tag,'id')!==id)continue;
+      if(!/\b(?:footnote|endnote|doc-footnote|doc-endnote)\b/i.test(
+        jfReadingAttr(tag,'epub:type')+' '+jfReadingAttr(tag,'role')))continue;
+      const tail=xml.slice(found.index+tag.length);
+      const close=new RegExp('<\\/'+kind+'\\s*>','i').exec(tail);
+      if(!close)break;
+      note=xml.slice(found.index,found.index+tag.length+close.index+close[0].length);
+      break;
+    }
     if(!note)continue;
     let text=jfReadingHtmlToText(note).trim();
     // Remove a visible note number only when it equals the verified noteref.
