@@ -8,3 +8,8 @@
 - 尽量限缩修改范围：没有恢复 `.jfBookBoard`、`.jfSheetCurl` 或实心 `.jfSheet` 背景；保留 WebP Alpha 边缘和独立 `.jfBookPile` 阅读进度，不触碰文本、阅读位置和书签逻辑。
 - 更新 `tests/paper-spine-gutter-v785.js` 为“后续版本继续保留核心不变量”的语义；新增 `tests/paper-stage-and-spine-v786.js` 对背景色和阴影叠层数量进行静态回归。
 - 仍需 Windows 真实浏览器视觉验收。不能把通过的 CSS/构建测试称为已经满足用户审美要求。
+## GitHub CI 验证
+
+- [EPUB paper slips regression #42188776717](https://github.com/smartahou/just-fun/actions/runs/42188776717)：**PASS**。Node 24 依赖安装、EPUB v7.86 专项、原有阅读回归、完整离线构建以及生成 JS 语法检查全部成功。
+- 构建 `sourceSha256`：`5b98826753ba74b089203b8aee24cb9fb6840a45f1bf352abc715cad54ba2ff7`（源码指纹，不是打包 JS 的 SHA-256）。
+- 仍需用户在 Windows 本机核验黑色背景是否完全消失、书脊柔光是否自然；CI 不能代替视觉验收。
