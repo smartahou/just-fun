@@ -388,6 +388,7 @@ async function jfDeskOpenReader(bookId,chapter){
     const outline=await jfDeskApi('outline?id='+encodeURIComponent(bookId));
     if(epoch!==jfDeskEpoch)return;
     jfDeskOutline=outline;jfDeskBook=outline.book;
+    window.JFEpubPaperToc?.close();
     document.getElementById('jfReadMask').hidden=outline.format==='PDF';
     document.getElementById('jfReadTitle').textContent=outline.book.title;
     document.getElementById('jfReadFormat').textContent=outline.format+' / JUST FUN';
@@ -398,6 +399,7 @@ async function jfDeskOpenReader(bookId,chapter){
     const savedMode=jfDeskWorkspace.progress[bookId]?.mode;
     jfDeskPaged=outline.format==='EPUB'&&savedMode==='paged';
     jfReader.classList.toggle('paged',jfDeskPaged);
+    window.JFEpubPaperToc?.sync();
     jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
     // Restore the selected old-paper skin whenever a book is reopened. The
     // paged/flow switch must not suppress its persistent textured state.
@@ -2443,6 +2445,7 @@ window.JFReaderGlyphAudit=()=>{
     note:'If anomalous glyphs remain, inspect their source element and EPUB dimensions rather than guessing CSS.'};
 };
 function jfDeskPagedRender(direction){
+  window.JFEpubPaperToc?.sync();
   const geo=jfDeskPagedGeometry();
   const twoPages=geo.two&&jfDeskPages.length>1;
   const left=document.getElementById('jfSheetLeft');
@@ -2679,6 +2682,7 @@ async function jfDeskPagedToggle(){
   const task=(async()=>{
     jfDeskPaged=!oldMode;
     jfReader.classList.toggle('paged',jfDeskPaged);
+    window.JFEpubPaperToc?.close();window.JFEpubPaperToc?.sync();
     window.JFPaperTextures?.syncButton();
     // Paper-book is a VIEW MODE, not a global theme preference. Switching one
     // book must not silently switch every other book into the paper theme.
