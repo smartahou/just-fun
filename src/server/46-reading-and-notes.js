@@ -667,10 +667,11 @@ function jfReadingEpubPaperNotes(xhtml,entry,epub){
     if(!note)continue;
     const text=jfReadingHtmlToText(note).trim();
     if(!text||text.length>12000)continue;
-    const key=require('node:crypto').createHash('sha256').update(entry.file+'\0'+notes.length).digest('hex').slice(0,16);
+    const key=require('node:crypto').createHash('sha256')
+      .update(entry.file+'\0'+target+'\0'+id).digest('hex').slice(0,16);
     const before=xhtml.slice(Math.max(0,match.index-250),match.index);
     const quote=jfReadingHtmlToText(before).replace(/\s+/g,' ').trim().slice(-24);
-    notes.push({id:key,text,quote});
+    if(!notes.some(n=>n.id===key))notes.push({id:key,text,quote});
     paper=paper.replace(match[0],'<span data-jf-note-ref="'+key+'" aria-label="笺注位置"></span>');
     if(target===entry.file)removed.push(note);
   }
