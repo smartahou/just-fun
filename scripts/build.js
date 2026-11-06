@@ -128,6 +128,45 @@ function build() {
       stackUrls.push('data:image/webp;base64,'+data.toString('base64'));
     }
   }
+
+  // v7.90: self-contained replacement photographs (original v7.88 assets remain
+  // byte-identical in Git for rollback). Strictly verify each original WebP,
+  // native dimensions, transparency and checksum BEFORE embedding it offline.
+  const photoMeta=JSON.parse(read('assets/paper-stacks/embedded-v790.json'));
+  if(photoMeta.canvas?.width!==64||photoMeta.canvas?.height!==1440||
+     photoMeta.progress_states?.length!==11)
+    throw Error('Invalid photographed fore-edge bundle');
+  const photoHashes=[];
+  let photoBytes=0;
+  for(let i=0;i<11;i++){
+    const state=photoMeta.progress_states[i];
+    if(!state||state.percent!==i*10)throw Error('Unordered photographed stack state '+i);
+    for(const side of ['left','right']){
+      const name='stack-'+String(i*10).padStart(3,'0')+'-'+side+'.webp';
+      if(state[side]!==name||typeof state[side+'_base64']!=='string')
+        throw Error('Wrong photographed stack file: '+i+' '+side);
+      const b64=state[side+'_base64'];
+      const data=Buffer.from(b64,'base64');
+      if(data.toString('base64')!==b64||
+         data.length!==state[side+'_bytes']||
+         data.toString('ascii',0,4)!=='RIFF'||
+         data.toString('ascii',8,12)!=='WEBP'||
+         data.toString('ascii',12,16)!=='VP8X'||
+         !(data[20]&0x10)||
+         data.readUIntLE(24,3)+1!==64||
+         data.readUIntLE(27,3)+1!==1440)
+        throw Error('Invalid alpha/dimensions for photographed stack '+name);
+      const sum=crypto.createHash('sha256').update(data).digest('hex');
+      if(sum!==state[side+'_sha256'])
+        throw Error('Photographed stack hash mismatch '+name);
+      if((i===0&&side==='left')||(i===10&&side==='right')){
+        if(data.length>600)throw Error('An empty book-edge endpoint must be transparent: '+name);
+      }
+      photoHashes.push(sum);
+      photoBytes+=data.length;
+      stackUrls[i*2+(side==='right'?1:0)]='data:image/webp;base64,'+b64;
+    }
+  }
   let injected=false,stackInjected=false;
   const browser=manifest.scripts.map(p=>{
     const code=read(p);
@@ -219,6 +258,8 @@ function build() {
     paperRuntimeAssetSha256:paperRuntimeHashes,paperRuntimeBytes,
     paperStackStates:stackMeta.progress_states.length,paperStackAssetsSha256:stackAssetHashes,
     paperStackAssetBytes:stackAssetBytes,
+    paperStackPhotoStates:photoMeta.progress_states.length,paperStackPhotoSha256:photoHashes,
+    paperStackPhotoBytes:photoBytes,
     pdfjsVersion:pdfPkg.version,pdfjsAssets:Object.keys(pdfAssets).length,
     pdfjsModuleSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(pdfRoot,'build/pdf.min.mjs'))).digest('hex'),
     baselinePageIdentical:hash(html)===manifest.baselineRenderedHtmlSha256

@@ -77,7 +77,7 @@ assert.equal(l.dataset.paperGroup,undefined);
  assert(paper.cacheLimit<=16&&paper.cacheSize()<=paper.cacheLimit,'bounded decoded image refs');
  button.click();
  assert.equal(paper.isEnabled(),false);
- assert.equal(stored.get('jf-reader-aged-paper'),'off');
+ assert.equal(stored.get('jf-reader-aged-paper-v768'),'off');
  button.click();
  assert.equal(paper.isEnabled(),true);
  assert(reader.classList.values.has('jf-aged-paper'));

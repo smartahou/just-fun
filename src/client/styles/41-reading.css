@@ -3493,3 +3493,29 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 /* No CSS-faked fore-edge in flow, plain paper, or single-page mode. */
 .jfReader.paged:not(.jf-aged-paper) #jfPageView .jfBookPile{display:none!important}
 .jfReader.paged.jf-aged-paper #jfPageView.single .jfBookPile{display:none!important}
+
+
+/* v7.90 · Photographic fore-edge, not a CSS page-count comb.
+   The raster contains genuine scanned thin-paper striation and a rounded
+   alpha silhouette. Hide its straight inner boundary UNDER the current
+   photographed leaf rather than pasting it beside the page. Never create
+   a painted border, rigid clipping polygon, or surface-wide shadow. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile{
+  top:calc(50% - var(--jf-page-h)/2 + 1px)!important;
+  height:calc(var(--jf-page-h) - 2px)!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+  border:0!important;
+  clip-path:none!important;
+  filter:none!important;
+  transform:none!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 3px)!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 3px)!important;
+}

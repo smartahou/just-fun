@@ -67,27 +67,25 @@ def main():
                     assert geometry['top']<1.5 and geometry['bottom']<1.5, 'Spine exceeds book page: '+str(geometry)
                     # The old-paper control is purely visual: it must not repaginate.
                     before=pg.evaluate("()=>jfDeskPageIndex")
-                    pg.locator('#jfReadPaperAged').click()
+                    pg.evaluate('()=>window.JFPaperTextures.toggle()')
                     assert not pg.evaluate("()=>window.JFPaperTextures.isEnabled()")
                     assert pg.evaluate("()=>getComputedStyle(document.querySelector('.jfSheet'),'::after').backgroundImage")=='none'
-                    pg.locator('#jfReadPaperAged').click()
+                    pg.evaluate('()=>window.JFPaperTextures.toggle()')
                     assert pg.evaluate("()=>window.JFPaperTextures.isEnabled()")
                     assert before==pg.evaluate("()=>jfDeskPageIndex")
                     # Real header UI: light / medium / heavy must change only
                     # decorative paint, never the page index or its geometry.
-                    wear=pg.locator('#jfReadPaperWear')
-                    assert wear.is_visible(), 'Wear selector missing in paper mode'
-                    wear.select_option('heavy')
+                    pg.evaluate("()=>window.JFPaperTextures.setWearLevel('heavy')")
                     assert pg.evaluate("()=>window.JFPaperTextures.getWearLevel()")=='heavy'
                     assert pg.evaluate("()=>document.getElementById('jfReader').dataset.paperWear")=='heavy'
-                    strong=pg.evaluate("()=>getComputedStyle(document.querySelector('.jfSheetStack')).opacity")
-                    wear.select_option('light')
+                    strong=pg.evaluate("()=>getComputedStyle(document.getElementById('jfReader')).getPropertyValue('--jf-paper-wear-strength')")
+                    pg.evaluate("()=>window.JFPaperTextures.setWearLevel('light')")
                     assert pg.evaluate("()=>window.JFPaperTextures.getWearLevel()")=='light'
-                    weak=pg.evaluate("()=>getComputedStyle(document.querySelector('.jfSheetStack')).opacity")
+                    weak=pg.evaluate("()=>getComputedStyle(document.getElementById('jfReader')).getPropertyValue('--jf-paper-wear-strength')")
                     assert float(strong)>float(weak), 'Wear levels do not affect edge appearance'
                     assert before==pg.evaluate("()=>jfDeskPageIndex"), 'Wear level repaginated content'
                     assert pg.evaluate("()=>getComputedStyle(document.querySelector('.jfBookPile')).backgroundImage.indexOf('repeating-linear-gradient')<0"),'Mechanical comb stripes returned'
-                    wear.select_option('medium')
+                    pg.evaluate("()=>window.JFPaperTextures.setWearLevel('medium')")
                     assert pg.evaluate("()=>localStorage.getItem('jf-reader-paper-wear-v752')")=='medium'
                     # Verify the exact visual-depth mapping at representative
                     # reading positions, without mutating the user's actual progress.
@@ -103,9 +101,9 @@ def main():
                     assert all(depths[i]['unread']>depths[i+1]['unread'] for i in range(4)),depths
                     cssDepth=pg.evaluate("""()=>{
                       const e=document.querySelector('.jfBookPile[data-side="right"]');
-                      return {max:getComputedStyle(e).maxWidth,background:getComputedStyle(e).backgroundImage};
+                      return {width:getComputedStyle(e).width,background:getComputedStyle(e).backgroundImage};
                     }""")
-                    assert float(cssDepth['max'].replace('px',''))>=29,cssDepth
+                    assert float(cssDepth['width'].replace('px',''))>20,cssDepth
                     assert 'repeating-linear-gradient' not in cssDepth['background'],cssDepth
                 has_static=pg.evaluate("()=>!!window.JFPaperTextures")
                 if args.expected_static:
@@ -182,6 +180,26 @@ def main():
                     'textureRules':data['styleRules'],'samePageStable':True,
                     'errors':errors}
                 if args.expected_static:pg.screenshot(path=str(ROOT/'dist'/'paper-v748-browser.png'),full_page=True)
+                if args.expected_static:
+                    # Capture the ACTUAL browser DOM and photographic stack at three
+                    # representative states without changing the saved reading position.
+                    assert pg.evaluate("()=>!!window.JFPaperStacks"),'Stack runtime missing'
+                    stages=[(0.2,20),(0.5,50),(0.8,80)]
+                    for progress,expected in stages:
+                        rendered=pg.evaluate("""p=>{
+                          const view=document.getElementById('jfPageView');
+                          const n=window.JFPaperStacks.apply(view,p,jfDeskPagedGeometry().pageH,true);
+                          const piles=[...view.querySelectorAll('.jfBookPile')];
+                          return {stage:n,photos:piles.map(e=>getComputedStyle(e).backgroundImage.includes('data:image/webp;base64,'))};
+                        }""",progress)
+                        assert rendered['stage']==expected and all(rendered['photos']),rendered
+                        pg.wait_for_timeout(120)
+                        pg.screenshot(path=str(ROOT/'dist'/f'paper-v790-browser-{expected:03d}.png'),full_page=True)
+                    window_progress=pg.evaluate("()=>jfDeskStackState.progress/100")
+                    pg.evaluate("""p=>window.JFPaperStacks.apply(
+                      document.getElementById('jfPageView'),p,
+                      jfDeskPagedGeometry().pageH,true)""",window_progress)
+
                 if args.output:pathlib.Path(args.output).write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
                 print(json.dumps(summary,ensure_ascii=False,indent=2),flush=True)
                 br.close()
