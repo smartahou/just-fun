@@ -648,6 +648,7 @@ function jfReadingEpubImageLayoutHints(tag){
   const alt=String(jfReadingXmlDecode(jfReadingAttr(tag,'alt')||'')).trim();
   const names=String(jfReadingAttr(tag,'class')||'')+' '+String(jfReadingAttr(tag,'id')||'')+' '+source;
   const known=/(?:^|[/_.\s-])(?:gaiji|glyph|rarechar|hanzi|inlinechar|charimg|u[0-9a-f]{4,6})(?:[/_.\s-]|$)/i.test(names)
+    ||/(?:^|\s)kindle-cn-inline-image(?:\s|$)/i.test(String(jfReadingAttr(tag,'class')||''))
     ||/^[\u3400-\u9fff\uf900-\ufaff]$/.test(alt);
   const style=String(jfReadingAttr(tag,'style')||'');
   function dim(name){
