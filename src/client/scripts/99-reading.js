@@ -388,7 +388,7 @@ async function jfDeskOpenReader(bookId,chapter){
     const outline=await jfDeskApi('outline?id='+encodeURIComponent(bookId));
     if(epoch!==jfDeskEpoch)return;
     jfDeskOutline=outline;jfDeskBook=outline.book;
-    window.JFEpubPaperToc?.close();
+    jfDeskPaperNotes.clear();window.JFEpubPaperToc?.close();
     document.getElementById('jfReadMask').hidden=outline.format==='PDF';
     document.getElementById('jfReadTitle').textContent=outline.book.title;
     document.getElementById('jfReadFormat').textContent=outline.format+' / JUST FUN';
@@ -466,6 +466,7 @@ async function jfDeskOpenReader(bookId,chapter){
 // Excerpt offsets stay per-chapter: the anchor is computed inside the section that
 // owns the selection, which keeps the stored format compatible with older notes.
 let jfDeskFlow=[],jfDeskFlowBusy=false,jfDeskBackfillBusy=false;
+const jfDeskPaperNotes=new Map();
 // While a saved position is being restored only the restore routine may prepend
 // chapters. Anything else inserts content above the anchor and moves the reader.
 let jfDeskRestoring=false,jfDeskRestoreTimer=0;
@@ -494,6 +495,10 @@ function jfDeskFlowSection(n,html){
 }
 async function jfDeskFlowFetch(n){
   const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+n);
+  if(jfDeskPaged&&jfDeskOutline?.format==='EPUB'){
+    jfDeskPaperNotes.set(n,Array.isArray(data.notes)?data.notes:[]);
+    return data.paperHtml||data.html||'';
+  }
   return data.html||'';
 }
 // One in-flight fetch per (book, chapter). Without this, two concurrent callers
@@ -2471,6 +2476,7 @@ function jfDeskPagedRender(direction){
   }
   left.replaceChildren(...pageA.map(x=>x.node));
   right.replaceChildren(...pageB.map(x=>x.node));
+  window.JFEpubPaperToc?.renderNotes?.(left,right,jfDeskPaperNotes);
   const first=pageA[0]||pageB[0];
   if(first)jfDeskChapter=first.chapter;
   // Key out the cream backing of scanned plates before the eye sees it.
@@ -2683,6 +2689,7 @@ async function jfDeskPagedToggle(){
     jfDeskPaged=!oldMode;
     jfReader.classList.toggle('paged',jfDeskPaged);
     window.JFEpubPaperToc?.close();window.JFEpubPaperToc?.sync();
+    jfDeskPaperNotes.clear();
     window.JFPaperTextures?.syncButton();
     // Paper-book is a VIEW MODE, not a global theme preference. Switching one
     // book must not silently switch every other book into the paper theme.
