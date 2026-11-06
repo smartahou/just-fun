@@ -228,7 +228,11 @@ with tempfile.TemporaryDirectory(prefix='jf-architecture-test-correctness-v736-'
                     bookFormat:jfDeskOutline?.format,
                     currentChapter:jfDeskChapter,
                     readerHidden:document.getElementById('jfReader')?.hidden,
-                    className:view?.className
+                    className:view?.className,
+                    lastMessage:document.getElementById('jfDeskSaveState')?.textContent,
+                    lastError:document.getElementById('jfDeskStatus')?.textContent,
+                    currentSession:jfDeskSession,
+                    pageEngineAvailable:!!window.JFPageEngine
                   };
                 }""")
                 print('TXT PAGINATION DIAGNOSTICS',json.dumps(diagnostic,ensure_ascii=False),flush=True)
