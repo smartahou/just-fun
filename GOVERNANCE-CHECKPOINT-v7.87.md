@@ -23,3 +23,10 @@
 
 - GitHub CI 应执行 `npm run test:epub-paper`、`npm run test:reading-print`、`node scripts/build.js`、`node --check dist/douyin.js`；以实际完成记录为准。
 - 用户 Windows 实机的书缝光影和自然程度尚需核验。
+
+## 最终 CI
+
+- [GitHub Actions #42191064935](https://github.com/smartahou/just-fun/actions/runs/42191064935)：**PASS**。
+- Node 24：依赖安装、EPUB 专项（含 v7.87 内沿裁切和 v7.85–v7.86 兼容回归）、阅读排版回归、完整离线构建和输出 JS 语法检查均成功。
+- 构建 `sourceSha256`：`7b48dfdc1bbde417daf308cec75f93b2b8f77409bef4d90f8156b0cc569c4ca5`（源码指纹，非构建 JS 的 SHA-256）。
+- 本轮验证包含原始图像像素离线模拟，但**未运行用户 Windows 上的完整实际渲染环境**。
