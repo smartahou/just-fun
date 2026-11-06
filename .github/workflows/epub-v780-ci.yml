@@ -16,6 +16,8 @@ on:
       - "tests/epub-paper-tabs-v783.js"
       - "tests/epub-size-tuning-v784.js"
       - "tests/paper-spine-gutter-v785.js"
+      - "tests/paper-stage-and-spine-v786.js"
+      - "tests/paper-inner-edge-v787.js"
       - "tests/paged-composition-v778.js"
       - ".github/workflows/epub-v780-ci.yml"
   workflow_dispatch:

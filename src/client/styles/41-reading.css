@@ -3408,36 +3408,39 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 }
 
 
-/* v7.86 · A page fold, not a painted central stripe.
-   v7.85's warm-paper "bridge" and 0.34-opacity centre looked like a fake
-   ribbon. A real scanned leaf already contains its own crease texture.
-   Keep only a low-contrast, continuously fading shadow above the join:
-   zero overlay away from the spine, no 1px hairline or paper-color patch. */
+/* v7.87 · The photographed pages must JOIN before shading.
+   Old WebP leaf images have alpha=0 at their innermost pixel. v7.86
+   merely changed the exposed stage from black to beige: a white seam.
+   Trim ONLY the INNER 12px of the bitmap painting, without shifting
+   sheet boxes or changing the outer torn edge, page text or pagination. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single) .jfSheet[data-paper-group][data-paper-side="left"]::after{
+  background-size:calc(100% + 12px) 100%!important;
+  background-position:left center!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single) .jfSheet[data-paper-group][data-paper-side="right"]::after{
+  background-size:calc(100% + 12px) 100%!important;
+  background-position:right center!important;
+}
+/* The actual paper textures now touch. Keep just a shallow asymmetrical
+   binding depression, NEVER a coloured filler or central hairline. */
 .jfReader.paged.jf-aged-paper #jfPageView:not(.single):has(.jfSheet[data-paper-group][data-paper-side]) .jfSpineShade{
-  width:clamp(64px,6vw,90px)!important;
+  width:clamp(58px,5.7vw,82px)!important;
   background:linear-gradient(90deg,
-    rgba(48,32,18,0) 0%,
-    rgba(48,32,18,.012) 23%,
-    rgba(44,30,18,.035) 35%,
-    rgba(40,27,16,.072) 43%,
-    rgba(37,25,15,.103) 50%,
-    rgba(40,27,16,.072) 57%,
-    rgba(44,30,18,.035) 65%,
-    rgba(48,32,18,.012) 77%,
-    rgba(48,32,18,0) 100%)!important;
+    rgba(43,32,20,0) 0%,
+    rgba(43,32,20,.008) 19%,
+    rgba(43,32,20,.036) 34%,
+    rgba(43,32,20,.076) 43%,
+    rgba(42,29,17,.112) 51%,
+    rgba(43,32,20,.072) 60%,
+    rgba(43,32,20,.027) 78%,
+    rgba(43,32,20,0) 100%)!important;
   background-color:transparent!important;
   background-blend-mode:normal!important;
-  opacity:1!important;
-  mix-blend-mode:normal!important;
-  filter:none!important;
-  box-shadow:none!important;
-  pointer-events:none!important;
+  opacity:1!important;mix-blend-mode:normal!important;
+  filter:none!important;box-shadow:none!important;pointer-events:none!important;
 }
-/* The rectangular black stage was #141210, not an edge of the paper asset.
-   Match the actual warm reader chrome (#e1ddd1), so there is no drawn black
-   box outside the organic alpha contour. Leave ordinary non-aged modes alone. */
+/* Retain the v7.86 non-rectangular warm desk and Alpha paper surfaces. */
 .jfReader.paged.jf-aged-paper #jfReadCenter{
   background:#e1ddd1!important;
-  box-shadow:none!important;
-  border:0!important;
+  box-shadow:none!important;border:0!important;
 }

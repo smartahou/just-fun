@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
+const texture=fs.readFileSync(path.join(root,'src/client/scripts/98e-paper-textures.js'),'utf8');
+const [major,minor]=require('../package.json').version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=87),'v7.87+ inner edge fix');
+const latest=css.slice(css.indexOf('/* v7.87 · The photographed pages'));
+assert(latest.startsWith('/* v7.87'));
+const left=latest.slice(latest.indexOf('[data-paper-side="left"]::after{'),latest.indexOf('[data-paper-side="right"]::after{'));
+const right=latest.slice(latest.indexOf('[data-paper-side="right"]::after{'),latest.indexOf('/* The actual paper'));
+for(const side of [left,right])assert(side.includes('background-size:calc(100% + 12px) 100%!important'));
+assert(left.includes('background-position:left center!important'),'left exterior edge unchanged');
+assert(right.includes('background-position:right center!important'),'right exterior edge unchanged');
+const paint=latest.slice(0,latest.indexOf('/* The actual paper'));
+assert(paint.includes('#jfPageView:not(.single)'),'never crop single-page photos');
+assert(!/transform:|margin-left:|margin-right:/.test(paint),'layout-neutral image painting only');
+assert(texture.includes('sheet.dataset.paperSide=side'),'runtime supplies real paper side');
+assert(css.includes('.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{\n  background-position:center center!important;\n  background-size:100% 100%!important;'),'normal non-double-page texture remains exact');
+assert(latest.includes('rgba(42,29,17,.112) 51%'),'one subtle crease');
+assert(!latest.includes('rgba(224,205,174,.96)'),'no artificial filler strip');
+console.log('PASS v7.87 real photo inner-edge crop, unchanged outer alpha and pagination');

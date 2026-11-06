@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.86.0 / Current version: v7.86.0** · 持续迭代 / Actively evolving
+**当前版本：v7.87.0 / Current version: v7.87.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.87 · 中央纸缝真实接合**：旧纸两张 WebP 的内沿具有透明像素，v7.86 把漏出的黑底改为米色后成为醒目的浅灰白竖线。现在只裁左纸纹理的内右沿、右纸纹理的内左沿各 12px；保留外侧破损轮廓、书页几何和分页。旧纸在中缝直接接合，只留一层低对比的非对称凹陷暗部；无人工补色带、黑/白细线或整页浮膜。新增 `tests/paper-inner-edge-v787.js`。真实 Windows 画面仍待用户视觉验收。
 
 **v7.86 · 书脊自然化与黑色矩形背景移除**：从用户实机截图定位两种独立视觉瑕疵：旧书双页的书脊由 v7.85 的高强度双层阴影/人工暖纸桥形成假竖带，纸张外围的四方黑边则来自固定宽高 `#jfReadCenter` 背景 `#141210`，而不是 WebP 的 Alpha 轮廓。现仅在旧纸模式下将阅读背景调整为与浅色工具栏相同的 `#e1ddd1`，让纸张不规则边缘直接呈现；用一层弱而连续、两侧逐渐透明的 64–90px 书缝光影替换双层填缝。未恢复浮膜、书板或卷曲层，也不改变分页、侧纸堆、按钮和文字。专项测试 `tests/paper-stage-and-spine-v786.js`；真实 Windows 画面仍需人工确认。
 
