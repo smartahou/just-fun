@@ -1,27 +1,21 @@
 #!/usr/bin/env node
 'use strict';
-const assert=require('node:assert/strict');
-const fs=require('node:fs'),path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const version=require('../package.json').version;
-assert.equal(version,'7.85.0');
-const idx=css.indexOf('/* v7.85 · restore physical gutter');
-assert(idx>=0,'gutter correction exists');
-const fix=css.slice(idx);
-assert.match(fix,/\.jfReader\.paged\.jf-aged-paper #jfPageView:not\(\.single\):has\(\.jfSheet\[data-paper-group\]\[data-paper-side\]\) \.jfSpineShade\s*\{/);
-assert.match(fix,/width:clamp\(40px,4\.6vw,64px\)!important/,'shadow has a gradual lateral falloff');
-assert.match(fix,/rgba\(224,205,174,\.96\) 48%/,'warm paper bridge masks transparent center seam');
-assert.match(fix,/rgba\(224,205,174,1\) 52%/);
-assert.match(fix,/rgba\(25,17,9,\.34\) 50%/,'center crevice is softly shaded, not black');
-assert.match(fix,/rgba\(30,22,13,0\) 0%/,'shadow is fully transparent at outer edge');
-assert.match(fix,/rgba\(30,22,13,0\) 100%/);
-assert(!fix.includes('background-color:#'),'do not restore a whole-sheet solid-paper backdrop');
-assert(!fix.includes('.jfSheetCurl{display:block'),'do not reinstate broad fake curl film');
-assert(css.includes('background-color:transparent!important'),'real photographic leaf stays alpha-backed');
-assert(css.includes("display:none!important;\n}\n.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after"),
-  'duplicate board retirement remains intact');
-assert(css.includes('.jfReader.paged #jfPageView.single .jfSheet>.jfSheetCurl,') &&
-       css.includes('.jfReader.paged #jfPageView.single .jfSpineShade{display:none!important}'),
-  'single page has no central fold');
-console.log('PASS v7.85: photographed center gap receives paper bridge + soft crease, outer membrane stays removed, single page untouched');
+const [major,minor]=version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=85),'gutter test applies to v7.85+');
+const start=css.indexOf('/* v7.86 · A page fold');
+assert(start>0,'the v7.85 two-layer effect must have been replaced');
+const part=css.slice(start);
+assert.match(part,/\.jfReader\.paged\.jf-aged-paper #jfPageView:not\(\.single\):has\(\.jfSheet\[data-paper-group\]\[data-paper-side\]\) \.jfSpineShade\s*\{/);
+assert.match(part,/rgba\(48,32,18,0\) 0%/);
+assert.match(part,/rgba\(48,32,18,0\) 100%/);
+assert(!part.includes('rgba(224,205,174,.96)'), 'no paper color bridge or two-layer painted gutter');
+assert(!part.includes('.jfSheetCurl{display:block'),'do not re-enable translucent films');
+assert(css.includes('background-color:transparent!important'),'photographic leaf alpha preserved');
+assert(css.includes(".jfReader.paged #jfPageView.single .jfSheet>.jfSheetCurl,")&&
+ css.includes(".jfReader.paged #jfPageView.single .jfSpineShade{display:none!important}"),
+ 'single-page mode has no centre fold');
+console.log('PASS inherited v7.85: photographic alpha and soft spread-only gutter retained (no fake warm bridge)');

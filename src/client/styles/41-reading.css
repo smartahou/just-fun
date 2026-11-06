@@ -3408,40 +3408,36 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 }
 
 
-/* v7.85 · restore physical gutter after alpha-backed paper was retired.
-   The photographed leaves have transparent central edge pixels: without the
-   former book-board, a 2–3px seam exposed the dark desk. The remaining
-   28px/.115 spine wash could not conceal it, leaving a hard black rule.
-   Layer one is ONLY a narrow warm-paper bridge across that central gap;
-   layer two models gentle occlusion onto the two leaves. Neither paints a
-   full-sheet "film", reinstates the retired curl, or changes page geometry. */
+/* v7.86 · A page fold, not a painted central stripe.
+   v7.85's warm-paper "bridge" and 0.34-opacity centre looked like a fake
+   ribbon. A real scanned leaf already contains its own crease texture.
+   Keep only a low-contrast, continuously fading shadow above the join:
+   zero overlay away from the spine, no 1px hairline or paper-color patch. */
 .jfReader.paged.jf-aged-paper #jfPageView:not(.single):has(.jfSheet[data-paper-group][data-paper-side]) .jfSpineShade{
-  width:clamp(40px,4.6vw,64px)!important;
-  background:
-    linear-gradient(90deg,
-      rgba(30,22,13,0) 0%,
-      rgba(38,27,17,.012) 16%,
-      rgba(38,27,17,.045) 29%,
-      rgba(34,24,14,.11) 39%,
-      rgba(29,20,11,.23) 45%,
-      rgba(25,17,9,.32) 49%,
-      rgba(25,17,9,.34) 50%,
-      rgba(25,17,9,.31) 51%,
-      rgba(29,20,11,.21) 56%,
-      rgba(34,24,14,.10) 64%,
-      rgba(38,27,17,.035) 77%,
-      rgba(30,22,13,0) 100%),
-    linear-gradient(90deg,
-      rgba(224,205,174,0) 44%,
-      rgba(224,205,174,.25) 46%,
-      rgba(224,205,174,.96) 48%,
-      rgba(224,205,174,1) 52%,
-      rgba(224,205,174,.25) 54%,
-      rgba(224,205,174,0) 56%)!important;
+  width:clamp(64px,6vw,90px)!important;
+  background:linear-gradient(90deg,
+    rgba(48,32,18,0) 0%,
+    rgba(48,32,18,.012) 23%,
+    rgba(44,30,18,.035) 35%,
+    rgba(40,27,16,.072) 43%,
+    rgba(37,25,15,.103) 50%,
+    rgba(40,27,16,.072) 57%,
+    rgba(44,30,18,.035) 65%,
+    rgba(48,32,18,.012) 77%,
+    rgba(48,32,18,0) 100%)!important;
+  background-color:transparent!important;
   background-blend-mode:normal!important;
-  filter:none!important;
-  mix-blend-mode:normal!important;
   opacity:1!important;
+  mix-blend-mode:normal!important;
+  filter:none!important;
   box-shadow:none!important;
   pointer-events:none!important;
+}
+/* The rectangular black stage was #141210, not an edge of the paper asset.
+   Match the actual warm reader chrome (#e1ddd1), so there is no drawn black
+   box outside the organic alpha contour. Leave ordinary non-aged modes alone. */
+.jfReader.paged.jf-aged-paper #jfReadCenter{
+  background:#e1ddd1!important;
+  box-shadow:none!important;
+  border:0!important;
 }

@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.85.0 / Current version: v7.85.0** · 持续迭代 / Actively evolving
+**当前版本：v7.86.0 / Current version: v7.86.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.86 · 书脊自然化与黑色矩形背景移除**：从用户实机截图定位两种独立视觉瑕疵：旧书双页的书脊由 v7.85 的高强度双层阴影/人工暖纸桥形成假竖带，纸张外围的四方黑边则来自固定宽高 `#jfReadCenter` 背景 `#141210`，而不是 WebP 的 Alpha 轮廓。现仅在旧纸模式下将阅读背景调整为与浅色工具栏相同的 `#e1ddd1`，让纸张不规则边缘直接呈现；用一层弱而连续、两侧逐渐透明的 64–90px 书缝光影替换双层填缝。未恢复浮膜、书板或卷曲层，也不改变分页、侧纸堆、按钮和文字。专项测试 `tests/paper-stage-and-spine-v786.js`；真实 Windows 画面仍需人工确认。
 
 **v7.85 · 旧书书脊阴影恢复**：v7.83 去除底层实心书板及页内卷曲层后，旧纸 WebP 中央透明边缘露出 2～3px 黑色背景；旧独立书脊渐变宽度仅 28px、中心不透明度约 0.115，无法掩盖接缝，呈现不自然的黑色竖线。仅在双页、已加载成对旧纸纹理的模式，为既有独立 `.jfSpineShade` 增加局限于书缝的暖纸色过渡与左右柔和凹陷阴影。没有恢复整页覆盖膜、页内卷曲层、书板或修改 WebP 与阅读进度。专项回归 `tests/paper-spine-gutter-v785.js`；实际浏览器效果仍以 Windows 验收为准。
 

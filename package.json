@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.85.0",
+  "version": "7.86.0",
   "private": true,
   "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
@@ -11,7 +11,7 @@
     "build": "node scripts/build.js",
     "test:reading-print": "node tests/epub-glyph-bridge-v773.js && node tests/print-glyph-ink-v774.js && node tests/glyph-tight-ink-v775.js && node tests/inline-gaiji-whitespace-v776.js && node tests/epub-empty-spacers-v777.js && node tests/paged-composition-v778.js",
     "test:paper-surface": "node tests/paper-surface-no-film-v7781.js",
-    "test:epub-paper": "node tests/epub-paper-slips-v780.js && node tests/epub-paper-slips-ui-v780.js && node tests/epub-visual-fixes-v782.js && node tests/epub-paper-tabs-v783.js && node tests/epub-size-tuning-v784.js && node tests/paper-spine-gutter-v785.js"
+    "test:epub-paper": "node tests/epub-paper-slips-v780.js && node tests/epub-paper-slips-ui-v780.js && node tests/epub-visual-fixes-v782.js && node tests/epub-paper-tabs-v783.js && node tests/epub-size-tuning-v784.js && node tests/paper-spine-gutter-v785.js && node tests/paper-stage-and-spine-v786.js"
   },
   "license": "MIT",
   "dependencies": {
