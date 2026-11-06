@@ -6,7 +6,8 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const version=require('../package.json').version;
-assert.equal(version,'7.84.0','version');
+const [major,minor]=String(version).split('.').map(Number);
+assert(major>7||(major===7&&minor>=84),'v7.84 size-tuning regression must apply to later releases');
 const find=(marker,end)=>{
   const a=css.indexOf(marker);
   const b=css.indexOf(end,a+marker.length);
