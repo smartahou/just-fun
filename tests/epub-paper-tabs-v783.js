@@ -31,7 +31,7 @@ const end=tabs.indexOf('\n  function flash(anchor){',start);
 assert(start>=0&&end>start,'word range helper exists');
 const wordBounds=vm.runInNewContext(tabs.slice(start,end)+'\ninkWordBounds');
 function picked(source){const range=wordBounds(source);return range?source.slice(...range):'';}
-assert.equal(picked('长安一片月，万户捣衣声。'),'捣衣声','Chinese stop is not highlighted');
+assert.equal(picked('长安一片月，万户捣衣声。'),'万户捣衣声','Chinese stop is not highlighted');
 assert.equal(picked('秋风吹不尽，'),'秋风吹不尽','Chinese comma is not highlighted');
 assert.equal(picked('汉字？！ '),'汉字','punctuation and spaces excluded');
 assert.equal(picked('。！、'),'', 'punctuation-only context yields no flash');
