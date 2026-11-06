@@ -5,6 +5,7 @@ on:
     paths:
       - "assets/paper/**"
       - "assets/paper-spreads/**"
+      - "assets/paper-stacks/**"
       - "src/client/**"
       - "scripts/build.js"
       - "build.manifest.json"
@@ -63,6 +64,9 @@ jobs:
             dist/douyin.js
             dist/paper-performance-v754.json
             dist/paper-v748-browser.png
+            dist/paper-v790-browser-020.png
+            dist/paper-v790-browser-050.png
+            dist/paper-v790-browser-080.png
             dist/paper-performance-v753-baseline.json
             dist-build.log
           if-no-files-found: warn
