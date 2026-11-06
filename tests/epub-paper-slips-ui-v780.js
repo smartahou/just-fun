@@ -77,6 +77,6 @@ assert.equal(noteTab.hidden,true,'note-free spread removes tab entirely');
 tocTab.click();
 for(const f of docEvents.keydown||[])f({key:'Escape',stopPropagation(){}});
 assert.equal(tocPane.hidden,true,'Esc closes TOC');
-state.jfDeskPaged=false;api.sync();
-assert.equal(tocTab.hidden,true,'non-paper mode hides TOC');
+state.jfDeskOutline.format='TXT';api.sync();
+assert.equal(tocTab.hidden,true,'non-EPUB mode hides TOC');
 console.log('PASS v7.80 UI: TOC data, paper notes current-spread, dedup, mutual exclusion, Esc and mode gate');
