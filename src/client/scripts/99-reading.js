@@ -2784,7 +2784,7 @@ jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden||jfDeskRestoring)
 jfReadCenter.addEventListener('click',event=>{
   if(!jfDeskPaged||jfReader.hidden||jfDeskOutline?.nativePdf)return;
   if((window.getSelection()?.toString()||'').trim())return;
-  if(event.target.closest('a,button,input,select,textarea,label'))return;
+  if(event.target.closest('a,button,input,select,textarea,label,#jfEpubTocPane,#jfEpubNotePane'))return;
   const rect=jfReadCenter.getBoundingClientRect();
   jfDeskPageTurn(event.clientX<rect.left+rect.width/2?-1:1);
 });
