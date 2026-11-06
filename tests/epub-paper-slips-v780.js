@@ -91,6 +91,38 @@ result=vm.runInNewContext(epubCode+';jfReadingEpub(null);',context);
 assert.equal(result.chapters[0].paperOmit,undefined,'literal 目录 never deleted');
 assert.equal(result.tocEntries.length,0,'no synthetic TOC');
 
+// v7.81: high-confidence HTML directory in an EPUB2 spine.
+const chapterNames=Array.from({length:9},(_,i)=>'chapter'+i+'.xhtml');
+const catalogue='<html><body><div>目录</div>'+
+  chapterNames.map((name,i)=>'<p><a href="'+name+'">第'+i+'章</a></p>').join('')+'</body></html>';
+const navigation='<ncx><navMap>'+
+  '<navPoint><navLabel><text>目录</text></navLabel><content src="index.xhtml"/></navPoint>'+
+  chapterNames.map((name,i)=>'<navPoint><navLabel><text>第'+i+'章</text></navLabel><content src="'+name+'"/></navPoint>').join('')+
+  '</navMap></ncx>';
+const material={
+  'META-INF/container.xml':container,
+  'OEBPS/package.opf':opf([
+    '<item id="toc" href="toc.ncx" media-type="application/x-dtbncx+xml"/>',
+    '<item id="index" href="index.xhtml" media-type="application/xhtml+xml"/>',
+    ...chapterNames.map((name,i)=>'<item id="ch'+i+'" href="'+name+'" media-type="application/xhtml+xml"/>')
+  ],['index',...chapterNames.map((_,i)=>'ch'+i)]),
+  'OEBPS/toc.ncx':navigation,
+  'OEBPS/index.xhtml':catalogue,
+  ...Object.fromEntries(chapterNames.map((name,i)=>['OEBPS/'+name,'<html><body><p>真正的第'+i+'章。</p></body></html>']))
+};
+context.zip=zipMock(material);
+result=vm.runInNewContext(epubCode+';jfReadingEpub(null);',context);
+assert.equal(result.chapters[0].paperOmit,'navigation',
+  'independently linked EPUB2 table of contents should not occupy printed folios');
+assert.equal(result.chapters[1].paperOmit,undefined,'first real chapter preserved');
+const insufficient={...material,
+  'OEBPS/index.xhtml':'<html><body><h1>目录</h1><p>本节正文中的目录，不能凭标题删除。</p>'+
+    '<a href="chapter0.xhtml">第一节</a></body></html>'};
+context.zip=zipMock(insufficient);
+result=vm.runInNewContext(epubCode+';jfReadingEpub(null);',context);
+assert.equal(result.chapters[0].paperOmit,undefined,
+  'unverified short human TOC stays inside the reading text');
+
 const start=server.indexOf('function jfReadingEpubPaperNotes(');
 const end=server.indexOf('\nfunction jfReadingEpubChapterHtml(',start);
 assert(start>0&&end>start,'note extractor present');
