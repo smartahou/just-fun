@@ -31,7 +31,7 @@
 
 - 新增 `tests/epub-paper-tabs-v783.js`：用 Node VM 实际解码并验签两份 WebP data URI（RIFF/WEBP）、检查离线脚本加载顺序、注释高亮不包含相邻标点、真实 EPUB 的 `kindle-cn-inline-image` 语义经服务端转换为强罕字标记，以及旧纸真 Alpha 配置。
 - `npm run test:epub-paper` 现在包含 NAV/NCX、注释匹配、纸笺 UI 仿真、v7.82 和 v7.83 专项。
-- GitHub CI：[42163400902](https://github.com/smartahou/just-fun/actions/runs/42163400902)：Ubuntu Node 24 `npm ci`、EPUB 专项、`npm run test:reading-print`、`node scripts/build.js`、`node --check dist/douyin.js` 均 PASS。
+- GitHub 最终 CI：[42163683842](https://github.com/smartahou/just-fun/actions/runs/42163683842)：Ubuntu Node 24 `npm ci`、EPUB 专项、`npm run test:reading-print`、`node scripts/build.js`、`node --check dist/douyin.js` 均 PASS。新增素材二进制完整 SHA-256 校验（非仅 RIFF 头），确认内嵌图片分别与上表用户原图优化产物一致。最终 `sourceSha256`：`efd86821c22eda3e2009787be6746722d53e76067dc2b16edb648b400a2a80a3`（构建源哈希，不等同于打包 JS 文件哈希）。
 - **尚未完成** Windows 本机 Chromium 浏览器对真实 EPUB 的人眼视觉验收，特别是四边透明膜和特殊字的位置；不能宣称实机已完全解决。没有修改远端素材组数量（v7.79 十六组纸张尚未并入 GitHub `main`）。
 
 ## 后续本地核对
