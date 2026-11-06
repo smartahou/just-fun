@@ -3541,3 +3541,22 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
     0 clamp(17px,2.2vw,31px) clamp(18px,2.35vw,34px) 0 /
     0 clamp(18px,2.1vw,30px) clamp(18px,2vw,29px) 0!important;
 }
+
+/* v7.92 · Silhouette-matched photographic fore-edge */
+/* Rounded caps are cut into the 22 offline WebP alpha channels. The master
+   64px canvas contains transparent padding, so border-radius on the whole
+   box cannot round the visible paper: the photograph must own its contour.
+   Keep the paper pile under the left/right front leaf, with gentle recess
+   at the top/bottom. No gradient stripe, new shadow or layout mutation. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile{
+  top:calc(50% - var(--jf-page-h) / 2 + 2px)!important;
+  height:calc(var(--jf-page-h) - 4px)!important;
+  background-size:100% 100%!important;
+  border-radius:0!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 4px)!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 4px)!important;
+}

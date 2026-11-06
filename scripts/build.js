@@ -129,10 +129,10 @@ function build() {
     }
   }
 
-  // v7.90: self-contained replacement photographs (original v7.88 assets remain
+  // v7.92: rounded-alpha runtime photographs (original v7.88 sources and v7.90 bundle remain
   // byte-identical in Git for rollback). Strictly verify each original WebP,
   // native dimensions, transparency and checksum BEFORE embedding it offline.
-  const photoMeta=JSON.parse(read('assets/paper-stacks/embedded-v790.json'));
+  const photoMeta=JSON.parse(read('assets/paper-stacks/embedded-v792.json'));
   if(photoMeta.canvas?.width!==64||photoMeta.canvas?.height!==1440||
      photoMeta.progress_states?.length!==11)
     throw Error('Invalid photographed fore-edge bundle');
