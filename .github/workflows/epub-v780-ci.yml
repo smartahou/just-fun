@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "src/server/46-reading-and-notes.js"
+      - "src/client/scripts/98e5-paper-tab-assets.js"
       - "src/client/scripts/98f-epub-paper-tabs.js"
       - "src/client/scripts/99-reading.js"
       - "src/client/styles/41-reading.css"
@@ -12,6 +13,7 @@ on:
       - "package-lock.json"
       - "tests/epub-paper-slips-*.js"
       - "tests/epub-visual-fixes-v782.js"
+      - "tests/epub-paper-tabs-v783.js"
       - "tests/paged-composition-v778.js"
       - ".github/workflows/epub-v780-ci.yml"
   workflow_dispatch:
