@@ -23,3 +23,13 @@
 - 此轮未接触用户 EPUB 原件或其阅读记录、笔记。
 - 浏览器实机的主观书脊真实程度，仍须用户查看截图；GitHub CI 和静态检查不能替代实际视觉验收。
 - 书中「乐府」独占空白页属于单 XHTML 强制分页的另一个问题，本轮不修改，不可误称解决。
+
+## 最终真实 CI 证明
+
+- GitHub Actions [#42196635645](https://github.com/smartahou/just-fun/actions/runs/42196635645)：**SUCCESS**（Node 24，2026-11-06）。
+- `npm run test:epub-paper`：包含 v7.88 原始 22 WebP SHA-256、图像 VP8L 尺寸、11 档单调关系、左右配对与运行时 DOM 模拟；PASS。
+- `npm run test:reading-print`：原有纸书分页回归 PASS。
+- `node scripts/build.js`：完整离线单文件构建 PASS；生成 JS `node --check dist/douyin.js` PASS。
+- 构建报告：`paperStackStates=11`，`paperStackAssetsSha256` 包含 22 个摘要，`paperStackAssetBytes=1430112`。
+- 源码构建指纹 `sourceSha256=0afd455193dd95330c4a366af280b0c786ded8e4885787d35a8ab6c179694f13`（此值是源码指纹，不是最后 JS 二进制的 SHA）。
+- **真实 Windows 浏览器旧书画面尚未经过用户视觉复核**，书脊最终观感仍以用户实际截图为准。
