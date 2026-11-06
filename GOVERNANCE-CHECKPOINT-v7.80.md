@@ -33,6 +33,17 @@
 - 新增 `tests/epub-paper-slips-ui-v780.js`，并纳入 `npm run test:epub-paper`。
 - **未运行** `npm run test:epub-paper` 在完整 Node 仓库下的执行、`node scripts/build.js`、完整回归门禁、真实 Chromium UI 与 Windows 实机检查。本会话无法克隆仓库到容器并安装所需全套依赖。因此这是一份代码完成、**尚未经过最终集成验收**的交付。
 
+## GitHub Actions 完整 Node 构建验证（追加）
+
+- CI：[`EPUB paper slips regression` #42146067445](https://github.com/smartahou/just-fun/actions/runs/42146067445)
+- Commit：`6f5e56493d1ab07682f34bd602b53886b1bb7fba`
+- 运行环境：GitHub Actions Ubuntu + Node 24；`npm ci` PASS。
+- `npm run test:epub-paper` PASS（真实 Node 环境中的 EPUB3 NAV/EPUB2 NCX、跨文件/同文件脚注、无目录、UI 模拟 DOM 测试）。
+- `npm run test:reading-print` PASS（v7.73 至 v7.78 共六项阅读/分页回归）。为解决升级版本导致的假失败，已修复 `tests/paged-composition-v778.js` 原来写死 `7.78.0` 的断言，使其表示 v7.78 起适用。
+- `node scripts/build.js` PASS；`node --check dist/douyin.js` PASS。
+- 正式构建 `sourceSha256`：`ae81241b83fa69ffb290db4dfb904910ed8d3f063a6893ff10a89f51963daf1c`。
+- **尚未执行**：带真实 EPUB 文件的 Chromium 可视化验收、Windows 实机交互/截图、完整全项目发布门禁、v7.79 16 组纸纹资产的整合；不能把这些记为通过。
+
 ## 明确不支持及保守降级
 
 - 纯文本人工「目录」页不能依据标题直接删除，未实施高风险的启发式过滤。
