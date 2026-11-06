@@ -3406,3 +3406,42 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
     top:calc(21% + 82px)!important;
   }
 }
+
+
+/* v7.85 · restore physical gutter after alpha-backed paper was retired.
+   The photographed leaves have transparent central edge pixels: without the
+   former book-board, a 2–3px seam exposed the dark desk. The remaining
+   28px/.115 spine wash could not conceal it, leaving a hard black rule.
+   Layer one is ONLY a narrow warm-paper bridge across that central gap;
+   layer two models gentle occlusion onto the two leaves. Neither paints a
+   full-sheet "film", reinstates the retired curl, or changes page geometry. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single):has(.jfSheet[data-paper-group][data-paper-side]) .jfSpineShade{
+  width:clamp(40px,4.6vw,64px)!important;
+  background:
+    linear-gradient(90deg,
+      rgba(30,22,13,0) 0%,
+      rgba(38,27,17,.012) 16%,
+      rgba(38,27,17,.045) 29%,
+      rgba(34,24,14,.11) 39%,
+      rgba(29,20,11,.23) 45%,
+      rgba(25,17,9,.32) 49%,
+      rgba(25,17,9,.34) 50%,
+      rgba(25,17,9,.31) 51%,
+      rgba(29,20,11,.21) 56%,
+      rgba(34,24,14,.10) 64%,
+      rgba(38,27,17,.035) 77%,
+      rgba(30,22,13,0) 100%),
+    linear-gradient(90deg,
+      rgba(224,205,174,0) 44%,
+      rgba(224,205,174,.25) 46%,
+      rgba(224,205,174,.96) 48%,
+      rgba(224,205,174,1) 52%,
+      rgba(224,205,174,.25) 54%,
+      rgba(224,205,174,0) 56%)!important;
+  background-blend-mode:normal!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  box-shadow:none!important;
+  pointer-events:none!important;
+}
