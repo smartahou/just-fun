@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.80.0 / Current version: v7.80.0** · 持续迭代 / Actively evolving
+**当前版本：v7.81.0 / Current version: v7.81.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.81 · 旧纸目录与笺注实书修复**：针对用户实际上传的《唐诗三百首新注》增加 Calibre/Kindle `noteBack_N` ↔ `note_N` 双向链接和「【注释】」分段联合验证，确认后从纸书投影移走编号、注释段和完整已验证的标题；保留诗词、评析、辑评和不确定编号。对 EPUB2 NCX 指向的独立人工目录，新增“导航元数据 + 目录标题 + 至少八个有效不同目标链接”高置信排除。旧版覆盖右页的软件式抽屉改为书页外侧朴素泛黄纸笺，展开时临时等比缩放/退让整本书（不改纸页原本字号和分页数据），收起还原；修复纸笺点击误翻页与键盘干扰。详见 `GOVERNANCE-CHECKPOINT-v7.81.md`。
 
 **v7.80 · EPUB「目」「笺」纸签（保守首版）**：在旧书双页模式中，从 EPUB3 NAV 或 EPUB2 NCX 读取结构化目录，将明确由 manifest 标识的导航 XHTML 从纸书页数中跳过，并在右书口用「目」抽出目录进行章节及 fragment 跳转。仅识别经 EPUB 显式 noteref 与 footnote/endnote 目标双重确认的注释；纸书正文隐藏已关联标记和同章注释块，「笺」仅按当前双页真实锚点出现，点击短暂高亮原位置。无可靠关系的数字、评析和辑评一律保留。未实现无语义标记的数字注释推断与任意人工目录页过滤。真实浏览器验收仍待执行。
 
