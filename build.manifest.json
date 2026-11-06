@@ -59,6 +59,7 @@
     "src/client/scripts/98c-pdf-projection.js",
     "src/client/scripts/98d-page-engine.js",
     "src/client/scripts/98e-paper-textures.js",
+    "src/client/scripts/98f-epub-paper-tabs.js",
     "src/client/scripts/99-reading.js",
     "src/client/scripts/99c-note-editor.js",
     "src/client/scripts/99a-pdfjs.js"
