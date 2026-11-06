@@ -107,20 +107,33 @@
   }
   // Highlight a source Range just before the actual anchor, never use global
   // string matching. The overlay is painted outside the reflowed book DOM.
+  // Locate only the nearest Chinese word before the true noteref anchor.
+  // The v7.82 six-character selection erroneously tinted commas and stops.
+  function inkWordBounds(value){
+    const chars=Array.from(String(value||''));
+    const han=/[\p{Script=Han}]/u;
+    let i=chars.length;
+    while(i>0&&!han.test(chars[i-1]))i--;
+    if(!i)return null;
+    const end=chars.slice(0,i).join('').length;
+    let start=i,count=0;
+    while(start>0&&han.test(chars[start-1])&&count<5){start--;count++;}
+    return count?[chars.slice(0,start).join('').length,end]:null;
+  }
   function flash(anchor){
     stopFlash();
     const sheet=anchor.closest('.jfSheetBody');
     if(!sheet)return;
     const walk=document.createTreeWalker(sheet,NodeFilter.SHOW_TEXT);
-    let node,last=null;
+    let node,last=null,bounds=null;
     while((node=walk.nextNode())){
       if(anchor.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING)break;
-      if(node.textContent?.trim())last=node;
+      const found=inkWordBounds(node.textContent);
+      if(found){last=node;bounds=found;}
     }
-    if(!last)return;
+    if(!last||!bounds)return;
     const range=document.createRange();
-    const end=last.textContent.length;
-    range.setStart(last,Math.max(0,end-6));range.setEnd(last,end);
+    range.setStart(last,bounds[0]);range.setEnd(last,bounds[1]);
     const parent=host.getBoundingClientRect();
     // CSS scales the book while the detached paper slip is out. Convert
     // rendered viewport coordinates back to the book's own CSS pixel space.
