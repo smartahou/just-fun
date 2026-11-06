@@ -59,6 +59,7 @@
     "src/client/scripts/98c-pdf-projection.js",
     "src/client/scripts/98d-page-engine.js",
     "src/client/scripts/98e-paper-textures.js",
+    "src/client/scripts/98e3-paper-stacks.js",
     "src/client/scripts/98e5-paper-tab-assets.js",
     "src/client/scripts/98f-epub-paper-tabs.js",
     "src/client/scripts/99-reading.js",
@@ -98,6 +99,33 @@
       "assets/paper-spreads/runtime/group-06.json",
       "assets/paper-spreads/runtime/group-07.json",
       "assets/paper-spreads/runtime/group-08.json"
+    ]
+  },
+  "stackAssets": {
+    "manifest": "assets/paper-stacks/manifest.json",
+    "files": [
+      "assets/paper-stacks/stack-000-left.webp",
+      "assets/paper-stacks/stack-000-right.webp",
+      "assets/paper-stacks/stack-010-left.webp",
+      "assets/paper-stacks/stack-010-right.webp",
+      "assets/paper-stacks/stack-020-left.webp",
+      "assets/paper-stacks/stack-020-right.webp",
+      "assets/paper-stacks/stack-030-left.webp",
+      "assets/paper-stacks/stack-030-right.webp",
+      "assets/paper-stacks/stack-040-left.webp",
+      "assets/paper-stacks/stack-040-right.webp",
+      "assets/paper-stacks/stack-050-left.webp",
+      "assets/paper-stacks/stack-050-right.webp",
+      "assets/paper-stacks/stack-060-left.webp",
+      "assets/paper-stacks/stack-060-right.webp",
+      "assets/paper-stacks/stack-070-left.webp",
+      "assets/paper-stacks/stack-070-right.webp",
+      "assets/paper-stacks/stack-080-left.webp",
+      "assets/paper-stacks/stack-080-right.webp",
+      "assets/paper-stacks/stack-090-left.webp",
+      "assets/paper-stacks/stack-090-right.webp",
+      "assets/paper-stacks/stack-100-left.webp",
+      "assets/paper-stacks/stack-100-right.webp"
     ]
   }
 }

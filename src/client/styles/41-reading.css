@@ -3424,16 +3424,18 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 /* The actual paper textures now touch. Keep just a shallow asymmetrical
    binding depression, NEVER a coloured filler or central hairline. */
 .jfReader.paged.jf-aged-paper #jfPageView:not(.single):has(.jfSheet[data-paper-group][data-paper-side]) .jfSpineShade{
-  width:clamp(58px,5.7vw,82px)!important;
+  width:clamp(76px,7vw,110px)!important;
   background:linear-gradient(90deg,
-    rgba(43,32,20,0) 0%,
-    rgba(43,32,20,.008) 19%,
-    rgba(43,32,20,.036) 34%,
-    rgba(43,32,20,.076) 43%,
-    rgba(42,29,17,.112) 51%,
-    rgba(43,32,20,.072) 60%,
-    rgba(43,32,20,.027) 78%,
-    rgba(43,32,20,0) 100%)!important;
+    rgba(48,33,20,0) 0%,
+    rgba(48,33,20,.008) 15%,
+    rgba(46,31,19,.032) 27%,
+    rgba(41,28,16,.083) 38%,
+    rgba(35,23,13,.155) 46%,
+    rgba(30,20,11,.215) 50%,
+    rgba(35,23,13,.162) 55%,
+    rgba(41,28,16,.076) 66%,
+    rgba(46,31,19,.022) 82%,
+    rgba(48,33,20,0) 100%)!important;
   background-color:transparent!important;
   background-blend-mode:normal!important;
   opacity:1!important;mix-blend-mode:normal!important;
@@ -3444,3 +3446,50 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background:#e1ddd1!important;
   box-shadow:none!important;border:0!important;
 }
+
+
+/* v7.88 · User-authored 11-pair book-fore-edge photos.
+   Retire every CSS fake strata/comb/clip on photographic old-book spreads.
+   Existing siblings are behind .jfSheet and OUTSIDE the text flow. Their
+   64:1440 aspect is resolved from the real page height by the JS controller.
+   The image data itself (including transparent padding and worn corners)
+   determines the irregular thickness. No masks, filters or stretching. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile{
+  top:calc(50% - var(--jf-page-h)/2)!important;
+  height:var(--jf-page-h)!important;
+  width:var(--jf-stack-art-width)!important;
+  max-width:none!important;
+  min-width:0!important;
+  border:0!important;
+  background:var(--jf-stack-art) center center / 100% 100% no-repeat!important;
+  background-color:transparent!important;
+  border-radius:0!important;
+  clip-path:none!important;
+  box-shadow:none!important;
+  filter:none!important;
+  opacity:1!important;
+  transform:none!important;
+  transition:none!important;
+  z-index:1!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 1px)!important;
+  left:auto!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 1px)!important;
+  right:auto!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-image-stacks .jfBookPile::before,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-image-stacks .jfBookPile::after{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-image-stacks .jfBookPile[data-empty='true']{
+  display:none!important;
+}
+/* No CSS-faked fore-edge in flow, plain paper, or single-page mode. */
+.jfReader.paged:not(.jf-aged-paper) #jfPageView .jfBookPile{display:none!important}
+.jfReader.paged.jf-aged-paper #jfPageView.single .jfBookPile{display:none!important}

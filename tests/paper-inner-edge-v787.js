@@ -18,6 +18,6 @@ assert(paint.includes('#jfPageView:not(.single)'),'never crop single-page photos
 assert(!/transform:|margin-left:|margin-right:/.test(paint),'layout-neutral image painting only');
 assert(texture.includes('sheet.dataset.paperSide=side'),'runtime supplies real paper side');
 assert(css.includes('.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{\n  background-position:center center!important;\n  background-size:100% 100%!important;'),'normal non-double-page texture remains exact');
-assert(latest.includes('rgba(42,29,17,.112) 51%'),'one subtle crease');
+assert(latest.includes('rgba(30,20,11,.215) 50%'),'v7.88 restored the center depression without artificial stripes');
 assert(!latest.includes('rgba(224,205,174,.96)'),'no artificial filler strip');
 console.log('PASS v7.87 real photo inner-edge crop, unchanged outer alpha and pagination');

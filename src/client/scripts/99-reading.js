@@ -2582,6 +2582,10 @@ function jfDeskPagedRender(direction){
       el.dataset.empty=empty?'true':'false';
     }
   }
+  // Only the old-paper variant replaces the former CSS faked paper piles with
+  // matched original WebPs. The stage derives from the same book-wide progress
+  // as the folio/census, never the mounted chapter window or local index.
+  window.JFPaperStacks?.apply(pageView,progress,geo.pageH,twoPages);
   // A light transition sells the turn without touching layout. Skipped when the
   // user asked for reduced motion or when the caller only re-renders in place.
   if(direction){

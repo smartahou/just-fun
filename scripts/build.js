@@ -93,16 +93,56 @@ function build() {
     paperRuntimeBytes+=optimized.length;
     paperUrls.push('data:image/webp;base64,'+small.base64);
   }
-  let injected=false;
+  // v7.88 · user's 11 matched outer-edge states are source-verified on every
+  // build, and embedded into offline HTML. No runtime filesystem or server URL.
+  const stackFiles=manifest.stackAssets;
+  if(!stackFiles||stackFiles.files?.length!==22)throw Error('Expected 22 user paper-stack WebPs');
+  const stackMeta=JSON.parse(read(stackFiles.manifest));
+  if(stackMeta.canvas?.width!==64||stackMeta.canvas?.height!==1440||
+      stackMeta.progress_states?.length!==11)throw Error('Invalid paper-stack state manifest');
+  const stackUrls=[],stackAssetHashes=[];
+  let stackAssetBytes=0;
+  for(let i=0;i<11;i++){
+    const state=stackMeta.progress_states[i];
+    if(!state||state.percent!==i*10)throw Error('Unordered paper stack state '+i);
+    for(const side of ['left','right']){
+      const expected='stack-'+String(i*10).padStart(3,'0')+'-'+side+'.webp';
+      const rel='assets/paper-stacks/'+expected;
+      if(state[side]!==expected||stackFiles.files[i*2+(side==='right'?1:0)]!==rel)
+        throw Error('Mismatched paper stack pair '+rel);
+      const data=fs.readFileSync(path.join(root,rel));
+      if(data.length!==state[side+'_bytes']||data.toString('ascii',0,4)!=='RIFF'||
+         data.toString('ascii',8,12)!=='WEBP')throw Error('Invalid paper-stack image '+rel);
+      const digest=crypto.createHash('sha256').update(data).digest('hex');
+      if(digest!==state[side+'_sha256'])throw Error('Paper-stack SHA mismatch: '+rel);
+      // These supplied images are WebP lossless VP8L (not VP8X).
+      // Its 4-byte size word begins at offset 21: width and height are
+      // packed into two 14-bit fields, with a +1 offset for each.
+      if(data.toString('ascii',12,16)!=='VP8L'||data[20]!==0x2f)
+        throw Error('Expected RGBA lossless WebP paper-stack source: '+rel);
+      const bits=data.readUInt32LE(21);
+      if((bits&0x3fff)+1!==64||((bits>>>14)&0x3fff)+1!==1440)
+        throw Error('Wrong paper-stack canvas dimensions: '+rel);
+      stackAssetHashes.push(digest);
+      stackAssetBytes+=data.length;
+      stackUrls.push('data:image/webp;base64,'+data.toString('base64'));
+    }
+  }
+  let injected=false,stackInjected=false;
   const browser=manifest.scripts.map(p=>{
     const code=read(p);
     if(p==='src/client/scripts/98e-paper-textures.js'){
       injected=true;
       return replaceOnce(code,'__JUSTFUN_PAPER_SPREAD_ASSETS__',JSON.stringify(paperUrls));
     }
+    if(p==='src/client/scripts/98e3-paper-stacks.js'){
+      stackInjected=true;
+      return replaceOnce(code,'__JUSTFUN_PAPER_STACK_ASSETS__',JSON.stringify(stackUrls));
+    }
     return code;
   }).join('');
   if(!injected)throw Error('Paper texture module missing from build order');
+  if(!stackInjected)throw Error('Paper stack module missing from build order');
   // Build must fail before writing dist if any client script is invalid.
   new vm.Script(browser, {filename:'bundled-browser.js'});
   const layout = read(manifest.html);
@@ -177,6 +217,8 @@ function build() {
     files:manifest.server.length+manifest.styles.length+manifest.scripts.length+2,
     paperTextures:paperUrls.length,paperTextureAssetsSha256:paperAssetHashes,
     paperRuntimeAssetSha256:paperRuntimeHashes,paperRuntimeBytes,
+    paperStackStates:stackMeta.progress_states.length,paperStackAssetsSha256:stackAssetHashes,
+    paperStackAssetBytes:stackAssetBytes,
     pdfjsVersion:pdfPkg.version,pdfjsAssets:Object.keys(pdfAssets).length,
     pdfjsModuleSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(pdfRoot,'build/pdf.min.mjs'))).digest('hex'),
     baselinePageIdentical:hash(html)===manifest.baselineRenderedHtmlSha256

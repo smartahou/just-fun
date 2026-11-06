@@ -1,0 +1,135 @@
+{
+  "name": "Just Fun old-book outer paper stack image assets",
+  "description": "11 paired states, 0–100% reader progress, realistic asymmetric page-edge stacks",
+  "canvas": {
+    "width": 64,
+    "height": 1440
+  },
+  "format": "WebP RGBA",
+  "progress_states": [
+    {
+      "percent": 0,
+      "left": "stack-000-left.webp",
+      "right": "stack-000-right.webp",
+      "left_visible_px": 0,
+      "right_visible_px": 56,
+      "left_bytes": 42,
+      "left_sha256": "628c5ef19a013b28bf5c60daad457148a6964e5497c01f1d06862a2543932fdc",
+      "right_bytes": 74194,
+      "right_sha256": "b7f7b651b256ceea76e0a89280a74d150e84fb4bcfb09201538a00dbba3d69b1"
+    },
+    {
+      "percent": 10,
+      "left": "stack-010-left.webp",
+      "right": "stack-010-right.webp",
+      "left_visible_px": 14,
+      "right_visible_px": 52,
+      "left_bytes": 36902,
+      "left_sha256": "b8017b9588f3824919a78879ebd15f214cc6c235e3d7b435c781ea00060380a0",
+      "right_bytes": 68662,
+      "right_sha256": "035b65b7446e373a4421543fee798af6fcd471cf9548fbab1e964a437570bdd4"
+    },
+    {
+      "percent": 20,
+      "left": "stack-020-left.webp",
+      "right": "stack-020-right.webp",
+      "left_visible_px": 20,
+      "right_visible_px": 48,
+      "left_bytes": 51732,
+      "left_sha256": "f5f1c4e3af84e11f61d116cdad056f7cc9289b415a98b4752ca3bd7ca4ebb4af",
+      "right_bytes": 64172,
+      "right_sha256": "2709c6e26463e2c271062aaefb9e25401f0c3792a1ed1a289c3edd8147b61209"
+    },
+    {
+      "percent": 30,
+      "left": "stack-030-left.webp",
+      "right": "stack-030-right.webp",
+      "left_visible_px": 26,
+      "right_visible_px": 44,
+      "left_bytes": 65174,
+      "left_sha256": "b2dedd71770d56a79521e4e7fb021ae0c3e7fb64d1bc69d638d9d27be7ccf27a",
+      "right_bytes": 58776,
+      "right_sha256": "81d2e22de32eefd9624e1ec83d83e8b25f7316e0408981a5871426dad0bd97e9"
+    },
+    {
+      "percent": 40,
+      "left": "stack-040-left.webp",
+      "right": "stack-040-right.webp",
+      "left_visible_px": 31,
+      "right_visible_px": 40,
+      "left_bytes": 78778,
+      "left_sha256": "4b9ae496a9eaa08ff4e1e6b773bcaf21debfbe510946653db3b9c0edc339ea61",
+      "right_bytes": 54222,
+      "right_sha256": "4eb8b1d007346fc13c06806dc8f1b5b40044552cef160460b1641aaec0541dc5"
+    },
+    {
+      "percent": 50,
+      "left": "stack-050-left.webp",
+      "right": "stack-050-right.webp",
+      "left_visible_px": 36,
+      "right_visible_px": 36,
+      "left_bytes": 88174,
+      "left_sha256": "236bc5f7389028d1fe2f5112d36dd519de555e075b97f14a46b8309d62aa8da4",
+      "right_bytes": 48924,
+      "right_sha256": "2ae2336e2c3146cf8c1c08308b63dfcd9a033c919099b7ec430b52f961a4ef16"
+    },
+    {
+      "percent": 60,
+      "left": "stack-060-left.webp",
+      "right": "stack-060-right.webp",
+      "left_visible_px": 40,
+      "right_visible_px": 31,
+      "left_bytes": 97316,
+      "left_sha256": "c2e822925033089107cb79c81c7c1769679ac08462d754a590354bb1f1513dd2",
+      "right_bytes": 43640,
+      "right_sha256": "b06311f9c468dc6a9c9d442cfabac131865404072e661b681a61c380351022de"
+    },
+    {
+      "percent": 70,
+      "left": "stack-070-left.webp",
+      "right": "stack-070-right.webp",
+      "left_visible_px": 44,
+      "right_visible_px": 26,
+      "left_bytes": 106122,
+      "left_sha256": "91e9419a6de604d3a14c6e15a45ed8334cd0797d913e3363727aba90116b3437",
+      "right_bytes": 35960,
+      "right_sha256": "acbc1c8c267b32e8e635808bd6a44a1e7dc0025e7fb9a003a82ce7ed1f253f59"
+    },
+    {
+      "percent": 80,
+      "left": "stack-080-left.webp",
+      "right": "stack-080-right.webp",
+      "left_visible_px": 48,
+      "right_visible_px": 20,
+      "left_bytes": 116576,
+      "left_sha256": "ade7e4d699b56a9315c9669c48f3c350ebd763883095af1ca66c922e976ec490",
+      "right_bytes": 46060,
+      "right_sha256": "defa3ebce6450316c779972c31b4ef9955d8511646a13e37fbfc074a49db6bc8"
+    },
+    {
+      "percent": 90,
+      "left": "stack-090-left.webp",
+      "right": "stack-090-right.webp",
+      "left_visible_px": 52,
+      "right_visible_px": 14,
+      "left_bytes": 124762,
+      "left_sha256": "78ec1f644eb3c9dbf8c3bb0f3ba6cb66e533d22fff1ca1b06a0be5003b44266a",
+      "right_bytes": 33232,
+      "right_sha256": "e1c785e667570f8dbd1a2e8bca9b2e79f57911de11bdf36aecaf22f734531bda"
+    },
+    {
+      "percent": 100,
+      "left": "stack-100-left.webp",
+      "right": "stack-100-right.webp",
+      "left_visible_px": 56,
+      "right_visible_px": 0,
+      "left_bytes": 136650,
+      "left_sha256": "2b07cac3d2fd491f5ba1ebaec6d2cd4c347fa8415e08ce2af5172d6842daf9a3",
+      "right_bytes": 42,
+      "right_sha256": "628c5ef19a013b28bf5c60daad457148a6964e5497c01f1d06862a2543932fdc"
+    }
+  ],
+  "max_visible_native_px": 56,
+  "placement": "left assets anchor RIGHT edge to left-page outer edge; right assets anchor LEFT edge to right-page outer edge; render behind the pages",
+  "notes": "All assets have real alpha. The 0% left and 100% right assets are intentionally fully transparent; one pair per reading progress. Static sources only; no runtime noise."
+}
