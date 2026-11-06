@@ -31,5 +31,6 @@ assert(!/(background-image|background-color|mask-image|clip-path|box-shadow|padd
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/paper-spreads/manifest.json'),'utf8'));
 assert.equal(manifest.images,16,'master images untouched');
 assert.equal(manifest.pairs,8,'all pairs retained');
-assert.equal(pkg.version,'7.91.0');
+const [major,minor]=pkg.version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=91),'v7.91 or later photo-corner baseline');
 console.log('PASS v7.91 external photo corners, square gutter, transparent sheet, original assets protected');
