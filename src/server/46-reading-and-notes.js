@@ -459,6 +459,52 @@ function jfReadingEpub(buf){
       }
     }catch{}
   }
+
+  const toc=[];
+  function tocAdd(title,href,source,depth){
+    if(!href||toc.length>=600)return;
+    const name=jfReadingHtmlToText(title).replace(/\s+/g,' ').trim().slice(0,140);
+    if(!name)return;
+    let raw=jfReadingXmlDecode(href),at=raw.indexOf('#'),fragment='';
+    try{if(at>=0)fragment=decodeURIComponent(raw.slice(at+1));}catch{return;}
+    raw=at>=0?raw.slice(0,at):raw;
+    const original=navPath(source);
+    const target=jfReadingEpubEntryName(require('node:path').posix.dirname(original),
+      raw||require('node:path').posix.basename(original));
+    if(target&&zip.entries.has(target))
+      toc.push({title:name,file:target,fragment:fragment.slice(0,160),depth:Math.max(0,Math.min(8,depth))});
+  }
+  if(navHref){
+    const source=navPath(navHref);
+    if(zip.entries.has(source))try{
+      const html=jfReadingTextDecode(zip.read(source));
+      const sections=[...html.matchAll(/<nav\b([^>]*)>([\s\S]*?)<\/nav\s*>/gi)];
+      const section=sections.find(m=>/\btoc\b/i.test(jfReadingAttr(m[1],'epub:type')+' '+jfReadingAttr(m[1],'role')))
+        ||(sections.length===1?sections[0]:null);
+      if(section){
+        let depth=0;
+        for(const m of section[2].matchAll(/<\/?(?:ol|ul)\b[^>]*>|<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
+          if(/^<(?:ol|ul)\b/i.test(m[0]))depth++;
+          else if(/^<\/(?:ol|ul)/i.test(m[0]))depth=Math.max(0,depth-1);
+          else tocAdd(m[2],jfReadingAttr(m[1],'href'),navHref,depth-1);
+        }
+      }
+    }catch{}
+  }
+  if(!toc.length&&ncxHref){
+    const source=navPath(ncxHref);
+    if(zip.entries.has(source))try{
+      const xml=jfReadingTextDecode(zip.read(source));let depth=0,label='';
+      for(const m of xml.matchAll(/<navPoint\b[^>]*>|<\/navPoint\s*>|<navLabel\b[^>]*>[\s\S]*?<\/navLabel\s*>|<content\b[^>]*\/?>/gi)){
+        const v=m[0];
+        if(/^<navPoint\b/i.test(v))depth++;
+        else if(/^<\/navPoint/i.test(v))depth=Math.max(0,depth-1);
+        else if(/^<navLabel/i.test(v))label=/<navLabel\b[^>]*>([\s\S]*?)<\/navLabel\s*>/i.exec(v)?.[1]||'';
+        else{tocAdd(label,jfReadingAttr(v,'src'),ncxHref,depth-1);label='';}
+      }
+    }catch{}
+  }
+
   const chapters=[];
   for(const tag of opf.match(/<itemref\b[^>]*>/gi)||[]){
     const ref=jfReadingAttr(tag,'idref'),href=manifest.get(ref);if(!href)continue;
@@ -469,12 +515,17 @@ function jfReadingEpub(buf){
     if(chapters.length>=500)break;
   }
   if(!chapters.length)throw jfReaderError(422,'EPUB 未找到可阅读章节');
+  const byFile=new Map(chapters.map((c,i)=>[c.file,i]));
+  const tocEntries=toc.filter(e=>byFile.has(e.file)).map(e=>({...e,chapter:byFile.get(e.file)}));
+  const navDocument=navHref?navPath(navHref):'';
+  for(const c of chapters)if(c.file===navDocument)c.paperOmit='navigation';
   // Paper mode starts at the readable book, not at the cover displayed on shelf.
   // A spine may lead with blank XHTML and an image-only cover: only classify
   // this initial run, not any later historical illustration or photo chapter.
   let coverFound=false;
   for(let n=0;n<Math.min(3,chapters.length);n++){
     const chapter=chapters[n];
+    if(chapter.paperOmit==='navigation')continue;
     let xhtml='';
     try{xhtml=jfReadingTextDecode(zip.read(chapter.file));}catch{break;}
     const body=xhtml.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1]||xhtml;
@@ -491,7 +542,7 @@ function jfReadingEpub(buf){
     }
     break;
   }
-  return {zip,chapters,base};
+  return {zip,chapters,base,tocEntries};
 }
 
 const JF_EPUB_ASSET_EXT=new Set(['.jpg','.jpeg','.png','.gif','.webp','.svg','.bmp','.avif']);
@@ -618,7 +669,7 @@ async function jfReadingOutline(id){
   if(stat.size>40*1024*1024)throw jfReaderError(413,'此书超过当前离线阅读器大小上限（40MB）');
   if(info.ext==='EPUB'){
     const epub=jfReadingEpub(await fs.promises.readFile(file));
-    return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title,...(c.paperOmit?{paperOmit:c.paperOmit}:{})}))};
+    return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title,...(c.paperOmit?{paperOmit:c.paperOmit}:{})})),toc:epub.tocEntries};
   }
   if(stat.size>12*1024*1024)throw jfReaderError(413,'文本书籍超过当前 12MB 阅读限制');
   const t=jfReadingTextDecode(await fs.promises.readFile(file));
