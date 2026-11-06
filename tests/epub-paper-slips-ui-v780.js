@@ -35,7 +35,8 @@ class Element{
   }
   closest(selector){return selector==='[data-chapter]'?null:null}
 }
-const host=new Element('div');host.id='jfPageView';
+const desk=new Element('div');desk.id='jfReadCenter';
+const host=new Element('div');host.id='jfPageView';desk.append(host);
 const document={getElementById:k=>registry.get(k)||null,createElement:k=>new Element(k),
   addEventListener(k,fn){(docEvents[k]??=[]).push(fn)}};
 const state={window:{},document,jfDeskPaged:true,
@@ -55,6 +56,8 @@ assert.equal(tocTab.hidden,false);
 assert.equal(noteTab.hidden,true);
 tocTab.click();
 assert.equal(tocPane.hidden,false);
+assert.equal(tocPane.parentElement,desk,'loose leaf not nested inside book texture');
+assert(desk.classList.contains('jfEpubDrawerOpen'),'open slip retreats book without reflow');
 assert.equal(tocPane.children[1].children.length,2,'real entries from outline');
 const left=new Element('div'),right=new Element('div');
 const marker=new Element('span');marker.dataset.jfNoteRef='stable-note-id';
@@ -64,6 +67,7 @@ api.renderNotes(left,right,notes);
 assert.equal(noteTab.hidden,false,'left-only note reveals 笺');
 noteTab.click();
 assert.equal(notePane.hidden,false);
+assert.equal(notePane.parentElement,desk,'note slip lives outside spread');
 assert.equal(tocPane.hidden,true,'opening 笺 closes 目');
 assert.equal(notePane.children[1].children.length,1);
 assert.equal(notePane.children[1].children[0].children[1].textContent,'翠微：青翠的山色。');
@@ -77,6 +81,7 @@ assert.equal(noteTab.hidden,true,'note-free spread removes tab entirely');
 tocTab.click();
 for(const f of docEvents.keydown||[])f({key:'Escape',stopPropagation(){}});
 assert.equal(tocPane.hidden,true,'Esc closes TOC');
+assert(!desk.classList.contains('jfEpubDrawerOpen'),'closing both slips restores full-size book');
 state.jfDeskOutline.format='TXT';api.sync();
 assert.equal(tocTab.hidden,true,'non-EPUB mode hides TOC');
 console.log('PASS v7.80 UI: TOC data, paper notes current-spread, dedup, mutual exclusion, Esc and mode gate');
