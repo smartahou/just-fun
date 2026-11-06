@@ -751,7 +751,8 @@ function jfReadingEpubPaperNotes(xhtml,entry,epub){
       .map(tag=>before.lastIndexOf(tag)));
     const quote=jfReadingHtmlToText(before.slice(blockStart))
       .replace(/\s+/g,' ').trim().slice(-24);
-    if(!notes.some(n=>n.id===key))notes.push({id:key,text:found.text,quote});
+    const number=/^\[(\d{1,4})\]$/.exec(label)?.[1]||'';
+    if(!notes.some(n=>n.id===key))notes.push({id:key,number,text:found.text,quote});
     paper=paper.replace(ref[0],'<span data-jf-note-ref="'+key+'" aria-hidden="true"></span>');
     if(target===entry.file)removed.add(found.raw);
   }
