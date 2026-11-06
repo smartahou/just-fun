@@ -190,6 +190,14 @@
     if(!notePane.hidden&&!notePane.contains(e.target)&&!noteTab.contains(e.target))
       closeNotes();
   });
+  // Arrow keys inside the loose slips scroll their lists, rather than
+  // bubbling into the document-wide printed-page turn shortcut.
+  function suppressPaperKeys(e){
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown',' '].includes(e.key))
+      e.stopPropagation();
+  }
+  pane.addEventListener('keydown',suppressPaperKeys);
+  notePane.addEventListener('keydown',suppressPaperKeys);
   const originalClose=close, originalSync=sync;
   function closeAll(){originalClose();closeNotes();syncDesk();}
   function syncAll(){originalSync();if(!jfDeskPaged||jfDeskOutline?.format!=='EPUB'){noteTab.hidden=true;closeNotes();}}
