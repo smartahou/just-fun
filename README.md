@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.88.0 / Current version: v7.88.0** · 持续迭代 / Actively evolving
+**当前版本：v7.89.0 / Current version: v7.89.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.89 · 旧书书口材质重建（视觉验收待定）**：以原有 8 组成对旧纸 WebP 色系为基准，把纸页堆叠压为较浅的细层纹理，支持 11 档 / 左右 22 张；0% 左和 100% 右采用透明端点。新增 `assets/paper-stacks/embedded-v789.json` 作为单文件离线构建的实际使用素材，逐张校验 SHA-256、WebP alpha 与尺寸；旧 v7.88 素材保留供回滚。将侧边图像向正面纸页下收 2px、上下内收 2px，减轻竖直木条的分离感。**须真实 Windows 旧书模式截图验收通过后才能视为最终视觉合格；不得以 CI 通过代替视觉验收。**
 
 **v7.88 · 真图书口堆叠与书脊柔光**：根据用户提供的 ZIP，已将 11 档 22 张原始 RGBA WebP（64×1440）逐张按 SHA-256 校验、原样写入 `assets/paper-stacks/`，并接入离线单文件构建。旧纸双页模式用书外现有的 `.jfBookPile` 绘制真实图像，0–100% 按全书进度四舍五入到最近的 10% 左右同步切档，保持图片 64:1440 等比缩放并贴在书页后方；移除书口上的所有 CSS 假纹理、裁切与规则层线。书脊独立阴影中心暗度由 .112 恢复到 .215，保留柔和渐隐、不再引入实色缝条。正文分页、定位、读书笔记及书签图不动。新增 `tests/paper-stack-images-v788.js`。真实 Windows 视觉仍需人工验收。
 
