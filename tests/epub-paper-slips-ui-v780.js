@@ -10,7 +10,7 @@ class Element{
   constructor(tag){this.tagName=tag;this.children=[];this.listeners={};this.dataset={};this.hidden=false;
     this.style={setProperty(k,v){this[k]=v}};
     const classes=new Set();
-    this.classList={toggle(k,on){if(on)classes.add(k);else classes.delete(k)},contains:k=>classes.has(k)};
+    this.classList={toggle(k,on){if(on)classes.add(k);else classes.delete(k)},add:k=>classes.add(k),contains:k=>classes.has(k)};
     this.attrs={};this.textContent='';this.parentElement=null;
   }
   set id(v){this._id=v;registry.set(v,this)}
