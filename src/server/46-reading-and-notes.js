@@ -642,55 +642,99 @@ function jfReadingEpubImageLayoutHints(tag){
 // Extract only notes whose targets are verified, explicitly typed EPUB elements.
 // This is a paper-mode projection; the original EPUB and flow HTML stay intact.
 function jfReadingEpubPaperNotes(xhtml,entry,epub){
-  const notes=[],removed=[];
+  const notes=[],removed=new Set();
   let paper=xhtml;
-  const dir=require('node:path').posix.dirname(entry.file);
-  for(const match of xhtml.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
-    if(notes.length>=200)break;
-    const attrs=match[1],semantic=jfReadingAttr(attrs,'epub:type')+' '+jfReadingAttr(attrs,'role');
-    if(!/\b(?:noteref|doc-noteref)\b/i.test(semantic))continue;
-    const href=jfReadingAttr(attrs,'href'),at=href.indexOf('#');
-    if(at<0||!href.slice(at+1))continue;
-    const target=at===0?entry.file:jfReadingEpubEntryName(dir,href.slice(0,at));
-    if(!target||!epub.zip.entries.has(target)||!/\.x?html?$/i.test(target))continue;
-    let id;try{id=decodeURIComponent(href.slice(at+1));}catch{continue;}
-    if(!id||id.length>160)continue;
-    let xml;
-    try{xml=target===entry.file?xhtml:jfReadingTextDecode(epub.zip.read(target));}catch{continue;}
-    // Search opening tags independently so a nested <li> under <section>
-    // is not swallowed by an outer non-overlapping regex match.
-    let note='';
-    for(const found of xml.matchAll(/<(aside|li|p|section|div)\b[^>]*>/gi)){
-      const tag=found[0],kind=found[1];
+  const posix=require('node:path').posix;
+  const dir=posix.dirname(entry.file);
+  const crypto=require('node:crypto');
+  // A legacy numeric link counts as a note only when its ID, target, backlink,
+  // visible number and an actual 注释 heading all agree. No plain [n] guesses.
+  function sectionsFor(source){
+    const headers=[...source.matchAll(/<h([1-6])\b[^>]*>[\s\S]*?<\/h\1\s*>/gi)];
+    return headers.flatMap((h,i)=>{
+      const name=jfReadingHtmlToText(h[0]).replace(/\s+/g,'').trim();
+      if(!/^(?:【注释】|注释)$/.test(name))return [];
+      return [{heading:h[0],body:source.slice(h.index+h[0].length,headers[i+1]?.index??source.length)}];
+    });
+  }
+  const localSections=sectionsFor(xhtml);
+  const sectionCache=new Map([[entry.file,localSections]]);
+  function findLegacyNote(xml,target,id,backId){
+    const sections=sectionCache.get(target)||sectionsFor(xml);
+    sectionCache.set(target,sections);
+    for(const section of sections){
+      for(const p of section.body.matchAll(/<p\b[^>]*>[\s\S]*?<\/p\s*>/gi)){
+        const candidate=p[0];
+        const open=/^<p\b[^>]*>/i.exec(candidate)?.[0]||'';
+        const a=/^\s*<a\b([^>]*)>([\s\S]*?)<\/a\s*>/i.exec(candidate.slice(open.length));
+        if(!a||jfReadingAttr(a[1],'id')!==id)continue;
+        const href=jfReadingAttr(a[1],'href');
+        if(!href||href.split('#')[1]!==backId)continue;
+        const backFile=href.split('#')[0];
+        const normalized=!backFile?target:jfReadingEpubEntryName(posix.dirname(target),backFile);
+        if(normalized!==entry.file)continue;
+        const visibleLabel=jfReadingHtmlToText(a[2]).replace(/\s+/g,'');
+        if(!/^\[\d{1,4}\]$/.test(visibleLabel))continue;
+        const bodyText=jfReadingHtmlToText(candidate).trim();
+        if(!bodyText.startsWith(visibleLabel))continue;
+        return {raw:candidate,text:bodyText.slice(visibleLabel.length).trim()};
+      }
+    }
+    return null;
+  }
+  function findSemanticNote(xml,id){
+    for(const m of xml.matchAll(/<(aside|li|p|section|div)\b[^>]*>/gi)){
+      const tag=m[0];
       if(jfReadingAttr(tag,'id')!==id)continue;
       if(!/\b(?:footnote|endnote|doc-footnote|doc-endnote)\b/i.test(
         jfReadingAttr(tag,'epub:type')+' '+jfReadingAttr(tag,'role')))continue;
-      const tail=xml.slice(found.index+tag.length);
-      const close=new RegExp('<\\/'+kind+'\\s*>','i').exec(tail);
-      if(!close)break;
-      note=xml.slice(found.index,found.index+tag.length+close.index+close[0].length);
-      break;
+      const close=new RegExp('<\\/'+m[1]+'\\s*>','i').exec(xml.slice(m.index+tag.length));
+      if(!close)continue;
+      const raw=xml.slice(m.index,m.index+tag.length+close.index+close[0].length);
+      return {raw,text:jfReadingHtmlToText(raw).trim()};
     }
-    if(!note)continue;
-    let text=jfReadingHtmlToText(note).trim();
-    // Remove a visible note number only when it equals the verified noteref.
-    // Unrelated numerals in the explanation are ordinary book content.
-    const printedLabel=jfReadingHtmlToText(match[2]).trim();
-    if(/^(?:\[\d{1,4}\]|［\d{1,4}］|【\d{1,4}】|\(\d{1,4}\)|（\d{1,4}）|\d{1,4})$/.test(printedLabel)&&text.startsWith(printedLabel))
-      text=text.slice(printedLabel.length).replace(/^[\s.．、：:]+/,'');
-    if(!text||text.length>12000)continue;
-    const key=require('node:crypto').createHash('sha256')
-      .update(entry.file+'\0'+target+'\0'+id).digest('hex').slice(0,16);
-    const before=xhtml.slice(Math.max(0,match.index-250),match.index);
-    const quote=jfReadingHtmlToText(before).replace(/\s+/g,' ').trim().slice(-24);
-    if(!notes.some(n=>n.id===key))notes.push({id:key,text,quote});
-    paper=paper.replace(match[0],'<span data-jf-note-ref="'+key+'" aria-label="笺注位置"></span>');
-    if(target===entry.file)removed.push(note);
+    return null;
   }
-  for(const raw of new Set(removed))paper=paper.replace(raw,'');
+  for(const ref of xhtml.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
+    if(notes.length>=200)break;
+    const attrs=ref[1],href=jfReadingAttr(attrs,'href');
+    const hash=href.indexOf('#');if(hash<0||!href.slice(hash+1))continue;
+    const semantic=/\b(?:noteref|doc-noteref)\b/i.test(
+      jfReadingAttr(attrs,'epub:type')+' '+jfReadingAttr(attrs,'role'));
+    const backId=jfReadingAttr(attrs,'id');
+    const label=jfReadingHtmlToText(ref[2]).replace(/\s+/g,'');
+    let id;
+    try{id=decodeURIComponent(href.slice(hash+1));}catch{continue;}
+    if(!id||id.length>160)continue;
+    const legacy=/^noteBack_(\d{1,4})$/.exec(backId);
+    const matchingLegacy=!!legacy&&id==='note_'+legacy[1]&&label==='['+legacy[1]+']';
+    if(!semantic&&!matchingLegacy)continue;
+    const target=hash===0?entry.file:jfReadingEpubEntryName(dir,href.slice(0,hash));
+    if(!target||!/\.x?html?$/i.test(target)||!epub.zip.entries.has(target))continue;
+    let xml;
+    try{xml=target===entry.file?xhtml:jfReadingTextDecode(epub.zip.read(target));}catch{continue;}
+    let found=semantic?findSemanticNote(xml,id):null;
+    if(!found&&matchingLegacy)found=findLegacyNote(xml,target,id,backId);
+    if(!found||!found.text||found.text.length>12000)continue;
+    const key=crypto.createHash('sha256').update(entry.file+'\0'+target+'\0'+id).digest('hex').slice(0,16);
+    const quote=jfReadingHtmlToText(xhtml.slice(Math.max(0,ref.index-180),ref.index))
+      .replace(/\s+/g,' ').trim().slice(-24);
+    if(!notes.some(n=>n.id===key))notes.push({id:key,text:found.text,quote});
+    paper=paper.replace(ref[0],'<span data-jf-note-ref="'+key+'" aria-hidden="true"></span>');
+    if(target===entry.file)removed.add(found.raw);
+  }
+  for(const raw of removed)paper=paper.replace(raw,'');
+  // A single XHTML may contain several poems and interleaved 注释/评析/辑评.
+  // Drop a note heading only if all explicitly numbered note paragraphs inside
+  // that section were verified; never remove unrelated critique or poetry.
+  for(const section of localSections){
+    const all=[...section.body.matchAll(/<p\b[^>]*>[\s\S]*?<\/p\s*>/gi)]
+      .map(x=>x[0])
+      .filter(raw=>/^<p\b[^>]*>\s*<a\b[^>]*\bid=["'][^"']*note_\d{1,4}["']/i.test(raw));
+    if(all.length&&all.every(raw=>removed.has(raw)))paper=paper.replace(section.heading,'');
+  }
   return {paper,notes};
 }
-
 function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
   const posix=require('node:path').posix;
   const bodyMatch=/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i.exec(xhtml);
