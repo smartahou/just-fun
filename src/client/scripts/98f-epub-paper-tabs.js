@@ -58,6 +58,7 @@
     if(!jfDeskPaged||!jfDeskOutline?.toc?.length)return;
     closeNotes();list.replaceChildren();
     for(const entry of jfDeskOutline.toc){
+      if((entry.depth||0)===0&&/^目\s*录$/.test(entry.title||''))continue;
       const b=document.createElement('button');b.type='button';
       b.className='jfEpubTocEntry';b.textContent=entry.title;b.title=entry.title;
       b.dataset.jfChapter=String(entry.chapter);
@@ -65,6 +66,7 @@
       b.dataset.jfTocDepth=String(depth);
       // Pixel indentation, not unsupported CSS calc(1px * number).
       b.style.paddingLeft=(10+depth*22)+'px';
+      b.style.setProperty('--jf-toc-rule-left',(4+depth*22)+'px');
       b.classList.add(depth===0?'jfEpubTocGroup':'jfEpubTocChild');
       b.classList.toggle('current',entry.chapter===jfDeskChapter);
       b.addEventListener('click',()=>jump(entry).catch(err=>console.warn('[JustFun] TOC jump',err)));
