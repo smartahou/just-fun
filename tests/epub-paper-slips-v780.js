@@ -126,4 +126,48 @@ const dedup=vm.runInNewContext(noteCode+';jfReadingEpubPaperNotes(raw,{file:"OEB
   {...context,raw:duplicated,zip:context.zip});
 assert.equal(dedup.notes.length,1,'repeated references dedup by target anchor');
 assert.equal((dedup.paper.match(/data-jf-note-ref=/g)||[]).length,2,'both physical anchors preserved');
+
+// v7.81 · Calibre/Kindle legacy noteBack_24 <-> note_24 has no epub:type.
+const legacy='<html><body>'+
+  '<h2>夜读<a id="noteBack_24" href="legacy.xhtml#note_24">[24]</a></h2>'+
+  '<p>松风过窗<a id="noteBack_25" href="legacy.xhtml#note_25">[25]</a>，第[2024]年。</p>'+
+  '<h4>【注释】</h4>'+
+  '<p class="kindle-cn-kai"><a id="note_24" href="legacy.xhtml#noteBack_24">[24]</a>夜读，晚间读书。</p>'+
+  '<p class="kindle-cn-kai"><a id="note_25" href="legacy.xhtml#noteBack_25">[25]</a>松风，松林中的风。</p>'+
+  '<h4>【评析】</h4><p>这里是原有的诗文评析，不能被移除。</p>'+
+  '<h4>【辑评】</h4><p>此处是辑录的评语，仍应保留。</p>'+
+  '</body></html>';
+context.zip=zipMock({'OEBPS/legacy.xhtml':legacy});
+const legacyResult=vm.runInNewContext(noteCode+
+  ';jfReadingEpubPaperNotes(raw,{file:"OEBPS/legacy.xhtml"},{zip});',
+  {...context,raw:legacy,zip:context.zip});
+assert.equal(legacyResult.notes.length,2,'two-way legacy references recognized without epub:type');
+assert(!legacyResult.paper.includes('【注释】'),'fully verified note heading disappears');
+assert(!legacyResult.paper.includes('夜读，晚间读书。'),'verified notes do not occupy paper');
+assert(legacyResult.paper.includes('【评析】')&&legacyResult.paper.includes('【辑评】'));
+assert(legacyResult.paper.includes('[2024]'),'ordinary bracketed date preserved');
+assert.equal((legacyResult.paper.match(/data-jf-note-ref=/g)||[]).length,2);
+const multiple='<html><body><p>甲<a id="noteBack_10" href="#note_10">[10]</a>。</p>'+
+  '<h4>【注释】</h4><p><a id="note_10" href="#noteBack_10">[10]</a>甲注。</p>'+
+  '<h4>【评析】</h4><p>中间保留。</p>'+
+  '<p>乙<a id="noteBack_11" href="#note_11">[11]</a>。</p>'+
+  '<h4>【注释】</h4><p><a id="note_11" href="#noteBack_11">[11]</a>乙注。</p>'+
+  '<p>后续正文不属于注释。</p>'+
+  '<h4>【辑评】</h4><p>末尾评论保留。</p></body></html>';
+context.zip=zipMock({'OEBPS/legacy.xhtml':multiple});
+const multi=vm.runInNewContext(noteCode+';jfReadingEpubPaperNotes(raw,{file:"OEBPS/legacy.xhtml"},{zip});',
+  {...context,raw:multiple,zip:context.zip});
+assert.equal(multi.notes.length,2,'several independent note sections within same XHTML');
+assert(!multi.paper.includes('【注释】'));
+assert(multi.paper.includes('后续正文不属于注释。'));
+assert(multi.paper.includes('中间保留。')&&multi.paper.includes('末尾评论保留。'));
+const malformed=legacy.replace('href="legacy.xhtml#noteBack_25"','href="legacy.xhtml#wrong"');
+context.zip=zipMock({'OEBPS/legacy.xhtml':malformed});
+const unsafe=vm.runInNewContext(noteCode+';jfReadingEpubPaperNotes(raw,{file:"OEBPS/legacy.xhtml"},{zip});',
+  {...context,raw:malformed,zip:context.zip});
+assert.equal(unsafe.notes.length,1,'unverified backward link must not be hidden');
+assert(unsafe.paper.includes('松风过窗')&&unsafe.paper.includes('[25]'),'unmatched marker stays');
+assert(unsafe.paper.includes('【注释】'),'partially unverified note section heading retained');
+console.log('PASS v7.81: Kindle/Calibre bidirectional refs, multi-poem chapters, commentary retained, invalid backlink guarded');
+
 console.log('PASS v7.80: NAV nested, NCX nested, no TOC, persistent spine, typed cross-file footnote, unlinked numerals retained');
