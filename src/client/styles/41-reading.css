@@ -3132,17 +3132,18 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged .jfSheetBody p[class*="poem"]:first-child:not(.jfPrintContinuation){
   text-indent:0!important;
 }
-/* A 34x34 Calibre gaiji inside a critique table is ONE inline character,
-   not a picture. Keep the measured and visible line-height identical. */
+/* v7.84: Calibre gaiji in commentary tables should read as a printed
+   character, slightly below full em height; no special photo handling.
+   Shared .jfSheetBody styles keep print measurement and display identical. */
 .jfReader.paged .jfSheetBody :is(td,th) img.jfInlineGlyph{
   display:inline-block!important;
   position:static!important;
-  height:.99em!important;
+  height:.86em!important;
   width:auto!important;
-  max-width:1.3em!important;
-  max-height:1.05em!important;
+  max-width:1.05em!important;
+  max-height:.9em!important;
   margin:0!important;padding:0!important;
-  vertical-align:-.12em!important;
+  vertical-align:-.06em!important;
   object-fit:contain!important;
   mix-blend-mode:multiply!important;
   filter:none!important;
@@ -3354,13 +3355,13 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 }
 
 
-/* v7.83 · User-designed PNG bookmarks converted to tiny transparent WebPs.
-   Both art files are bundled into the offline JS entry and applied using CSS
-   variables on buttons. The click targets and aria labels remain native. */
+/* v7.84 · Original user-authored WebP tabs, subtly reduced.
+   Only the illustrated tab's bounds change: no book scale or re-pagination.
+   The click targets and aria labels remain native. */
 .jfReader.paged #jfPageView .jfEpubTocTab,
 .jfReader.paged #jfPageView .jfEpubNoteTab{
-  width:32px!important;
-  height:116px!important;
+  width:26px!important;
+  height:98px!important;
   box-sizing:border-box!important;
   border:0!important;
   padding:0!important;
@@ -3386,7 +3387,7 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   left:calc(50% + var(--jf-page-w) - 2px)!important;
 }
 .jfReader.paged #jfPageView .jfEpubNoteTab{
-  top:calc(21% + 112px)!important;
+  top:calc(21% + 94px)!important;
 }
 .jfReader.paged #jfPageView .jfEpubTocTab:hover,
 .jfReader.paged #jfPageView .jfEpubNoteTab:hover{
@@ -3399,9 +3400,9 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 @media(max-width:700px){
   .jfReader.paged #jfPageView .jfEpubTocTab,
   .jfReader.paged #jfPageView .jfEpubNoteTab{
-    width:27px!important;height:98px!important;
+    width:23px!important;height:86px!important;
   }
   .jfReader.paged #jfPageView .jfEpubNoteTab{
-    top:calc(21% + 94px)!important;
+    top:calc(21% + 82px)!important;
   }
 }

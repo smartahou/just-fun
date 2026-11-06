@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
+const version=require('../package.json').version;
+assert.equal(version,'7.84.0','version');
+const find=(marker,end)=>{
+  const a=css.indexOf(marker);
+  const b=css.indexOf(end,a+marker.length);
+  assert(a>=0&&b>a,'expected styling section: '+marker);
+  return css.slice(a,b);
+};
+const glyph=find('/* v7.84: Calibre','/* The photograph itself owns');
+assert.match(glyph,/\.jfReader\.paged \.jfSheetBody :is\(td,th\) img\.jfInlineGlyph\s*\{/);
+assert.match(glyph,/height:\.86em!important/);
+assert.match(glyph,/max-height:\.9em!important/);
+assert.match(glyph,/max-width:1\.05em!important/);
+assert.match(glyph,/vertical-align:-\.06em!important/);
+assert(!glyph.includes('height:.99em!important'),'old oversized glyph removed');
+const tabs=css.slice(css.indexOf('/* v7.84 · Original'));
+assert.match(tabs,/width:26px!important;\s*height:98px!important/);
+assert.match(tabs,/\.jfEpubNoteTab\s*\{\s*top:calc\(21% \+ 94px\)!important;/);
+assert.match(tabs,/@media\(max-width:700px\)[\s\S]*?width:23px!important;height:86px!important/);
+assert.match(tabs,/@media\(max-width:700px\)[\s\S]*?top:calc\(21% \+ 82px\)!important/);
+assert(tabs.includes('background-image:var(--jf-tab-image)!important'),'approved bitmap artwork retained');
+assert(tabs.includes('#jfEpubNoteTab[hidden]'),'no-note hidden behavior retained');
+assert(css.includes('#jfReadCenter.jfEpubDrawerOpen #jfPageView'),'drawer behavior remains defined');
+console.log('PASS v7.84: original photo tabs reduced, responsive spacing aligned, table gaiji shrunk without pagination changes');
