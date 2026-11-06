@@ -737,10 +737,28 @@ async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null,anchorY=
     document.getElementById('jfReadPrev').disabled=number===0;
     document.getElementById('jfReadNext').disabled=number===jfDeskOutline.chapters.length-1;
     jfReadCenter.scrollTo({top:0,behavior:'instant'});
-    requestAnimationFrame(()=>{if(epoch!==jfDeskEpoch)return;
-      jfReadCenter.scrollTo({top:Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight)*ratio,behavior:'instant'});
+    // v7.90 regression repair: TXT deliberately uses this non-flow branch.
+    // When switched to paper mode it MUST perform pagination before the mode
+    // switch checks for available pages; otherwise it always rolls back.
+    if(jfDeskPaged){
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      if(epoch!==jfDeskEpoch)return;
+      await jfDeskPagedLayout(false,'restore');
+      if(epoch!==jfDeskEpoch)return;
+      jfDeskPageIndex=jfDeskPageForAnchor(jfDeskPages,number,
+        Number.isSafeInteger(offset)&&offset>=0?offset:
+          Math.round(Math.max(0,Math.min(1,ratio))*String(jfReadRawText||'').length),
+        jfDeskPagedGeometry().two?2:1);
+      if(jfDeskPages.length)jfDeskPagedRender();
+      jfReadCenter.scrollTo({top:0,behavior:'instant'});
       jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
-      jfDeskProgressSignature='';jfDeskUpdateProgress();});
+      jfDeskProgressSignature='';jfDeskUpdateProgress();
+    }else{
+      requestAnimationFrame(()=>{if(epoch!==jfDeskEpoch)return;
+        jfReadCenter.scrollTo({top:Math.max(0,jfReadCenter.scrollHeight-jfReadCenter.clientHeight)*ratio,behavior:'instant'});
+        jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+        jfDeskProgressSignature='';jfDeskUpdateProgress();});
+    }
   }catch(e){if(epoch!==jfDeskEpoch)return;
     jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
     jfReadText.textContent='章节无法打开：'+e.message;}
