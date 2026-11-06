@@ -519,6 +519,33 @@ function jfReadingEpub(buf){
   const tocEntries=toc.filter(e=>byFile.has(e.file)).map(e=>({...e,chapter:byFile.get(e.file)}));
   const navDocument=navHref?navPath(navHref):'';
   for(const c of chapters)if(c.file===navDocument)c.paperOmit='navigation';
+  // EPUB2 often has a genuine, independently typeset "目录" XHTML in the
+  // spine in addition to NCX. Do not mistake its title for proof. Require:
+  // explicit NCX/NAV navigation to this chapter, a visible table-of-contents
+  // heading, and >=8 distinct links to other known spine/TOC targets.
+  for(let index=0;index<chapters.length;index++){
+    const chapter=chapters[index];
+    if(chapter.paperOmit||!tocEntries.some(t=>t.chapter===index&&/^目\s*录$/.test(t.title)))continue;
+    let source='';
+    try{source=jfReadingTextDecode(zip.read(chapter.file));}catch{continue;}
+    const body=source.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1]||'';
+    if(!/^目录(?:\s|$)/.test(jfReadingHtmlToText(body)))continue;
+    const links=[...body.matchAll(/<a\b([^>]*)>[\s\S]*?<\/a\s*>/gi)].slice(0,1000);
+    if(links.length<8)continue;
+    let verified=0;
+    const destinations=new Set();
+    const folder=require('node:path').posix.dirname(chapter.file);
+    for(const link of links){
+      const href=jfReadingAttr(link[1],'href');
+      const target=jfReadingEpubEntryName(folder,href);
+      if(target&&target!==chapter.file&&byFile.has(target)
+          &&tocEntries.some(t=>t.file===target)){
+        verified++;destinations.add(target);
+      }
+    }
+    if(destinations.size>=8&&verified>=8&&verified/links.length>=.75)
+      chapter.paperOmit='navigation';
+  }
   // Paper mode starts at the readable book, not at the cover displayed on shelf.
   // A spine may lead with blank XHTML and an image-only cover: only classify
   // this initial run, not any later historical illustration or photo chapter.
