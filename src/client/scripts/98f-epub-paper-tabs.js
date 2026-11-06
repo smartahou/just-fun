@@ -6,7 +6,7 @@
   const desk=document.getElementById('jfReadCenter');
   if(!desk)return;
   const tab=document.createElement('button');
-  tab.id='jfEpubTocTab';tab.type='button';tab.textContent='目';
+  tab.id='jfEpubTocTab';tab.type='button';tab.textContent='目录';
   tab.title='抽出目录';tab.className='jfEpubTocTab';tab.hidden=true;
   tab.setAttribute('aria-label','打开书籍目录');
   tab.setAttribute('aria-expanded','false');
@@ -61,7 +61,11 @@
       const b=document.createElement('button');b.type='button';
       b.className='jfEpubTocEntry';b.textContent=entry.title;b.title=entry.title;
       b.dataset.jfChapter=String(entry.chapter);
-      b.style.setProperty('--toc-depth',String(entry.depth||0));
+      const depth=Math.max(0,Math.min(6,Number(entry.depth)||0));
+      b.dataset.jfTocDepth=String(depth);
+      // Pixel indentation, not unsupported CSS calc(1px * number).
+      b.style.paddingLeft=(10+depth*22)+'px';
+      b.classList.add(depth===0?'jfEpubTocGroup':'jfEpubTocChild');
       b.classList.toggle('current',entry.chapter===jfDeskChapter);
       b.addEventListener('click',()=>jump(entry).catch(err=>console.warn('[JustFun] TOC jump',err)));
       list.append(b);
@@ -79,7 +83,7 @@
   const noteTab=document.createElement('button');
   noteTab.id='jfEpubNoteTab';noteTab.type='button';
   noteTab.className='jfEpubTocTab jfEpubNoteTab';
-  noteTab.textContent='笺';noteTab.title='抽出当前页笺注';noteTab.hidden=true;
+  noteTab.textContent='笺注';noteTab.title='抽出当前页笺注';noteTab.hidden=true;
   noteTab.setAttribute('aria-label','打开当前双页笺注');
   noteTab.setAttribute('aria-expanded','false');
   const notePane=document.createElement('aside');
@@ -139,11 +143,12 @@
     for(const n of currentNotes){
       const b=document.createElement('button');
       b.type='button';b.className='jfEpubNoteEntry';
-      const quote=document.createElement('div');
-      quote.className='jfEpubNoteQuote';quote.textContent=n.quote||'正文所注';
-      const content=document.createElement('div');
+      const number=document.createElement('span');
+      number.className='jfEpubNoteNumber';
+      number.textContent=n.number?'〔'+n.number+'〕':'·';
+      const content=document.createElement('span');
       content.className='jfEpubNoteText';content.textContent=n.text;
-      b.append(quote,content);
+      b.append(number,content);
       b.addEventListener('click',()=>flash(n.anchor));
       noteList.append(b);
     }
