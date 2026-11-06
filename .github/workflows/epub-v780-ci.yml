@@ -11,6 +11,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tests/epub-paper-slips-*.js"
+      - "tests/paged-composition-v778.js"
       - ".github/workflows/epub-v780-ci.yml"
   workflow_dispatch:
 permissions:
