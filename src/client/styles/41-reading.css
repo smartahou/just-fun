@@ -3022,3 +3022,29 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
  .jfReader.paged #jfPageView .jfEpubTocPane{left:auto;right:3%;top:12%}
  .jfReader.paged #jfPageView .jfEpubTocTab{left:auto;right:0}
 }
+
+
+/* EPUB paper-book side notes: same bare paper as the TOC, below it. */
+.jfReader #jfEpubNoteTab[hidden],.jfReader #jfEpubNotePane[hidden]{display:none!important}
+.jfReader.paged #jfPageView .jfEpubNoteTab{top:calc(22% + 62px)}
+.jfReader.paged #jfPageView .jfEpubNotePane{top:16%}
+.jfEpubNoteEntry{
+ display:block;width:100%;background:transparent;
+ border:0;border-bottom:1px solid rgba(92,74,54,.17);
+ padding:10px 5px;text-align:left;color:inherit;cursor:pointer;
+ font:14px/1.65 'Songti SC',SimSun,serif;
+}
+.jfEpubNoteQuote{color:#75593b;font-weight:600;margin-bottom:4px}
+.jfEpubNoteText{white-space:pre-wrap;overflow-wrap:anywhere}
+.jfEpubNoteEntry:focus-visible{outline:2px solid #826443}
+.jfEpubNoteFlash{
+ position:absolute;pointer-events:none;z-index:10;
+ background:rgba(164,105,47,.18);border-radius:2px;
+}
+.jfReader.paged #jfPageView .jfSheetBody [data-jf-note-ref]{
+ display:inline-block;width:0;height:0;padding:0;margin:0;overflow:hidden;
+}
+@media(max-width:800px){
+ .jfReader.paged #jfPageView .jfEpubNoteTab{top:calc(22% + 62px)}
+ .jfReader.paged #jfPageView .jfEpubNotePane{top:15%}
+}
