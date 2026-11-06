@@ -868,6 +868,7 @@ async function jfDeskCloseReader(){
     catch(e){jfDeskMessage('阅读位置未保存：'+e.message,true);return false;}
   }
   jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+  window.JFEpubPaperToc?.close();
   jfDeskSyncImmersive(false);
   document.getElementById('jfReadTypographyPanel').hidden=true;
   document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded','false');
@@ -2479,6 +2480,7 @@ function jfDeskPagedRender(direction){
   window.JFEpubPaperToc?.renderNotes?.(left,right,jfDeskPaperNotes);
   const first=pageA[0]||pageB[0];
   if(first)jfDeskChapter=first.chapter;
+  window.JFEpubPaperToc?.sync();
   // Key out the cream backing of scanned plates before the eye sees it.
   jfDeskKnockOutPlates(left);
   jfDeskKnockOutPlates(right);
