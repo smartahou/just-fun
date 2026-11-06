@@ -7,5 +7,5 @@
 - 同一本 EPUB 评论表格中的原 34×34 行内罕字图已可以正确排版，但仍比印刷正文稍显大。只调整 `td/th img.jfInlineGlyph` 的高度 .99em→.86em、最大高度 1.05em→.9em、最大宽度 1.3em→1.05em、基线 -.12em→-.06em。源码标记/图片不变。
 - 仅变更原 CSS 声明，不增加额外样式覆盖层，不触及分页、读书进度、注释/目录数据模型和其他播放器。
 - 专项测试 `node tests/epub-size-tuning-v784.js`。
-- CI 将执行 `npm run test:epub-paper`、`npm run test:reading-print`、完整离线构建和产物语法检查。
+- GitHub Actions [#42167623500](https://github.com/smartahou/just-fun/actions/runs/42167623500) **PASS**：Node 24 依赖安装、`npm run test:epub-paper`（含 v7.84 尺寸专项）、`npm run test:reading-print`、`node scripts/build.js`、`node --check dist/douyin.js` 均通过。构建 `sourceSha256` 为 `a94add6b91ed9275bb6c0a70daf4d14ab292d3b3412433d112102f313e17647a`（源码指纹，非 JS 二进制 SHA）。
 - Windows 实机新一轮视觉验收仍需用户以实际截图确认。
