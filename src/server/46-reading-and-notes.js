@@ -529,7 +529,7 @@ function jfReadingEpub(buf){
     let source='';
     try{source=jfReadingTextDecode(zip.read(chapter.file));}catch{continue;}
     const body=source.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1]||'';
-    if(!/^目录(?:\s|$)/.test(jfReadingHtmlToText(body)))continue;
+    if(!jfReadingHtmlToText(body).trim().startsWith('目录'))continue;
     const links=[...body.matchAll(/<a\b([^>]*)>[\s\S]*?<\/a\s*>/gi)].slice(0,1000);
     if(links.length<8)continue;
     let verified=0;
