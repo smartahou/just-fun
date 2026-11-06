@@ -717,7 +717,12 @@ function jfReadingEpubPaperNotes(xhtml,entry,epub){
     if(!found&&matchingLegacy)found=findLegacyNote(xml,target,id,backId);
     if(!found||!found.text||found.text.length>12000)continue;
     const key=crypto.createHash('sha256').update(entry.file+'\0'+target+'\0'+id).digest('hex').slice(0,16);
-    const quote=jfReadingHtmlToText(xhtml.slice(Math.max(0,ref.index-180),ref.index))
+    // Start at a real paragraph/heading opening tag. Cutting raw XHTML at
+    // an arbitrary byte can leak half an HTML attribute into the visible quote.
+    const before=xhtml.slice(0,ref.index);
+    const blockStart=Math.max(0,...['<p','<h1','<h2','<h3','<h4','<h5','<h6']
+      .map(tag=>before.lastIndexOf(tag)));
+    const quote=jfReadingHtmlToText(before.slice(blockStart))
       .replace(/\s+/g,' ').trim().slice(-24);
     if(!notes.some(n=>n.id===key))notes.push({id:key,text:found.text,quote});
     paper=paper.replace(ref[0],'<span data-jf-note-ref="'+key+'" aria-hidden="true"></span>');
