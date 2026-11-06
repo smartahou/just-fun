@@ -9,6 +9,7 @@ on:
       - "scripts/build.js"
       - "assets/paper-stacks/**"
       - "tests/paper-stack-images-v788.js"
+      - "tests/paper-stack-runtime-v789.js"
       - "src/client/scripts/98f-epub-paper-tabs.js"
       - "src/client/scripts/99-reading.js"
       - "src/client/styles/41-reading.css"
