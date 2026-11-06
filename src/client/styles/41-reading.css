@@ -3113,3 +3113,203 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 @media(prefers-reduced-motion:reduce){
  .jfReader.paged #jfPageView{transition:none!important}
 }
+
+
+/* ===== v7.82 · paper-book correction from actual Tang poetry EPUB ======
+   The user's book stays at exactly the same size when a side slip opens.
+   Spreads and the pagination measurement boxes are never transformed. */
+.jfReader.paged #jfReadCenter.jfEpubDrawerOpen #jfPageView{
+  transform:none!important;
+}
+.jfReader.paged #jfPageView{transition:none!important;transform:none!important}
+
+/* Real verse is flush-start poetry, not a new prose paragraph. Both the
+   hidden .jfPageMeasure and visible page leaves share .jfSheetBody. */
+.jfReader.paged .jfSheetBody p[class*="poem"]{
+  text-indent:0!important;
+  text-align:left!important;
+}
+.jfReader.paged .jfSheetBody p[class*="poem"]:first-child:not(.jfPrintContinuation){
+  text-indent:0!important;
+}
+/* A 34x34 Calibre gaiji inside a critique table is ONE inline character,
+   not a picture. Keep the measured and visible line-height identical. */
+.jfReader.paged .jfSheetBody :is(td,th) img.jfInlineGlyph{
+  display:inline-block!important;
+  position:static!important;
+  height:.99em!important;
+  width:auto!important;
+  max-width:1.3em!important;
+  max-height:1.05em!important;
+  margin:0!important;padding:0!important;
+  vertical-align:-.12em!important;
+  object-fit:contain!important;
+  mix-blend-mode:multiply!important;
+  filter:none!important;
+}
+
+/* The photograph itself owns all four edges. The remaining vignette gradients,
+   transparent inner curl and the small scan alpha rim appeared as a translucent
+   rectangular film. Remove those only for approved old-paper photographs.
+   24px overscan trims the outermost 12px of the scanned rim from every edge;
+   the book's actual page width, text box, and progress pile stay unchanged. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]{
+  background-image:none!important;
+  box-shadow:0 1px 3px rgba(24,17,10,.18)!important;
+  border:0!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after{
+  background-size:calc(100% + 24px) calc(100% + 24px)!important;
+  background-position:center center!important;
+  opacity:1!important;filter:none!important;
+  box-shadow:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet>.jfSheetCurl{
+  display:none!important;
+}
+/* Inner spine shadow is already painted independently by .jfSpineShade. */
+
+/* Plain paper markers, physically peeking out beyond the fore-edge.
+   A pointed free end reads as a tucked bookmark, not a software button. */
+.jfReader.paged #jfPageView .jfEpubTocTab{
+  width:29px!important;height:75px!important;
+  box-sizing:border-box!important;
+  left:calc(50% + var(--jf-page-w) - 1px)!important;
+  right:auto!important;top:25%!important;
+  padding:4px 3px 12px!important;
+  writing-mode:vertical-rl;
+  text-orientation:upright;
+  display:flex!important;align-items:center;justify-content:center;
+  font:16px/1.25 'Songti SC','Noto Serif SC',SimSun,serif!important;
+  font-weight:500!important;letter-spacing:.08em!important;
+  background:linear-gradient(90deg,#c6b08a 0%,#e9d9ba 19%,#e3d0ab 85%,#d3bd96 100%)!important;
+  border:0!important;
+  border-radius:0!important;
+  clip-path:polygon(0 0,100% 0,100% 88%,50% 100%,0 88%);
+  color:#513e2a!important;
+  box-shadow:none!important;text-shadow:none!important;
+  transform:none!important;
+}
+.jfReader.paged #jfPageView .jfEpubNoteTab{top:calc(25% + 84px)!important}
+.jfReader.paged #jfPageView .jfEpubTocTab:hover{
+  background:linear-gradient(90deg,#c2aa80,#f0e2c8 20%,#e5d1aa)!important;
+}
+.jfReader #jfEpubTocTab[hidden],.jfReader #jfEpubNoteTab[hidden]{
+  display:none!important;
+}
+
+/* Only the loose right-hand drawer moves; the book stays full-size.
+   This intentional side overlay can cover part of the rightmost leaf while
+   open, but never permanently squeezes or reflows the underlying text. */
+.jfReader.paged #jfReadCenter > .jfEpubTocPane{
+  right:clamp(8px,1vw,18px)!important;
+  left:auto!important;
+  width:clamp(266px,23vw,385px)!important;
+  top:50%!important;bottom:auto!important;
+  transform:translateY(-50%)!important;
+  height:min(86%,755px)!important;
+  min-height:0!important;max-height:calc(100% - 28px)!important;
+  padding:24px 22px 20px 25px!important;
+  box-sizing:border-box;
+  background:
+    radial-gradient(ellipse 55% 32% at 94% 4%,rgba(151,123,80,.065),transparent 100%),
+    linear-gradient(95deg,#d4bf9d 0,#e7d8bd 2.7%,#f0e5d1 9%,#f1e6d2 90%,#ddc8a7 100%)!important;
+  color:#49372a!important;
+  border:1px solid rgba(120,91,54,.18)!important;
+  border-radius:2px!important;
+  box-shadow:-10px 11px 33px rgba(20,15,9,.28),-1px 0 3px rgba(35,25,15,.13)!important;
+}
+.jfReader.paged #jfReadCenter > .jfEpubTocPane::before{
+  left:12px!important;
+  background:linear-gradient(180deg,transparent,rgba(110,83,53,.14) 11%,rgba(110,83,53,.14) 89%,transparent)!important;
+}
+.jfEpubTocTitle{
+  font-size:18px!important;
+  font-weight:500!important;
+  color:#463526!important;
+  letter-spacing:.21em!important;
+  padding-bottom:14px!important;
+  margin-bottom:9px!important;
+}
+.jfEpubTocList{
+  height:calc(100% - 58px)!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(122,97,66,.3) transparent;
+  padding-right:7px!important;
+}
+.jfEpubTocEntry{
+  display:block!important;
+  box-sizing:border-box!important;
+  position:relative;
+  width:100%;
+  padding-top:8px!important;
+  padding-right:4px!important;
+  padding-bottom:8px!important;
+  /* padding-left is an explicit pixel value on each item from the controller. */
+  text-align:left!important;
+  text-indent:0!important;
+  color:#594633!important;
+  font:14px/1.65 'Songti SC','Noto Serif SC',SimSun,serif!important;
+  letter-spacing:.015em!important;
+  white-space:normal!important;
+  border:0!important;
+  background:transparent!important;
+}
+.jfEpubTocEntry.jfEpubTocGroup{
+  margin:11px 0 4px!important;
+  padding-top:10px!important;padding-bottom:9px!important;
+  border-bottom:1px solid rgba(111,84,52,.22)!important;
+  color:#3f3023!important;
+  font-size:15px!important;font-weight:650!important;
+  letter-spacing:.065em!important;
+}
+.jfEpubTocEntry.jfEpubTocChild{
+  color:#69543b!important;
+  font-size:14px!important;
+}
+.jfEpubTocEntry.jfEpubTocChild::before{
+  content:'·';position:absolute;
+  left:var(--jf-toc-rule-left,12px);top:8px;
+  color:#a28b6c;font-weight:400;
+}
+.jfEpubTocEntry.current{
+  background:rgba(115,84,44,.09)!important;
+  color:#382818!important;
+}
+.jfEpubTocEntry:hover,.jfEpubNoteEntry:hover{
+  background:rgba(112,81,46,.07)!important;
+}
+
+/* Clean, numbered reader notes. No truncated source quotes or fake labels. */
+.jfEpubNoteEntry{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:start;column-gap:9px;
+  width:100%;box-sizing:border-box;
+  padding:13px 4px 14px!important;
+  border:0!important;
+  border-bottom:1px solid rgba(106,77,49,.14)!important;
+  font:14px/1.85 'Songti SC','Noto Serif SC',SimSun,serif!important;
+  color:#483629!important;
+  letter-spacing:.01em!important;
+}
+.jfEpubNoteNumber{
+  white-space:nowrap;color:#826645;
+  font-size:12px;line-height:2.15;
+}
+.jfEpubNoteText{
+  font-size:14px;line-height:1.86!important;
+  white-space:pre-wrap;overflow-wrap:anywhere;
+}
+@media(max-width:700px){
+ .jfReader.paged #jfReadCenter > .jfEpubTocPane{
+   right:1.5%!important;left:auto!important;
+   top:50%!important;bottom:auto!important;
+   width:min(92vw,345px)!important;
+   height:min(84%,640px)!important;max-height:calc(100% - 20px)!important;
+   transform:translateY(-50%)!important;
+   padding:17px 13px 14px 18px!important;
+ }
+}
