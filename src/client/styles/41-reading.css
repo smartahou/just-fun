@@ -3198,6 +3198,13 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   display:none!important;
 }
 
+/* Higher specificity than the bookmark's display:flex!important.
+   Without this the DOM hidden attribute loses and note-free books show tabs. */
+.jfReader.paged #jfPageView #jfEpubTocTab[hidden],
+.jfReader.paged #jfPageView #jfEpubNoteTab[hidden]{
+  display:none!important;
+}
+
 /* Only the loose right-hand drawer moves; the book stays full-size.
    This intentional side overlay can cover part of the rightmost leaf while
    open, but never permanently squeezes or reflows the underlying text. */
