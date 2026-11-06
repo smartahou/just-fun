@@ -128,6 +128,38 @@ function build() {
       stackUrls.push('data:image/webp;base64,'+data.toString('base64'));
     }
   }
+  // v7.89 · Replace the earlier photographed-wood-looking strips with 22
+  // photo-tinted fine-paper layers prepared from the approved page textures.
+  // Store the compact WebP binaries as base64 in one UTF-8 asset bundle so
+  // the single-file builder remains deterministic and offline.
+  const rebuilt=JSON.parse(read('assets/paper-stacks/embedded-v789.json'));
+  if(rebuilt.format!=='WebP RGBA 64x1440'||rebuilt.data?.length!==11)
+    throw Error('Invalid v7.89 paper-stack asset bundle');
+  const rebuiltHashes=[];
+  let rebuiltBytes=0;
+  stackUrls.length=0;
+  for(let i=0;i<11;i++){
+    const state=rebuilt.data[i];
+    if(!state||state.percent!==i*10)throw Error('Unexpected rebuilt stack stage '+i);
+    for(const side of ['left','right']){
+      const base64=state[side];
+      if(typeof base64!=='string'||!base64.length||!/^[A-Za-z0-9+/]+={0,2}$/.test(base64))
+        throw Error('Invalid v7.89 base64 for '+i+' '+side);
+      const data=Buffer.from(base64,'base64');
+      if(data.toString('base64')!==base64||data.toString('ascii',0,4)!=='RIFF'||
+          data.toString('ascii',8,12)!=='WEBP'||data.toString('ascii',12,16)!=='VP8X')
+        throw Error('Invalid rebuilt WebP source '+i+' '+side);
+      // VP8X has three-byte little-endian width-1 / height-1 at 24 and 27.
+      if(data.readUIntLE(24,3)+1!==64||data.readUIntLE(27,3)+1!==1440||
+          !(data[20]&0x10))throw Error('Wrong RGBA WebP dimensions '+i+' '+side);
+      const digest=crypto.createHash('sha256').update(data).digest('hex');
+      if(digest!==state[side+'_sha256'])
+        throw Error('Rebuilt stack integrity mismatch '+i+' '+side);
+      rebuiltHashes.push(digest);
+      rebuiltBytes+=data.length;
+      stackUrls.push('data:image/webp;base64,'+base64);
+    }
+  }
   let injected=false,stackInjected=false;
   const browser=manifest.scripts.map(p=>{
     const code=read(p);
@@ -219,6 +251,7 @@ function build() {
     paperRuntimeAssetSha256:paperRuntimeHashes,paperRuntimeBytes,
     paperStackStates:stackMeta.progress_states.length,paperStackAssetsSha256:stackAssetHashes,
     paperStackAssetBytes:stackAssetBytes,
+    paperStackRebuiltAssetsSha256:rebuiltHashes,paperStackRebuiltAssetBytes:rebuiltBytes,
     pdfjsVersion:pdfPkg.version,pdfjsAssets:Object.keys(pdfAssets).length,
     pdfjsModuleSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(pdfRoot,'build/pdf.min.mjs'))).digest('hex'),
     baselinePageIdentical:hash(html)===manifest.baselineRenderedHtmlSha256
