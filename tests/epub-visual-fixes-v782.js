@@ -50,6 +50,8 @@ assert(lastCss.includes('calc(100% + 24px) calc(100% + 24px)'),
 assert(tabs.includes("tab.textContent='目录'")||tabs.includes("tab.type='button';tab.textContent='目录'"),
   'side bookmark reads full 目录 instead of a lonely character');
 assert(tabs.includes("noteTab.textContent='笺注'"),'side bookmark reads full 笺注');
+assert(lastCss.includes('#jfEpubNoteTab[hidden]')&&
+  lastCss.includes('display:none!important'),'note-free spreads MUST hide the side marker');
 assert(tabs.includes("b.style.paddingLeft=(10+depth*22)+'px'"),
   'hierarchy is a valid pixel indentation, not invalid calc multiplication');
 assert(tabs.includes('jfEpubNoteNumber')&&tabs.includes("n.number"),
