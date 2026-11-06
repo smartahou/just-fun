@@ -49,6 +49,13 @@ jobs:
           python tests/paged-correctness-v736.py
           python tests/paged-no-skip-v737.py
           python tests/paper-perf-v747.py --expected-static --output dist/paper-performance-v754.json
+      - name: Same-run baseline against current production v7.88
+        continue-on-error: true
+        run: |
+          git worktree add --detach /tmp/justfun-paper-v788-baseline 35b60f2cd792e7e46ac8d0aeaee4ce81d5b3eeeb
+          ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/justfun-paper-v788-baseline/node_modules
+          (cd /tmp/justfun-paper-v788-baseline && node scripts/build.js)
+          python tests/paper-perf-v747.py --build /tmp/justfun-paper-v788-baseline/dist/douyin.js --output dist/paper-performance-v788-baseline.json
       - name: Baseline comparison against prior v7.53
         continue-on-error: true
         run: |
@@ -69,5 +76,6 @@ jobs:
             dist/paper-v790-browser-050.png
             dist/paper-v790-browser-080.png
             dist/paper-performance-v753-baseline.json
+            dist/paper-performance-v788-baseline.json
             dist-build.log
           if-no-files-found: warn
