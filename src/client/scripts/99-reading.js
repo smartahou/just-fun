@@ -1843,8 +1843,13 @@ function jfDeskMarkInlineGlyphs(root){
   if(!root?.querySelectorAll||!document.createRange)return;
   for(const img of root.querySelectorAll('img')){
     if(img.classList?.contains('jfInlineGlyph'))continue;
-    if(img.closest?.('figure,figcaption,table,pre'))continue;
-    const paragraph=img.closest?.('p,li,blockquote');
+    if(img.closest?.('figure,figcaption,pre'))continue;
+    // Calibre routinely places rare-character miniatures in table cells.
+    // Ordinary table photos must NOT become one-character glyphs.
+    const cell=img.closest?.('td,th');
+    const legacyInline=/\bkindle-cn-inline-image\b/.test(String(img.className||''));
+    if(cell&&!legacyInline&&img.dataset?.jfGlyphHint!=='1')continue;
+    const paragraph=img.closest?.('p,li,blockquote,td,th');
     if(!paragraph)continue;
     let before='',after='';
     try{
@@ -1864,9 +1869,10 @@ function jfDeskMarkInlineGlyphs(root){
         before=prev.textContent;after=next.textContent;bridge=true;
       }
     }
-    const hinted=img.dataset?.jfGlyphHint==='1'||
-      /^[\u3400-\u9fff\uf900-\ufaff]$/.test(String(img.alt||'').trim());
     const [w,h]=jfDeskGlyphDimensions(img);
+    const hinted=img.dataset?.jfGlyphHint==='1'||
+      /^[\u3400-\u9fff\uf900-\ufaff]$/.test(String(img.alt||'').trim())||
+      (legacyInline&&w<=96&&h<=96);
     if(!jfDeskIsInlineGlyphShape(w,h,before,after,hinted))continue;
     img.classList.add('jfInlineGlyph');
     img.dataset.jfInlineGlyph='1';
