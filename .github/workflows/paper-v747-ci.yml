@@ -10,6 +10,7 @@ on:
       - "scripts/build.js"
       - "build.manifest.json"
       - "tests/paper-*"
+      - "tests/paged-correctness-v736.py"
       - ".github/workflows/paper-v747-ci.yml"
   workflow_dispatch:
 permissions:
