@@ -639,6 +639,45 @@ function jfReadingEpubImageLayoutHints(tag){
     +(w?' data-jf-source-width="'+w+'"':'')
     +(h?' data-jf-source-height="'+h+'"':'');
 }
+// Extract only notes whose targets are verified, explicitly typed EPUB elements.
+// This is a paper-mode projection; the original EPUB and flow HTML stay intact.
+function jfReadingEpubPaperNotes(xhtml,entry,epub){
+  const notes=[],removed=[];
+  let paper=xhtml;
+  const dir=require('node:path').posix.dirname(entry.file);
+  for(const match of xhtml.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
+    if(notes.length>=200)break;
+    const attrs=match[1],semantic=jfReadingAttr(attrs,'epub:type')+' '+jfReadingAttr(attrs,'role');
+    if(!/\b(?:noteref|doc-noteref)\b/i.test(semantic))continue;
+    const href=jfReadingAttr(attrs,'href'),at=href.indexOf('#');
+    if(at<0||!href.slice(at+1))continue;
+    const target=at===0?entry.file:jfReadingEpubEntryName(dir,href.slice(0,at));
+    if(!target||!epub.zip.entries.has(target)||!/\.x?html?$/i.test(target))continue;
+    let id;try{id=decodeURIComponent(href.slice(at+1));}catch{continue;}
+    if(!id||id.length>160)continue;
+    let xml;
+    try{xml=target===entry.file?xhtml:jfReadingTextDecode(epub.zip.read(target));}catch{continue;}
+    const candidates=xml.match(/<(aside|li|p|section|div)\b[^>]*>[\s\S]*?<\/\1\s*>/gi)||[];
+    const note=candidates.find(candidate=>{
+      const tag=candidate.match(/^<[^>]+>/)?.[0]||'';
+      return jfReadingAttr(tag,'id')===id &&
+        /\b(?:footnote|endnote|doc-footnote|doc-endnote)\b/i.test(
+          jfReadingAttr(tag,'epub:type')+' '+jfReadingAttr(tag,'role'));
+    });
+    if(!note)continue;
+    const text=jfReadingHtmlToText(note).trim();
+    if(!text||text.length>12000)continue;
+    const key=String(notes.length);
+    const before=xhtml.slice(Math.max(0,match.index-250),match.index);
+    const quote=jfReadingHtmlToText(before).replace(/\s+/g,' ').trim().slice(-24);
+    notes.push({id:key,text,quote});
+    paper=paper.replace(match[0],'<span data-jf-note-ref="'+key+'" aria-label="笺注位置"></span>');
+    if(target===entry.file)removed.push(note);
+  }
+  for(const raw of new Set(removed))paper=paper.replace(raw,'');
+  return {paper,notes};
+}
+
 function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
   const posix=require('node:path').posix;
   const bodyMatch=/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i.exec(xhtml);
@@ -690,7 +729,7 @@ async function jfReadingChapter(id,index){
   const {info,file,stat}=await jfBookFindById(id);
   if(!Number.isSafeInteger(index)||index<0||index>5000)throw jfReaderError(400,'章节编号无效');
   if(info.ext==='PDF')throw jfReaderError(400,'PDF 使用浏览器内置阅读器');
-  let text,total,html;
+  let text,total,html,paperHtml,notes;
   if(info.ext==='EPUB'){
     if(stat.size>40*1024*1024)throw jfReaderError(413,'EPUB 文件超出 40MB');
     const epub=jfReadingEpub(await fs.promises.readFile(file));
@@ -701,13 +740,17 @@ async function jfReadingChapter(id,index){
     // text stays the plain rendering: excerpt anchors and progress math depend on it.
     text=jfReadingHtmlToText(xhtml);
     html=jfReadingEpubChapterHtml(xhtml,{dir:require('node:path').posix.dirname(entry.file),bookId:info.id,zip:epub.zip});
+    const noteData=jfReadingEpubPaperNotes(xhtml,entry,epub);
+    notes=noteData.notes;
+    paperHtml=notes.length?jfReadingEpubChapterHtml(noteData.paper,{
+      dir:require('node:path').posix.dirname(entry.file),bookId:info.id,zip:epub.zip}):html;
   }else{
     if(stat.size>12*1024*1024)throw jfReaderError(413,'文本文件超出 12MB');
     const sections=jfReadingSplitText(jfReadingTextDecode(await fs.promises.readFile(file)));
     total=sections.length;if(index>=total)throw jfReaderError(404,'章节不存在');
     text=sections[index];
   }
-  return {ok:true,chapter:index,total,text,book:info,...(html===undefined?{}:{html})};
+  return {ok:true,chapter:index,total,text,book:info,...(html===undefined?{}:{html}),...(paperHtml===undefined?{}:{paperHtml,notes})};
 }
 // Serve one in-archive image. The entry name must exist in the EPUB index and
 // have an image extension; the archive is re-read only when the book file changes.
