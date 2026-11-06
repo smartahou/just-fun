@@ -676,8 +676,8 @@ function jfReadingEpubPaperNotes(xhtml,entry,epub){
     // Remove a visible note number only when it equals the verified noteref.
     // Unrelated numerals in the explanation are ordinary book content.
     const printedLabel=jfReadingHtmlToText(match[2]).trim();
-    if(/^[\\[［【(（]?\\d{1,4}[\\]］】)）]?$/.test(printedLabel)&&text.startsWith(printedLabel))
-      text=text.slice(printedLabel.length).replace(/^[\\s.．、：:]+/,'');
+    if(/^(?:\[\d{1,4}\]|［\d{1,4}］|【\d{1,4}】|\(\d{1,4}\)|（\d{1,4}）|\d{1,4})$/.test(printedLabel)&&text.startsWith(printedLabel))
+      text=text.slice(printedLabel.length).replace(/^[\s.．、：:]+/,'');
     if(!text||text.length>12000)continue;
     const key=require('node:crypto').createHash('sha256')
       .update(entry.file+'\0'+target+'\0'+id).digest('hex').slice(0,16);
