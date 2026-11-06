@@ -33,6 +33,14 @@
 - GitHub CI 流程：`npm ci`、`npm run test:epub-paper`、`npm run test:reading-print`、`node scripts/build.js` 与 `node --check dist/douyin.js`。
 - **尚未验证**：Windows 端真实浏览器打开原 EPUB、全部右侧纸签交互视觉、透明膜是否肉眼彻底消失、完整媒体功能全量回归。不能写成实机验收通过。
 
+## 最终 GitHub Actions 验证
+
+- CI 运行：[42160843564](https://github.com/smartahou/just-fun/actions/runs/42160843564)（PASS）。
+- CI HEAD：`787914e3c9496626aaba996492d4933367f33aca`，后续 `GOVERNANCE-CHECKPOINT` 提交仅修改记录文件。
+- Node 24：EPUB 数据与 UI 合成测试 PASS，v7.73～7.78 阅读回归 PASS，离线完整构建 PASS，生成 JS 的 `node --check` PASS。
+- `sourceSha256`：`ce126d966df0c95bede0c6382f24f4fcabf5d4be4d712009af22384f2d731182`（构建源集合哈希，不是发行 JS 二进制 SHA）。
+- **限制：** 未执行真实 Windows EPUB 页面浏览器截图验收，不得宣称外观已经最终合格。
+
 ## 本地人工验收重点
 
 1. 打开《晨诣超师院读禅经》，确认《溪居》的第一句没有通用 2 字缩进；表格中「道人四语景色霮〔罕字〕如沐」的 34×34 图片不再单独显示为大块异形图。
