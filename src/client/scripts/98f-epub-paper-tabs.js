@@ -3,6 +3,8 @@
   'use strict';
   const host=document.getElementById('jfPageView');
   if(!host)return;
+  const desk=document.getElementById('jfReadCenter');
+  if(!desk)return;
   const tab=document.createElement('button');
   tab.id='jfEpubTocTab';tab.type='button';tab.textContent='目';
   tab.title='抽出目录';tab.className='jfEpubTocTab';tab.hidden=true;
@@ -15,10 +17,14 @@
   title.className='jfEpubTocTitle';title.textContent='目录';
   const list=document.createElement('div');list.className='jfEpubTocList';
   pane.append(title,list);
-  host.append(tab,pane);
-  let opened=false,session=0;
+  host.append(tab);desk.append(pane);
+  let opened=false;
+  function syncDesk(){
+    desk.classList.toggle('jfEpubDrawerOpen',!pane.hidden||!notePane.hidden);
+  }
   function close(){
     pane.hidden=true;opened=false;tab.setAttribute('aria-expanded','false');
+    syncDesk();
   }
   function sync(){
     const enabled=!!(jfDeskPaged&&jfDeskOutline?.format==='EPUB'&&jfDeskOutline.toc?.length);
@@ -60,7 +66,7 @@
       b.addEventListener('click',()=>jump(entry).catch(err=>console.warn('[JustFun] TOC jump',err)));
       list.append(b);
     }
-    pane.hidden=false;opened=true;tab.setAttribute('aria-expanded','true');sync();
+    pane.hidden=false;opened=true;tab.setAttribute('aria-expanded','true');sync();syncDesk();
   });
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&opened){close();e.stopPropagation();}
@@ -82,7 +88,7 @@
   const noteTitle=document.createElement('div');
   noteTitle.className='jfEpubTocTitle';noteTitle.textContent='笺注';
   const noteList=document.createElement('div');noteList.className='jfEpubTocList';
-  notePane.append(noteTitle,noteList);host.append(noteTab,notePane);
+  notePane.append(noteTitle,noteList);host.append(noteTab);desk.append(notePane);
   let currentNotes=[],flashNodes=[],flashTimer=0;
   function stopFlash(){
     clearTimeout(flashTimer);
@@ -91,7 +97,7 @@
   }
   function closeNotes(){
     notePane.hidden=true;noteTab.setAttribute('aria-expanded','false');
-    stopFlash();
+    stopFlash();syncDesk();
   }
   // Highlight a source Range just before the actual anchor, never use global
   // string matching. The overlay is painted outside the reflowed book DOM.
@@ -110,13 +116,17 @@
     const end=last.textContent.length;
     range.setStart(last,Math.max(0,end-6));range.setEnd(last,end);
     const parent=host.getBoundingClientRect();
+    // CSS scales the book while the detached paper slip is out. Convert
+    // rendered viewport coordinates back to the book's own CSS pixel space.
+    const sx=host.offsetWidth?parent.width/host.offsetWidth:1;
+    const sy=host.offsetHeight?parent.height/host.offsetHeight:1;
     for(const rect of range.getClientRects()){
       if(rect.width<1||rect.height<1)continue;
       const mark=document.createElement('span');
       mark.className='jfEpubNoteFlash';
-      mark.style.left=(rect.left-parent.left)+'px';
-      mark.style.top=(rect.top-parent.top)+'px';
-      mark.style.width=rect.width+'px';mark.style.height=rect.height+'px';
+      mark.style.left=((rect.left-parent.left)/sx)+'px';
+      mark.style.top=((rect.top-parent.top)/sy)+'px';
+      mark.style.width=(rect.width/sx)+'px';mark.style.height=(rect.height/sy)+'px';
       host.append(mark);flashNodes.push(mark);
     }
     if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){stopFlash();return;}
@@ -137,7 +147,7 @@
       b.addEventListener('click',()=>flash(n.anchor));
       noteList.append(b);
     }
-    notePane.hidden=false;noteTab.setAttribute('aria-expanded','true');
+    notePane.hidden=false;noteTab.setAttribute('aria-expanded','true');syncDesk();
   });
   function renderNotes(left,right,notesByChapter){
     closeNotes();
@@ -181,7 +191,7 @@
       closeNotes();
   });
   const originalClose=close, originalSync=sync;
-  function closeAll(){originalClose();closeNotes();}
+  function closeAll(){originalClose();closeNotes();syncDesk();}
   function syncAll(){originalSync();if(!jfDeskPaged||jfDeskOutline?.format!=='EPUB'){noteTab.hidden=true;closeNotes();}}
 
   window.JFEpubPaperToc={sync:syncAll,close:closeAll,renderNotes};
