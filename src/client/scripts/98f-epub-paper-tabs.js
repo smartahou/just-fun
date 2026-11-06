@@ -50,7 +50,7 @@
   tab.addEventListener('click',()=>{
     if(opened){close();return;}
     if(!jfDeskPaged||!jfDeskOutline?.toc?.length)return;
-    list.replaceChildren();
+    closeNotes();list.replaceChildren();
     for(const entry of jfDeskOutline.toc){
       const b=document.createElement('button');b.type='button';
       b.className='jfEpubTocEntry';b.textContent=entry.title;b.title=entry.title;
