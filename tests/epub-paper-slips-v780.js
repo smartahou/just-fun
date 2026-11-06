@@ -114,4 +114,16 @@ const untouched=vm.runInNewContext(noteCode+';jfReadingEpubPaperNotes(raw,{file:
  {...context,raw:noRef,zip:context.zip});
 assert.equal(untouched.notes.length,0);
 assert.equal(untouched.paper,noRef);
+const local='<html><body><p>却顾<a role="doc-noteref" href="#local">[18]</a>，回看。</p><section><ol><li id="local" role="doc-footnote">[18]却顾：回头观看。</li></ol></section><p>【辑评】保留</p></body></html>';
+const localNote=vm.runInNewContext(noteCode+';jfReadingEpubPaperNotes(raw,{file:"OEBPS/chap.xhtml"},{zip});',
+  {...context,raw:local,zip:context.zip});
+assert.equal(localNote.notes.length,1,'nested semantic footnote resolved');
+assert(!localNote.paper.includes('role="doc-footnote"'),'matched local note removed from paged copy');
+assert(!localNote.paper.includes('[18]'),'visible linked label removed');
+assert(localNote.paper.includes('【辑评】'),'separate commentary preserved');
+const duplicated='<html><body><p>翠微<a epub:type="noteref" href="notes.xhtml#n17">[17]</a>。复言<a epub:type="noteref" href="notes.xhtml#n17">[17]</a>。</p></body></html>';
+const dedup=vm.runInNewContext(noteCode+';jfReadingEpubPaperNotes(raw,{file:"OEBPS/chap.xhtml"},{zip});',
+  {...context,raw:duplicated,zip:context.zip});
+assert.equal(dedup.notes.length,1,'repeated references dedup by target anchor');
+assert.equal((dedup.paper.match(/data-jf-note-ref=/g)||[]).length,2,'both physical anchors preserved');
 console.log('PASS v7.80: NAV nested, NCX nested, no TOC, persistent spine, typed cross-file footnote, unlinked numerals retained');
