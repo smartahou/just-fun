@@ -10,6 +10,9 @@
   tab.title='抽出目录';tab.className='jfEpubTocTab';tab.hidden=true;
   tab.setAttribute('aria-label','打开书籍目录');
   tab.setAttribute('aria-expanded','false');
+  // Real user-authored paper bookmarks are bundled as transparent WebP data URIs.
+  if(window.JFPaperTabImages?.toc)
+    tab.style.setProperty('--jf-tab-image','url("'+window.JFPaperTabImages.toc+'")');
   const pane=document.createElement('aside');
   pane.id='jfEpubTocPane';pane.className='jfEpubTocPane';pane.hidden=true;
   pane.setAttribute('aria-label','书籍目录');
@@ -88,6 +91,8 @@
   noteTab.textContent='笺注';noteTab.title='抽出当前页笺注';noteTab.hidden=true;
   noteTab.setAttribute('aria-label','打开当前双页笺注');
   noteTab.setAttribute('aria-expanded','false');
+  if(window.JFPaperTabImages?.notes)
+    noteTab.style.setProperty('--jf-tab-image','url("'+window.JFPaperTabImages.notes+'")');
   const notePane=document.createElement('aside');
   notePane.id='jfEpubNotePane';notePane.className='jfEpubTocPane jfEpubNotePane';
   notePane.setAttribute('aria-label','当前双页笺注');notePane.hidden=true;
