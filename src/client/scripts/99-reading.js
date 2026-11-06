@@ -1873,7 +1873,12 @@ function jfDeskMarkInlineGlyphs(root){
     const hinted=img.dataset?.jfGlyphHint==='1'||
       /^[\u3400-\u9fff\uf900-\ufaff]$/.test(String(img.alt||'').trim())||
       (legacyInline&&w<=96&&h<=96);
-    if(!jfDeskIsInlineGlyphShape(w,h,before,after,hinted))continue;
+    // Explicit Calibre line-glyph bitmaps sometimes sit at the very start
+    // or end of a table cell/verse, so only one neighbouring text side exists.
+    // Their exact source class and tiny dimensions are strong enough evidence.
+    const legacyShape=legacyInline&&w>=8&&h>=8&&w<=120&&h<=120&&
+      w/h>=.38&&w/h<=2.4&&/[\u3400-\u9fff]/.test(before+after);
+    if(!legacyShape&&!jfDeskIsInlineGlyphShape(w,h,before,after,hinted))continue;
     img.classList.add('jfInlineGlyph');
     img.dataset.jfInlineGlyph='1';
     if(bridge)img.dataset.jfGlyphBridge='1';
