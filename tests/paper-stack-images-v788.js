@@ -9,7 +9,7 @@ const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const meta=require('../assets/paper-stacks/manifest.json');
 const build=require('../build.manifest.json');
-assert.equal(require('../package.json').version,'7.88.0');
+assert.equal(require('../package.json').version,'7.89.0');
 assert.deepEqual(meta.canvas,{width:64,height:1440});
 assert.equal(meta.progress_states.length,11);
 assert.equal(build.stackAssets.files.length,22);
