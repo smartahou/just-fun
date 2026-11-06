@@ -21,6 +21,7 @@
 - `src/client/styles/41-reading.css`：朴素旧纸目录与笺注层、不参与排版的瞬时高亮
 - `build.manifest.json`：在阅读器脚本前加载纸签模块
 - `tests/epub-paper-slips-v780.js`：合成 NAV、NCX、无导航、跨文件脚注、同文件嵌套脚注、重复引用、未关联编号测试
+- `tests/epub-paper-slips-ui-v780.js`：模拟 DOM 测试目录/笺注抽签、两侧注释、无注释、重复引用、互斥与 Escape
 - `package.json`、`package-lock.json`、`README.md`：版本与测试命令
 
 ## 实际验证（不要夸大）
@@ -28,7 +29,9 @@
 - 已直接从 GitHub main 读取并修改模块化源码，无 dist 产物直改。
 - V8 语法解析：服务端 EPUB 模块、阅读器脚本和纸签控制器三份 JS 均通过。
 - 合成 EPUB 函数体测试：在 V8 中使用模拟 Node/ZIP 依赖执行真实解析函数，涵盖两级 EPUB3 NAV、两级 EPUB2 NCX、无目录正文、跨 XHTML 脚注、同文嵌套脚注、未匹配数字与相同注释重复引用，结果 PASS。
-- **未运行** `node tests/epub-paper-slips-v780.js` 在完整 Node 仓库下的执行、`node scripts/build.js`、完整回归门禁、真实 Chromium UI 与 Windows 实机检查。本会话无法克隆仓库到容器并安装所需全套依赖。因此这是一份代码完成、**尚未经过最终集成验收**的交付。
+- 孤立模拟 DOM 的纸签控制器测试：V8 环境中执行实际模块，通过目录、双页笺注、重复引用去重、互斥、Esc、切换非 EPUB 这几种状态（模拟 DOM，不是 Chromium）。
+- 新增 `tests/epub-paper-slips-ui-v780.js`，并纳入 `npm run test:epub-paper`。
+- **未运行** `npm run test:epub-paper` 在完整 Node 仓库下的执行、`node scripts/build.js`、完整回归门禁、真实 Chromium UI 与 Windows 实机检查。本会话无法克隆仓库到容器并安装所需全套依赖。因此这是一份代码完成、**尚未经过最终集成验收**的交付。
 
 ## 明确不支持及保守降级
 
@@ -43,7 +46,7 @@
 
 ```bash
 npm ci
-node tests/epub-paper-slips-v780.js
+npm run test:epub-paper
 npm run test:reading-print
 node scripts/build.js
 node dist/douyin.js --doctor
