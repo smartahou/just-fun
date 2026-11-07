@@ -3571,6 +3571,5 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   top:calc(50% - var(--jf-page-h) / 2 + 4px)!important;
   height:calc(var(--jf-page-h) - 8px)!important;
   background-size:100% 100%!important;
-  box-shadow:none!important;
   pointer-events:none!important;
 }
