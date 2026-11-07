@@ -3560,3 +3560,16 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
   left:calc(50% + var(--jf-page-w) - 4px)!important;
 }
+
+/* v7.93 · Recessed shoulders for the photographic fore-edge.
+   v7.92 could still expose the top/bottom tips of a tall paper block next
+   to the round exterior corners of the page. The v7.93 alpha photographs
+   now recede at the ends: keep their full native aspect, set the side pile
+   a few px below the facing sheet, and retain the natural paper edge.
+   No added shadow, repeating texture, clip polygon, mask, or text reflow. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile {
+  top:calc(50% - var(--jf-page-h) / 2 + 4px)!important;
+  height:calc(var(--jf-page-h) - 8px)!important;
+  background-size:100% 100%!important;
+  pointer-events:none!important;
+}
