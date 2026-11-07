@@ -36,12 +36,14 @@ jobs:
           node --check dist/douyin.js
           node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==16||r.paperTextureAssetsSha256.length!==16||r.paperRuntimeAssetSha256.length!==16||r.paperRuntimeBytes>=4291594)throw Error('bad approved/optimized paper assets');console.log('BUILD SHA-256:',r.sourceSha256);"
       - name: Verify actual WebP alpha geometry (reject translucent corners)
-        run: python tests/paper-stack-alpha-v794.py
+        run: |
+          python -m pip install -q pillow
+          python tests/paper-stack-alpha-v794.py
       - name: Prepare real Chromium tests
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-          python -m pip install -q playwright pillow
+          python -m pip install -q playwright
           python -m playwright install chromium --with-deps
           CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
           test -n "$CHROME"
