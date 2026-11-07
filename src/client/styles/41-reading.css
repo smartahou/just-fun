@@ -3573,3 +3573,17 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background-size:100% 100%!important;
   pointer-events:none!important;
 }
+
+/* v7.94 · Solid photographic paper edge, no opacity-faded ghost.
+   The RGBA photographs carry a crisp physical rounded shoulder; the paper
+   remains fully opaque INSIDE its contour and transparent OUTSIDE.
+   Preserve the old stack behind the front leaf with no white halo. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile {
+  opacity:1!important;
+  background-color:transparent!important;
+  mix-blend-mode:normal!important;
+  filter:none!important;
+  box-shadow:none!important;
+  mask:none!important;
+  -webkit-mask:none!important;
+}

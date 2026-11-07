@@ -8,7 +8,7 @@ const pkg=require('../package.json');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const marker='/* v7.91 · asymmetric photograph corner treatment';
 assert(css.includes(marker),'v7.91 photo corner patch missing');
-const s=css.slice(css.lastIndexOf(marker));
+const s=css.slice(css.lastIndexOf(marker),css.indexOf('/* v7.92 · Silhouette-matched photographic fore-edge */'));
 function rule(side){
   const re=new RegExp('\\.jfReader\\.paged\\.jf-aged-paper #jfPageView \\.jfSheet\\[data-paper-group\\]\\[data-paper-side="'+side+'"\\]::after \\{([^}]+)\\}');
   const match=s.match(re);
