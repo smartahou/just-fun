@@ -56,6 +56,6 @@ const controller=fs.readFileSync(path.join(root,'src/client/scripts/98e3-paper-s
 assert(controller.includes('const renderedHeight=Math.max(1,height-2*capInsetPx)'));
 assert(!/document\.createElement\(['"]canvas['"]\)|toBlob\(/.test(controller),'no asynchronous canvas per page');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
-assert(build.includes("read('assets/paper-stacks/embedded-v795.json')"));
-assert.equal(require('../package.json').version,'7.95.0');
+assert(build.includes("read('assets/paper-stacks/embedded-v796.json')"));
+assert(Number(require('../package.json').version.split('.')[1])>=95);
 console.log('PASS v7.95 real solid caps, 20 unique photo stacks, 2 empty ends, exact aspect, no blur or async Canvas');

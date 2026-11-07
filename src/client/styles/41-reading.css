@@ -3608,3 +3608,26 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   -webkit-mask:none!important;
   pointer-events:none!important;
 }
+
+/* v7.96 · Thin folio edges, not folded cardboard.
+   Use the offline scan-derived lamina photos. Their true RGBA silhouette has
+   curved shoulders and 1.0px antialiasing at the contour ONLY; never fake
+   a rounded outline with white fog or CSS shadows. The pile recedes behind
+   the rounded front leaf. Text geometry and spine remain untouched. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile{
+  top:calc(50% - var(--jf-page-h) / 2 + 3px)!important;
+  height:calc(var(--jf-page-h) - 6px)!important;
+  background-size:100% 100%!important;
+  background-color:transparent!important;
+  opacity:1!important;
+  filter:none!important;
+  box-shadow:none!important;
+  mix-blend-mode:normal!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 5px)!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 5px)!important;
+}

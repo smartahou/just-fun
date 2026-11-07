@@ -48,7 +48,7 @@ assert.equal(changed,20);
 assert.equal(unique.size,20);
 assert(total>90000&&total<800000,'offline photographic assets within intended budget');
 const build=fs.readFileSync(require('node:path').join(__dirname,'../scripts/build.js'),'utf8');
-assert(build.includes("read('assets/paper-stacks/embedded-v795.json')"),'v7.95 must be active; v7.92 is retained as rollback reference');
+assert(build.includes("read('assets/paper-stacks/embedded-v796.json')"),'v7.95 must be active; v7.92 is retained as rollback reference');
 const css=fs.readFileSync(require('node:path').join(__dirname,'../src/client/styles/41-reading.css'),'utf8');
 const p=css.slice(css.lastIndexOf('/* v7.92 · Silhouette-matched photographic fore-edge */'));
 assert(p.startsWith('/* v7.92'));
