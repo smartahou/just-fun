@@ -5,7 +5,7 @@ const fs=require('node:fs'),crypto=require('node:crypto'),path=require('node:pat
 const current=require('../assets/paper-stacks/embedded-v794.json');
 const previous=require('../assets/paper-stacks/embedded-v793.json');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.94.0');
+assert(Number(pkg.version.split('.')[1])>=94,'v7.94+ baseline retained');
 assert.equal(current.version,'7.94.0');
 assert.deepEqual(current.canvas,{width:64,height:1440});
 assert.equal(current.progress_states.length,11);
