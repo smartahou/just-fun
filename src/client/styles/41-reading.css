@@ -3631,3 +3631,26 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
   left:calc(50% + var(--jf-page-w) - 5px)!important;
 }
+
+/* v7.97 · Full-height physical page block, shallow staggered paper corners.
+   v7.96 shrank the entire pile and added ~59px of transparent space to each
+   end, making its side section a disconnected cardboard strip. Here the
+   physical leaf height is retained; only the image's outer page corners
+   recede. Most thickness remains behind the front leaf. No new fake shadow. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile{
+  top:calc(50% - var(--jf-page-h)/2)!important;
+  height:var(--jf-page-h)!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+  background-color:transparent!important;
+  opacity:1!important;
+  filter:none!important;
+  box-shadow:none!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='left']{
+  right:calc(50% + var(--jf-page-w) - 11px)!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
+  left:calc(50% + var(--jf-page-w) - 11px)!important;
+}

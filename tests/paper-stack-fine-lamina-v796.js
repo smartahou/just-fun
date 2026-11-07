@@ -6,7 +6,7 @@ const fs=require('node:fs'),crypto=require('node:crypto'),path=require('node:pat
 const root=path.join(__dirname,'..');
 const current=require('../assets/paper-stacks/embedded-v796.json');
 const prior=require('../assets/paper-stacks/embedded-v795.json');
-assert.equal(require('../package.json').version,'7.96.0');
+assert(Number(require('../package.json').version.split('.')[1])>=96,'historical fine-lamina pack retained');
 assert.equal(current.version,'7.96.0');
 assert.deepEqual(current.canvas,{width:64,height:1440});
 assert.equal(current.progress_states.length,11);
@@ -44,7 +44,7 @@ assert.equal(nonempty,20);
 assert.equal(seen.size,20);
 assert(total>60000&&total<220000,'offline paper edge budget');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
-assert(build.includes("read('assets/paper-stacks/embedded-v796.json')"));
+assert(build.includes("read('assets/paper-stacks/embedded-v797.json')"));
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const section=css.slice(css.lastIndexOf('/* v7.96 · Thin folio edges'));
 assert(section.startsWith('/* v7.96'));

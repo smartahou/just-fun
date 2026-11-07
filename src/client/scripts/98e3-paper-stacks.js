@@ -5,7 +5,7 @@
   const images=__JUSTFUN_PAPER_STACK_ASSETS__;
   if(!Array.isArray(images)||images.length!==22||images.some(src=>typeof src!=='string'||!src.startsWith('data:image/webp;base64,')))
     throw Error('[JustFun] Expected 11 matched pairs of offline WebP book-stack assets');
-  const nativeWidth=64,nativeHeight=1440,states=11,capInsetPx=3;
+  const nativeWidth=64,nativeHeight=1440,states=11;
   function stageFor(progress){
     const p=Number(progress);
     if(!Number.isFinite(p))return 0;
@@ -32,11 +32,9 @@
     if(!enabled)return null;
     const stage=stageFor(progress),height=Number(pageHeight);
     if(!Number.isFinite(height)||height<=0)return null;
-    // The photographed pile is recessed 3px at top and bottom by CSS.
-    // Calculate width from its *rendered* height, not from the taller page:
-    // native 64:1440 remains undistorted at every reader viewport size.
-    const renderedHeight=Math.max(1,height-2*capInsetPx);
-    view.style.setProperty('--jf-stack-art-width',(renderedHeight*nativeWidth/nativeHeight).toFixed(3)+'px');
+    // The photographed page block is as tall as its facing sheet.
+    // Only its shallow physical corners recede within the RGBA asset.
+    view.style.setProperty('--jf-stack-art-width',(height*nativeWidth/nativeHeight).toFixed(3)+'px');
     const left=view.querySelector('.jfBookPile[data-side="left"]');
     const right=view.querySelector('.jfBookPile[data-side="right"]');
     for(const [side,el,index] of [['left',left,0],['right',right,1]]){
