@@ -3587,3 +3587,24 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   mask:none!important;
   -webkit-mask:none!important;
 }
+
+/* v7.95 · Optical paper-edge alignment, actual opaque rounded WebP caps.
+   The off-line photos already own their physical outside silhouette. No white
+   gradients, CSS soft masks, runtime canvas, faux stripes or blur. Keep both
+   pages and the text flow untouched, and preserve exact 64:1440 aspect
+   by matching the JS-computed width to the rendered height. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile {
+  top:calc(50% - var(--jf-page-h) / 2 + 3px)!important;
+  height:calc(var(--jf-page-h) - 6px)!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+  opacity:1!important;
+  border:0!important;
+  border-radius:0!important;
+  filter:none!important;
+  box-shadow:none!important;
+  clip-path:none!important;
+  mask:none!important;
+  -webkit-mask:none!important;
+  pointer-events:none!important;
+}

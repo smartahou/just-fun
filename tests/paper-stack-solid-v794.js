@@ -5,7 +5,7 @@ const fs=require('node:fs'),crypto=require('node:crypto'),path=require('node:pat
 const current=require('../assets/paper-stacks/embedded-v794.json');
 const previous=require('../assets/paper-stacks/embedded-v793.json');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.94.0');
+assert(Number(pkg.version.split('.')[1])>=94,'v7.94+ baseline retained');
 assert.equal(current.version,'7.94.0');
 assert.deepEqual(current.canvas,{width:64,height:1440});
 assert.equal(current.progress_states.length,11);
@@ -42,7 +42,7 @@ for(let i=0;i<11;i++){
 }
 assert.equal(rebuilt,20);assert.equal(unique.size,20);
 const build=fs.readFileSync(path.join(__dirname,'../scripts/build.js'),'utf8');
-assert(build.includes("read('assets/paper-stacks/embedded-v794.json')"));
+assert(build.includes("read('assets/paper-stacks/embedded-v795.json')"),'v7.95 is now the active runtime bundle; v7.94 remains the solid-alpha baseline');
 const css=fs.readFileSync(path.join(__dirname,'../src/client/styles/41-reading.css'),'utf8');
 const last=css.slice(css.lastIndexOf('/* v7.94 · Solid photographic paper edge'));
 assert(last.startsWith('/* v7.94'));
