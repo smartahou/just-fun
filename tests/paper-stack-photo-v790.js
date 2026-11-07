@@ -45,7 +45,7 @@ assert(all.size>=21,'No wholesale duplicated strips');
 assert(total>70000&&total<1000000,'Require compact independent offline assets');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
 const [majorV,minorV]=require('../package.json').version.split('.').map(Number);
-const liveBundle=(majorV>7||(majorV===7&&minorV>=93))?'embedded-v793.json':(majorV>7||(majorV===7&&minorV>=92))?'embedded-v792.json':'embedded-v790.json';
+const liveBundle=(majorV>7||(majorV===7&&minorV>=94))?'embedded-v794.json':(majorV>7||(majorV===7&&minorV>=93))?'embedded-v793.json':(majorV>7||(majorV===7&&minorV>=92))?'embedded-v792.json':'embedded-v790.json';
 assert(build.includes("assets/paper-stacks/"+liveBundle),'verify the actual active offline stack bundle');
 assert(build.includes('paperStackPhotoSha256:photoHashes'));
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');

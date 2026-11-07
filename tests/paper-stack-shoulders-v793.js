@@ -54,7 +54,7 @@ assert.equal(changed,20);
 assert.equal(digests.size,20,'all nonempty photographic pairs unique');
 assert(bytesTotal>120000&&bytesTotal<500000,'runtime should remain compact');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
-assert(build.includes("read('assets/paper-stacks/embedded-v793.json')"),'builder must embed v7.93 data');
+assert(build.includes("read('assets/paper-stacks/embedded-v794.json')"),'builder must embed current v7.94 data; v7.93 is retained');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const latest=css.slice(css.lastIndexOf('/* v7.93 · Recessed shoulders'));
 assert(latest.startsWith('/* v7.93'));
