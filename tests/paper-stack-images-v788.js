@@ -72,7 +72,7 @@ for(const [progress,stage] of [[0,0],[.1,1],[.5,5],[.9,9],[1,10]]){
   assert.equal(right.style.values['--jf-stack-art'],'url("'+fake[2*stage+1]+'")');
   assert.equal(left.dataset.empty,stage===0?'true':'false');
   assert.equal(right.dataset.empty,stage===10?'true':'false');
-  assert.equal(style.values['--jf-stack-art-width'],((700-6)*64/1440).toFixed(3)+'px');
+  assert.equal(style.values['--jf-stack-art-width'],(700*64/1440).toFixed(3)+'px');
 }
 assert(classes.has('jf-image-stacks'),'image mode active');
 aged=false;assert.equal(stacks.apply(view,.5,700,true),null);
