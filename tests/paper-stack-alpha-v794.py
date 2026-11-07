@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
-"""Pixel-level RGBA regression: no top/bottom white opacity fog."""
-import base64
-import io
-import json
+"""Pixel-level RGBA regression: no top/bottom opacity fog. Requires Pillow."""
+import base64, io, json
 from pathlib import Path
-import numpy as np
 from PIL import Image
-
 pack=json.loads((Path(__file__).resolve().parents[1]/'assets/paper-stacks/embedded-v794.json').read_text())
 assert pack['version']=='7.94.0'
 assert pack['canvas']=={'width':64,'height':1440}
 assert len(pack['progress_states'])==11
+def count_gt(image, y, limit):
+    return sum(v>limit for v in image.crop((0,y,64,y+1)).getdata())
 for stage,row in enumerate(pack['progress_states']):
     assert row['percent']==stage*10
     for side in ('left','right'):
         raw=base64.b64decode(row[side+'_base64'],validate=True)
-        a=np.asarray(Image.open(io.BytesIO(raw)).convert('RGBA'))[:,:,3]
-        assert a.shape==(1440,64)
+        im=Image.open(io.BytesIO(raw)).convert('RGBA')
+        assert im.size==(64,1440)
+        alpha=im.getchannel('A')
         name=row[side]
         empty=(stage==0 and side=='left') or (stage==10 and side=='right')
         if empty:
-            assert a.max()==0,(name,'endpoint not transparent')
+            assert alpha.getextrema()[1]==0,(name,'endpoint not transparent')
             continue
-        assert a[:10].max()==0 and a[-10:].max()==0,(name,'tip exposed')
-        assert a[110:1330].max()==255,(name,'paper not opaque')
-        cover=[int((a[y]>180).sum()) for y in (20,40,60,80,110)]
+        assert alpha.crop((0,0,64,10)).getextrema()[1]==0,(name,'top tip exposed')
+        assert alpha.crop((0,1430,64,1440)).getextrema()[1]==0,(name,'bottom tip exposed')
+        assert alpha.crop((0,110,64,1330)).getextrema()[1]==255,(name,'paper body not opaque')
+        cover=[count_gt(alpha,y,180) for y in (20,40,60,80,110)]
         assert cover[0]<cover[1]<cover[2]<cover[3]<=cover[4],(name,cover)
-        cap=a[18:102]
-        visible=(cap>10)
-        fog=((cap>10)&(cap<220))
-        assert fog.sum()/max(1,visible.sum())<0.16,(name,'translucent fog')
-        body=a[160:1270]
-        assert (body>245).sum()>(body>10).sum()*0.70,(name,'paper body foggy')
-print('PASS v7.94: crisp solid-alpha corners for 20 states, 2 invisible endpoints')
+        cap=list(alpha.crop((0,18,64,102)).getdata())
+        visible=sum(v>10 for v in cap)
+        fog=sum(10<v<220 for v in cap)
+        assert fog/max(1,visible)<0.16,(name,'translucent corner fog')
+        body=list(alpha.crop((0,160,64,1270)).getdata())
+        assert sum(v>245 for v in body)>sum(v>10 for v in body)*0.70,(name,'paper body foggy')
+print('PASS v7.94: crisp physical photo corners for 20 states and 2 invisible endpoints')
