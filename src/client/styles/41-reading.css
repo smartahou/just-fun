@@ -3879,3 +3879,23 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   filter:none!important;
   pointer-events:none!important;
 }
+
+/* ===== v7.105 · quiet printed ink / old-book typography ==================
+   Conservative ink-only refinement after visual review of v7.104.
+   The published original WebP photographs, physical case, and every single
+   pagination metric (font family, size, line-height, margins, indent and
+   letter spacing) are deliberately unchanged. This rule reaches both the
+   visible leaves and the hidden .jfPageMeasure because both use .jfSheetBody.
+   Avoid filters, simulated ink bleed, opacity on containers, and more layers. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody{
+  color:rgba(47,37,29,.98);
+  -webkit-text-stroke:.045px rgba(43,32,24,.12);
+  text-shadow:none;
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody > :is(h1,h2,h3,h4,h5,h6){
+  color:rgba(43,32,24,.99);
+}
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody figcaption{
+  color:#6c5841;
+}
+
