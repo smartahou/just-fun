@@ -23,6 +23,7 @@ function testReader(chapters=4,omitted=[]){
     jfDeskBook:{id:'old-book'},jfDeskSession:1,
     jfDeskOutline:{chapters:Array.from({length:chapters},(_,i)=>({paperOmit:omitted.includes(i)}))},
     jfDeskFlow:[{n:0}],jfDeskPages:[[{chapter:0}],[{chapter:0}]],jfDeskPageIndex:0,
+    jfDeskAppendTasks:new Map(),
     jfDeskLastPageTurn:0,jfDeskBackfillBusy:false,
     jfDeskPagedGeometry:()=>({two:true}),
     jfDeskPaperOmittedChapter:n=>omitted.includes(n),
@@ -32,8 +33,11 @@ function testReader(chapters=4,omitted=[]){
     jfDeskFlowAppend(n){
       if(jobs.has(n))return jobs.get(n).promise;
       let complete;
-      const promise=new Promise(resolve=>{complete=()=>{ctx.jfDeskFlow.push({n});
+      const promise=new Promise(resolve=>{complete=()=>{
+        if(!ctx.jfDeskFlow.some(x=>x.n===n))ctx.jfDeskFlow.push({n});
         ctx.jfDeskPages.push([{chapter:n}],[{chapter:n}]);resolve(true);};});
+      ctx.jfDeskAppendTasks.set(ctx.jfDeskSession+'#'+ctx.jfDeskBook.id+'#'+n,promise);
+      promise.finally(()=>ctx.jfDeskAppendTasks.delete(ctx.jfDeskSession+'#'+ctx.jfDeskBook.id+'#'+n));
       jobs.set(n,{promise,complete});
       return promise;
     },
@@ -56,6 +60,17 @@ function testReader(chapters=4,omitted=[]){
     r.jobs.get(2).complete();await tick();
     assert.equal(r.ctx.jfDeskPageIndex,4,'second pending turn is committed');
     assert.deepEqual(r.paints.map(x=>x.index),[2,4],'exactly once, no skipped spreads');
+  }
+  {
+    // The next section was already mounted, but its async pagination has not
+    // published a spread yet. This is the narrower race that produced false EOF.
+    const r=testReader(2);
+    r.ctx.jfDeskFlowAppend(1); // prefetch still unresolved
+    r.ctx.jfDeskFlow.push({n:1}); // DOM insertion raced ahead of layout commit
+    assert.equal(r.reader.turn(1),true,'in-flight mounted chapter is not final book');
+    r.jobs.get(1).complete();await tick();
+    assert.equal(r.ctx.jfDeskPageIndex,2,'deferred next commits after pending layout');
+    assert.deepEqual(r.paints.map(x=>x.index),[2]);
   }
   {
     const r=testReader(3);
