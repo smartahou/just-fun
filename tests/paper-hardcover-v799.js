@@ -47,7 +47,7 @@ assert(live.includes('border-image-repeat:stretch!important'));
 assert(live.includes('background:none!important'),'paper cannot be replaced by the cover');
 assert(live.includes('border-radius:0!important'),'no artificial rectangular mask');
 assert(!/border-image-slice:[^;]*fill|background-size:|background-position:|blur\(|drop-shadow\(|linear-gradient\(|radial-gradient\(/.test(live),'no background photo or fog');
-assert(live.includes('.jfPageView.jf-hardcover-book.single .jfBookBoard'),'single mobile page border');
+assert(live.includes('#jfPageView.jf-hardcover-book.single .jfBookBoard'),'single mobile page border');
 assert(live.includes('.jfBookPile{')&&live.includes('display:none!important'),'no dynamic pile');
 const paper=fs.readFileSync(path.join(root,'src/client/scripts/98e-paper-textures.js'),'utf8');
 assert(paper.includes('Expected 8 paired WebP sets'),'original paper unchanged');
