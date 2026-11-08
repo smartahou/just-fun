@@ -3912,3 +3912,12 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   text-align:center;
   text-indent:0;
 }
+
+/* v7.107 · Annotated poetry source/commentary top alignment.
+   This class is applied only to copied two-column reference tables; normal
+   EPUB tables, image grids, and all original chapter DOM remain unchanged.
+   Both hidden pagination probe and rendered sheets use the same selectors. */
+.jfReader.paged #jfPageView .jfSheetBody table.jfPrintSourceCommentary > :is(thead,tbody,tfoot) > tr > :is(td,th),
+.jfReader.paged #jfPageView .jfSheetBody table.jfPrintSourceCommentary > tr > :is(td,th){
+  vertical-align:top!important;
+}
