@@ -46,9 +46,10 @@ assert(live.startsWith('/* v7.99'));
 assert(live.includes('border-image-source:var(--jf-cover-board-url)!important'));
 assert(live.includes('border-image-slice:32 32 32 32!important'));
 assert(live.includes('border-image-width:8px 9px 8px 9px!important'));
-assert(live.includes('background:none!important'));
+assert(live.includes('background-size:55px 100%,55px 100%!important'));
+assert(live.includes('background-position:left center,right center!important'));
 assert(live.includes('.jf-hardcover-book.single .jfBookBoard'));
-assert(!/\.jfSheet::after|\.jfSheetBody|\.jfSpineShade\s*(?:\{|::)|linear-gradient\(|radial-gradient\(/.test(live),
+assert(!/\.jfSheet::after|\.jfSheetBody|\.jfSpineShade\s*(?:\{|::)|radial-gradient\(|blur\(/.test(live),
   'no changes to original paper, centre crease or text flow');
 const controller=fs.readFileSync(path.join(root,'src/client/scripts/98e4-paper-covers.js'),'utf8');
 assert(controller.includes("jf-reader-hardcover-board-v798"),'old book-to-skin mapping retained');
