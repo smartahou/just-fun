@@ -1,0 +1,110 @@
+{
+  "version": "7.104.0",
+  "decision": "Preserve real photo, remove CSS artificial curvature",
+  "approved_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b",
+  "originals_exact": true,
+  "asset_count": 16,
+  "paired_runtime_groups": 8,
+  "previous_damaged_versions": [
+    "7.102.0",
+    "7.103.0"
+  ],
+  "assets": [
+    {
+      "file": "spread-01-left.webp",
+      "original_sha256": "b5f318c533ad9bc840f67763a39972c4a119ff86806adc64981cce1754c6100c",
+      "source_bytes": 1260514,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-01-right.webp",
+      "original_sha256": "ef108d23f46669c33b51cc124d9871e9b98c30191f112c90e35c4407283e302d",
+      "source_bytes": 1432944,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-02-left.webp",
+      "original_sha256": "5126e109e28922589619cccbe9d2cdb139fb7caa6de9b5d02406780098d00897",
+      "source_bytes": 1280462,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-02-right.webp",
+      "original_sha256": "723d5d38fd3f35132ac4dfc7479708ab1f577d8ac6ca152686ac2a4ece7efb6a",
+      "source_bytes": 1285640,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-03-left.webp",
+      "original_sha256": "5109db4137041114a46edc75b3564fa8f72e589a122757300ad9d512b844c69f",
+      "source_bytes": 1460568,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-03-right.webp",
+      "original_sha256": "7fb60f0a76a28022c0c8eba86e6e016bb339023921b46cabc36c67d1b7a92990",
+      "source_bytes": 1544470,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-04-left.webp",
+      "original_sha256": "0863dce6b3f18d098d13776cddacd8ef2c28de96d5102be3a6bc7124ba9cde74",
+      "source_bytes": 1367902,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-04-right.webp",
+      "original_sha256": "e1bad7f6005c2a01ee67f54e8bf9e3b6ef9cef0952c68134eebb4be7959a1488",
+      "source_bytes": 1454888,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-05-left.webp",
+      "original_sha256": "ed85cf63fe8727c9b3e5f22866bf4d198eea3cbdab1ae453e40bb2ff7c183cbd",
+      "source_bytes": 1431304,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-05-right.webp",
+      "original_sha256": "61df0a3a8a9df8376da0fbab78faad9afda1b1ef07af17a4f742fcb51eff4a6c",
+      "source_bytes": 1267112,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-06-left.webp",
+      "original_sha256": "faeb759cafab7b339165531b9693495f51eb28aaaef17b942590679e565791cf",
+      "source_bytes": 1291192,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-06-right.webp",
+      "original_sha256": "9bbcc6e64a2d4eda30706d82cf3e6da3cdc82aab8efa057d1c15b2f7302d1851",
+      "source_bytes": 1465210,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-07-left.webp",
+      "original_sha256": "a9d52d2316f98921e76e7759d118fb6f1753911b8cb27a3dec78925f5ab08987",
+      "source_bytes": 1556424,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-07-right.webp",
+      "original_sha256": "cb5f89ca7de802fc575578e156093ab8bc8a206500ad8852a1e0b4e52839899f",
+      "source_bytes": 1356496,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-08-left.webp",
+      "original_sha256": "140ac86fd2c3d17bb4c904bec8b8be6547b20148034d0c671773ba1da2808e2f",
+      "source_bytes": 1452552,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    },
+    {
+      "file": "spread-08-right.webp",
+      "original_sha256": "547c0fd49cbde1506e44b4f7bf3593324a450f3947481927a9ec97b6822cfabb",
+      "source_bytes": 1267364,
+      "source_commit": "ec22e318b383750d2483c95ff3bff2ca3d592b4b"
+    }
+  ]
+}

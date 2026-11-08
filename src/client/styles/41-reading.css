@@ -3520,10 +3520,14 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   left:calc(50% + var(--jf-page-w) - 3px)!important;
 }
 
-/* v7.102 · The revised WebP photographs own the visible leaf contour.
-   Do not clip old paper into an 18–34px UI-card ellipse; genuine edges and
-   corner damage come from the verified alpha channel of each paired image.
-   Keep the independent full-height book binding and page-layout untouched. */
+/* v7.104 · Unaltered approved photographic paper edges.
+   These 16 WebP masters and all eight runtime bundles have been restored
+   byte-for-byte from v7.101. The old 18–34px CSS ellipse was the cause of
+   exaggerated card-like corners; v7.102/v7.103 re-encoded and cut the
+   photographs, creating unnatural black voids that exposed the book cover.
+   No additional CSS clip, radius, mask or alpha manipulation is permitted:
+   the original scanned photograph owns the full visible paper silhouette.
+   The physical cover, spine, page stacks and layout are untouched. */
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side],
 .jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after {
   border-radius:0!important;
