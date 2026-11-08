@@ -871,9 +871,17 @@ function jfDeskUpdateProgress(){
   const here=jfDeskCurrentPosition();
   const chapter=here.chapter,ratio=here.ratio;
   if(jfDeskPaged){
-    const page=jfDeskPages[jfDeskPageIndex];
-    const fraction=page&&page.length?Math.min(.99,jfDeskPageIndex/Math.max(1,jfDeskPages.length)):0;
-    const pct=Math.min(100,Math.round(((chapter+fraction)/Math.max(1,jfDeskOutline.chapters.length))*100));
+    // v7.107: the footer, paper pile and book-wide page position must use one
+    // committed progress snapshot. jfDeskPageIndex/jfDeskPages.length is only
+    // the mounted window and can reverse when chapters are prefetched/trimmed.
+    const shown=jfDeskPages[jfDeskPageIndex];
+    const stack=jfDeskStackState;
+    const sameSpread=!!(stack&&shown&&stack.bookId===jfDeskBook.id&&
+      stack.session===jfDeskSession&&stack.layout===jfDeskPagesSig&&
+      stack.page===shown);
+    const pct=sameSpread?stack.progress:
+      Math.max(0,Math.min(100,Math.round(
+        (chapter+ratio)/Math.max(1,jfDeskOutline.chapters.length)*100)));
     document.getElementById('jfReadProgress').textContent=pct+'%';
     document.getElementById('jfReadProgressFill').style.width=pct+'%';
   }else{
@@ -1709,6 +1717,25 @@ function jfDeskPagesBefore(chapter){
   }
   return sum;
 }
+// v7.107: a background book census can replace chapter-based approximate
+// progress with physical page counts after the user is already reading. Never
+// make the footer and physical paper piles jump BACKWARD while the visible
+// reading position has stayed the same or advanced. Reversing pages must still
+// decrease the indicator immediately. Reflow, new books and new sessions reset.
+let jfDeskProgressContinuity=null;
+function jfDeskStabilizeBookProgress(value,chapter,inChapter){
+  const fraction=Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
+  const point={bookId:jfDeskBook?.id,session:jfDeskSession,
+    layout:jfDeskPagesSig,chapter,inChapter,progress:fraction};
+  const prev=jfDeskProgressContinuity;
+  if(prev&&prev.bookId===point.bookId&&prev.session===point.session&&
+     prev.layout===point.layout &&
+     (chapter>prev.chapter||(chapter===prev.chapter&&inChapter>=prev.inChapter))){
+    point.progress=Math.max(fraction,prev.progress);
+  }
+  jfDeskProgressContinuity=point;
+  return point.progress;
+}
 
 // Background census: paginate the chapters that are not mounted, so the book's
 // page count becomes exact. It only records counts (no DOM is kept), runs one
@@ -1838,6 +1865,27 @@ function jfDeskIsStandalonePlate(node){
   // Do not mistake a text paragraph with a small inline image for a plate.
   if(String(node.textContent||'').replace(/[\s\u00a0\u3000]+/g,'').length)return false;
   return /^(P|DIV|FIGURE)$/i.test(node.tagName||'');
+}
+// v7.107: align only bibliographic source–commentary tables from annotated
+// poetry EPUBs. Two cells per row, book-title references in the left cells,
+// and real prose in the right; never affect ordinary data or navigation tables.
+// The classifier runs on the *printed clone* for both census and visible pages.
+function jfDeskIsSourceCommentaryTable(node){
+  if(node?.tagName!=='TABLE')return false;
+  const rows=Array.from(node.rows||node.querySelectorAll?.('tr')||[]);
+  if(rows.length<2||rows.length>20)return false;
+  let cited=0,longComments=0;
+  for(const row of rows){
+    const cells=Array.from(row.cells||row.querySelectorAll?.('td,th')||[]);
+    if(cells.length!==2||cells.some(cell=>
+      Number(cell.colSpan||1)!==1||Number(cell.rowSpan||1)!==1))return false;
+    const left=String(cells[0].textContent||'').replace(/\s+/g,'').trim();
+    const right=String(cells[1].textContent||'').replace(/\s+/g,'').trim();
+    if(!left||left.length>50||!right||right.length<8)return false;
+    if(/^《[^》]{2,36}》(?:[^《》]{0,8})?$/.test(left))cited++;
+    if(right.length>=18)longComments++;
+  }
+  return cited>=Math.ceil(rows.length*.66)&&longComments>=Math.ceil(rows.length*.5);
 }
 // v7.67 · Only physical-book publication metadata receives the imprint layout.
 // Detection is deliberately conservative: first chapters AND several bibliographic
@@ -2195,6 +2243,8 @@ function jfDeskBlocksFor(sec){
       if(consecutiveBlanks>1)printed.classList.add('jfPrintRedundantBlank');
     }
     jfDeskDecorateImprintBlock(printed,sec.n,imprint,k);
+    if(jfDeskIsSourceCommentaryTable(printed))
+      printed.classList.add('jfPrintSourceCommentary');
     blocks.push({chapter:sec.n,node:printed,
                  key:sec.n+':'+(i++),offset:acc});
     acc+=node.textContent.length;
@@ -2605,6 +2655,7 @@ function jfDeskPagedRender(direction){
            inChapter>=Math.max(0,chapterPages.length-(pageB.length?2:1))){
     progress=1;
   }
+  progress=jfDeskStabilizeBookProgress(progress,chapterOfPage,inChapter);
   const stacks=jfDeskStackForProgress(progress);
   const readVisible=exactProgress?readPages>0:progress>0;
   const unreadVisible=exactProgress?unreadPages>0:progress<1;
@@ -2613,7 +2664,9 @@ function jfDeskPagedRender(direction){
   jfDeskStackState={total:totalSheets,exact:book.exact,left:leftPageNumber,right:rightPageNumber,
                     read:readPages,unread:unreadPages,readPx:readWidth,unreadPx:unreadWidth,
                     progress:Math.round(progress*100),progressExact:exactProgress,
-                    folio:exactNumber?'exact':'estimated'};
+                    folio:exactNumber?'exact':'estimated',
+                    bookId:jfDeskBook?.id,session:jfDeskSession,layout:jfDeskPagesSig,
+                    page:pageA0};
   // Folio numbers are book-wide values, never the index into the mounted array.
   if(leftSheet){
     leftSheet.dataset.page=String(leftPageNumber);
