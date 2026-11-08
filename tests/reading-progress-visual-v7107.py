@@ -113,6 +113,21 @@ def main():
                 rerender=facts(page)
                 assert rerender['percent']==basePercent,rerender
 
+                # Non-zero progress is essential: an equality check at 0%
+                # alone would miss a broken footer on real mid-book pages.
+                middle=page.evaluate("()=>Math.min(4,Math.max(0,jfDeskPages.length-2))")
+                page.evaluate('(i)=>{jfDeskPageIndex=Math.floor(i/2)*2;jfDeskPagedRender();}',middle)
+                page.wait_for_timeout(100)
+                mid=facts(page)
+                assert 0<mid['bookPercent']<=100,mid
+                assert mid['percent']==str(mid['bookPercent'])+'%',mid
+                assert mid['bookPercent']>=first['bookPercent'],mid
+                page.evaluate('(idx)=>{jfDeskPageIndex=Math.floor(idx/2)*2;jfDeskPagedRender();}',target)
+                page.wait_for_timeout(100)
+                reverse=facts(page)
+                assert reverse['bookPercent']<=mid['bookPercent'],reverse
+                assert reverse['percent']==str(reverse['bookPercent'])+'%',reverse
+
                 normal=page.evaluate("""()=>jfDeskPages.findIndex(p=>p.some(block=>
                   block.node?.querySelector?.('table.ordinary')||
                   block.node?.classList?.contains('ordinary')))""")
@@ -135,7 +150,8 @@ def main():
                 preview.save(out,format='JPEG',quality=72,optimize=True)
                 photo=base64.b64encode(out.getvalue()).decode('ascii')
                 print('PROGRESS_VISUAL_FACTS',json.dumps({
-                    'first':first,'rerender':rerender,'plainTable':nochange if normal>=0 else 'not mounted'
+                    'first':first,'rerender':rerender,'middle':mid,'backwards':reverse,
+                    'plainTable':nochange if normal>=0 else 'not mounted'
                 },ensure_ascii=False),flush=True)
                 print('PROGRESS_VISUAL_BEGIN',flush=True)
                 for i in range(0,len(photo),3000): print('PROGRESS_VISUAL_DATA:'+photo[i:i+3000],flush=True)
