@@ -6,7 +6,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.join(__dirname,'..');
 const js=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const a=js.indexOf('function jfDeskIsImprintChapter(');
+const a=js.indexOf('function jfDeskIsCaption(node){');
 const b=js.indexOf('function jfDeskBlocksFor(sec){',a);
 const end=js.indexOf('async function jfDeskPagedLayout(',b);
 assert(a>=0&&b>a&&end>b,'pagination front matter helpers exist');
