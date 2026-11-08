@@ -46,8 +46,8 @@ assert(live.startsWith('/* v7.99'));
 assert(live.includes('border-image-source:var(--jf-cover-board-url)!important'));
 assert(live.includes('border-image-slice:32 32 32 32!important'));
 assert(live.includes('border-image-width:8px 9px 8px 9px!important'));
-assert(live.includes('background-size:55px 100%,55px 100%!important'));
-assert(live.includes('background-position:left center,right center!important'));
+assert(live.includes('inset 55px 0 0 var(--jf-cover-board-color)'));
+assert(live.includes('inset -55px 0 0 var(--jf-cover-board-color)'));
 assert(live.includes('.jf-hardcover-book.single .jfBookBoard'));
 assert(!/\.jfSheet::after|\.jfSheetBody|\.jfSpineShade\s*(?:\{|::)|radial-gradient\(|blur\(/.test(live),
   'no changes to original paper, centre crease or text flow');

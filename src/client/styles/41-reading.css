@@ -3712,15 +3712,9 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   height:calc(var(--jf-page-h) + 16px)!important;
   box-sizing:border-box!important;
   padding:0!important;
-  /* The real hardcover board remains beneath worn, rounded outer corners.
-     Two SOLID side bands fill the physical board only; the middle stays fully
-     transparent so the approved original spine/crease cannot be darkened. */
-  background-image:
-    linear-gradient(var(--jf-cover-board-color),var(--jf-cover-board-color)),
-    linear-gradient(var(--jf-cover-board-color),var(--jf-cover-board-color))!important;
-  background-position:left center,right center!important;
-  background-size:55px 100%,55px 100%!important;
-  background-repeat:no-repeat,no-repeat!important;
+  /* Zero-blur inset fills represent actual solid boards beneath rounded outer
+     paper corners. Unlike a full-page background they never colour the gutter. */
+  background:none!important;
   background-color:transparent!important;
   border:9px solid transparent!important;
   border-image-source:var(--jf-cover-board-url)!important;
@@ -3729,7 +3723,9 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   border-image-outset:0!important;
   border-image-repeat:stretch!important;
   border-radius:0!important;
-  box-shadow:0 2px 5px rgba(48,34,19,.11)!important;
+  box-shadow:inset 55px 0 0 var(--jf-cover-board-color),
+             inset -55px 0 0 var(--jf-cover-board-color),
+             0 2px 5px rgba(48,34,19,.11)!important;
   filter:none!important;
   opacity:1!important;
   pointer-events:none!important;
