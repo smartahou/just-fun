@@ -1,0 +1,105 @@
+name: Just Fun v7.103 paper corners and forward-turn regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/refine-paper-corners-v7103.py"
+      - ".github/workflows/reading-v7103.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: justfun-v7103-paper
+  cancel-in-progress: false
+jobs:
+  validate-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PNG and WebP test codec
+        run: python -m pip install -q pillow numpy
+      - name: Step 1 — reconstruct slight natural outer corners for every old-paper pair
+        run: python scripts/refine-paper-corners-v7103.py
+      - name: Verify all 16 master / runtime assets and transparent corners
+        run: |
+          python - <<'PY'
+          import base64,hashlib,io,json
+          from pathlib import Path
+          from PIL import Image
+          root=Path('assets/paper-spreads')
+          m=json.loads((root/'manifest.json').read_text())
+          a=json.loads((root/'corner-refinement-v7103.json').read_text())
+          assert m['version']=='3.2-subtle-natural-corners'
+          assert len(m['assets'])==16 and len(a['assets'])==16
+          for i,row in enumerate(m['assets']):
+              raw=(root/row['file']).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==row['sha256']
+              assert len(raw)==row['bytes']
+              im=Image.open(io.BytesIO(raw)).convert('RGBA')
+              assert im.size==(960,1440)
+              outer=0 if row['side']=='left' else 959
+              inner=12 if row['side']=='left' else 947
+              for y,inside in [(0,12),(1439,1427)]:
+                  assert im.getpixel((outer,y))[3]<100,(row['file'],'corner should be gently rubbed')
+                  assert im.getpixel((inner,inside))[3]>150,(row['file'],'not a large cutout')
+              bundle=json.loads((root/'runtime'/f'group-{i//2+1:02}.json').read_text())
+              rt=bundle['assets'][i%2]
+              encoded=base64.b64decode(rt['base64'])
+              assert rt['sourceSha256']==row['sha256']
+              assert hashlib.sha256(encoded).hexdigest()==rt['runtimeSha256']
+              assert len(encoded)==rt['bytes']
+          print('PASS v7.103: 16 slightly worn leaf corners, original texture preserved, 8 offline pairs matched')
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install exact pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Step 2 — run race regression, paper suite and offline build
+        run: |
+          node tests/paged-forward-boundary-v7103.js
+          npm run test:epub-paper
+          node tests/reader-interactions-v766.js
+          node scripts/build.js > build-v7103.log
+          node --check dist/douyin.js
+          node -e "const b=require('./dist/build-report.json');if(b.paperTextures!==16||b.paperRuntimeAssetSha256.length!==16)throw Error('v7.103 runtime missing page photograph');console.log('PASS v7.103 dist/douyin.js:',b.sourceSha256);"
+      - name: Prepare Chromium for end-to-end pagination regression
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Verify genuine EPUB source-continuity across turns
+        run: python tests/paged-no-skip-v737.py
+      - name: Commit v7.103 repaired leaf assets and offline integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/paper-spreads/ package.json package-lock.json tests/paper-corners-v791.js
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo "v7.103 output unchanged"
+            exit 0
+          fi
+          git commit -m "fix(reading): v7.103 natural paper corners and durable next-page turns"
+          git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: justfun-v7103-regression
+          path: |
+            build-v7103.log
+            dist/build-report.json
+            assets/paper-spreads/corner-refinement-v7103.json
+          if-no-files-found: warn
