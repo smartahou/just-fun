@@ -1,0 +1,37 @@
+name: Just Fun v7.104 actual EPUB photographed-paper render
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tests/paper-visual-smoke-v7104.py"
+      - ".github/workflows/paper-visual-smoke-v7104.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chromium-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Build original 16 scanned WebPs into standalone JS
+        run: node scripts/build.js > build-visual-v7104.log
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install screenshot codec and chromium
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Render actual 1386×850 Just Fun book view for visual review
+        run: python tests/paper-visual-smoke-v7104.py
