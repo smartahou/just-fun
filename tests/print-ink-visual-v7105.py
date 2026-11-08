@@ -89,11 +89,11 @@ def main():
                 page.evaluate("()=>{jfDeskPageIndex=2;jfDeskPagedRender();}")
                 page.wait_for_timeout(250)
                 # Temporary CSS is test-only. It is removed after baseline screenshot.
-                page.add_style_tag(content=BASELINE_CSS)
+                baseline_style=page.add_style_tag(content=BASELINE_CSS)
                 page.wait_for_timeout(120)
                 before=inspect(page)
                 shot_before=Image.open(io.BytesIO(page.screenshot())).convert('RGB')
-                page.evaluate("""()=>{const s=[...document.querySelectorAll('style')].find(n=>n.textContent.includes('rgba(53,37,24,.95)'));if(s)s.remove();}""")
+                baseline_style.evaluate("(element)=>element.remove()")
                 page.wait_for_timeout(120)
                 after=inspect(page)
                 shot_after=Image.open(io.BytesIO(page.screenshot())).convert('RGB')
