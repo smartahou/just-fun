@@ -11,7 +11,8 @@ const marker='/* ===== v7.105 · quiet printed ink / old-book typography';
 const at=css.indexOf(marker);
 assert(at>0,'v7.105 incremental CSS exists');
 assert.equal(css.indexOf(marker,at+marker.length),-1,'only one ink override');
-const patch=css.slice(at);
+const nextMarker=css.indexOf('/* v7.106 ·',at);
+const patch=css.slice(at,nextMarker>at?nextMarker:undefined);
 assert(patch.includes('.jfReader.paged.jf-aged-paper #jfPageView .jfSheetBody{'),
   'shared old-paper type style affects both measurement and printed sheets');
 assert(patch.includes('color:rgba(47,37,29,.98);'),'ink shade changed modestly');
@@ -27,5 +28,6 @@ assert(js.includes("view.style.setProperty('--jf-read-family',jfReadFamilyMap[jf
 assert(!patch.includes('.jfReadText{'),'continuous reader remains unchanged');
 assert.equal(manifest.version,'3.0-approved','v7.104 original 16 photos remain approved');
 assert.equal(manifest.assets.length,16);
-assert.equal(pkg.version,'7.105.0');
+const [major,minor]=pkg.version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=105),'v7.105 typography remains valid in later versions');
 console.log('PASS v7.105: ink-only change, font and measurement preserved, 16 approved paper photographs unchanged');
