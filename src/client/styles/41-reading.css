@@ -3520,26 +3520,13 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   left:calc(50% + var(--jf-page-w) - 3px)!important;
 }
 
-/* v7.91 · asymmetric photograph corner treatment for 8 paired paper textures.
-   v7.83 flattened both the leaf box and its photo overlay with a forced
-   0px radius. The source-master WebPs are deliberately SHA-locked, while
-   their separately verified runtime transcodes are what actually render:
-   editing a master image alone cannot affect an already built reader.
-   Make the *visible photograph* and its transparent leaf box agree.
-   The two outer corners have soft, unequal elliptical radii; the two
-   binding-side corners remain square. There is no filler colour, new mask,
-   additional shadow, scaled bitmap, or change to pagination geometry. */
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side="left"],
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side="left"]::after {
-  border-radius:
-    clamp(18px,2.35vw,33px) 0 0 clamp(18px,2.05vw,29px) /
-    clamp(17px,1.95vw,29px) 0 0 clamp(18px,2.15vw,31px)!important;
-}
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side="right"],
-.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side="right"]::after {
-  border-radius:
-    0 clamp(17px,2.2vw,31px) clamp(18px,2.35vw,34px) 0 /
-    0 clamp(18px,2.1vw,30px) clamp(18px,2vw,29px) 0!important;
+/* v7.102 · The revised WebP photographs own the visible leaf contour.
+   Do not clip old paper into an 18–34px UI-card ellipse; genuine edges and
+   corner damage come from the verified alpha channel of each paired image.
+   Keep the independent full-height book binding and page-layout untouched. */
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side],
+.jfReader.paged.jf-aged-paper #jfPageView .jfSheet[data-paper-group][data-paper-side]::after {
+  border-radius:0!important;
 }
 
 /* v7.92 · Silhouette-matched photographic fore-edge */

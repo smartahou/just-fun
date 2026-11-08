@@ -2,7 +2,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),pkg=require('../package.json');
-assert.equal(pkg.version,'7.101.0');
+assert(Number(pkg.version.split('.')[1])>=101);
 const pack=require('../assets/paper-covers/embedded-v7101.json');
 assert.equal(pack.version,'7.101.0');
 assert.equal(pack.render_strategy,'photo-only-alpha');
