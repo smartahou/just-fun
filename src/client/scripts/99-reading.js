@@ -2243,8 +2243,14 @@ function jfDeskBlocksFor(sec){
       if(consecutiveBlanks>1)printed.classList.add('jfPrintRedundantBlank');
     }
     jfDeskDecorateImprintBlock(printed,sec.n,imprint,k);
-    if(jfDeskIsSourceCommentaryTable(printed))
-      printed.classList.add('jfPrintSourceCommentary');
+    // EPUBs may wrap a commentary table in a div. Apply the class to the
+    // exact table rather than its surrounding prose or unrelated siblings.
+    const commentaryTables=printed.tagName==='TABLE'?[printed]:
+      Array.from(printed.querySelectorAll?.('table')||[]);
+    for(const table of commentaryTables){
+      if(jfDeskIsSourceCommentaryTable(table))
+        table.classList.add('jfPrintSourceCommentary');
+    }
     blocks.push({chapter:sec.n,node:printed,
                  key:sec.n+':'+(i++),offset:acc});
     acc+=node.textContent.length;
