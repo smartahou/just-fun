@@ -46,7 +46,7 @@ assert(total>60000&&total<220000,'offline paper edge budget');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
 assert(build.includes("read('assets/paper-stacks/embedded-v797.json')"));
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const section=css.slice(css.lastIndexOf('/* v7.96 · Thin folio edges'));
+const section=css.slice(css.lastIndexOf('/* v7.96 · Thin folio edges'),css.indexOf('/* ===== v7.100 · straight-backed hardcover'));
 assert(section.startsWith('/* v7.96'));
 assert(section.includes("data-side='left'")&&section.includes("data-side='right'"));
 assert(!/blur\(|drop-shadow\(|gradient\(|mask-image|clip-path:polygon/.test(section),'no faux paper fog');

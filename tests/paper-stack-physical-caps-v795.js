@@ -47,7 +47,7 @@ assert.equal(nonempty,20);
 assert.equal(unique.size,20);
 assert(total>120000&&total<600000,'compact standalone book photos');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const latest=css.slice(css.lastIndexOf('/* v7.95 · Optical paper-edge alignment'));
+const latest=css.slice(css.lastIndexOf('/* v7.95 · Optical paper-edge alignment'),css.indexOf('/* ===== v7.100 · straight-backed hardcover'));
 assert(latest.startsWith('/* v7.95'));
 assert(latest.includes('height:calc(var(--jf-page-h) - 6px)'));
 assert(latest.includes('filter:none!important')&&latest.includes('mask:none!important'));
