@@ -1,0 +1,54 @@
+name: Just Fun v7.105 printed typography visual regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/styles/41-reading.css"
+      - "tests/print-ink-v7105.js"
+      - "tests/print-ink-visual-v7105.py"
+      - "package.json"
+      - ".github/workflows/print-ink-v7105.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ink-and-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install pinned build modules
+        run: npm ci --no-audit --no-fund
+      - name: Verify old-paper ink change is isolated from page layout
+        run: |
+          node tests/print-ink-v7105.js
+          npm run test:reading-print
+          npm run test:epub-paper
+          node tests/printed-typography-v769.js
+          node tests/imprint-typesetting-v767.js
+          node tests/reader-interactions-v766.js
+      - name: Build standalone app and check JS syntax
+        run: |
+          node scripts/build.js > /tmp/justfun-v7105-build.log
+          node --check dist/douyin.js
+          node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==16) throw Error('8 original paper pairs missing'); console.log('PASS paper textures:',r.paperTextures);"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install real browser for A/B comparison
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Chromium original-font and printed-ink A/B rendering
+        run: python tests/print-ink-visual-v7105.py
+      - name: Ensure navigation continuity unaffected
+        run: python tests/paged-no-skip-v737.py
