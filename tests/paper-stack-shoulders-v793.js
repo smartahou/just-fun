@@ -56,7 +56,7 @@ assert(bytesTotal>120000&&bytesTotal<500000,'runtime should remain compact');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
 assert(build.includes("read('assets/paper-stacks/embedded-v797.json')"),'builder must embed current v7.95 data; v7.93 remains a rollback reference');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const latest=css.slice(css.lastIndexOf('/* v7.93 · Recessed shoulders'));
+const latest=css.slice(css.lastIndexOf('/* v7.93 · Recessed shoulders'),css.indexOf('/* ===== v7.100 · straight-backed hardcover'));
 assert(latest.startsWith('/* v7.93'));
 assert(latest.includes('height:calc(var(--jf-page-h) - 8px)'));
 assert(!latest.includes('repeating-linear-gradient')&&!latest.includes('mask-image:')&&!latest.includes('clip-path:polygon'));

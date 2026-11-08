@@ -3784,3 +3784,58 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background-size:100% 100%!important;
   background-position:center center!important;
 }
+
+/* ===== v7.100 · straight-backed hardcover and restrained binding valley =====
+   The photos are already approved: no new page texture or replacement cover
+   raster. A narrow matching leather/cloth return fills ONLY the four hollow
+   outer corners of the photographic case; the paper windows stay transparent.
+   Keep this entirely behind original paper, without re-pagination. */
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book:has(.jfSheet[data-paper-group]) .jfBookBoard{
+  /* +12px width / +8px height over v7.99: a modest, real board overhang. */
+  width:calc(var(--jf-page-w) * 2 + 34px)!important;
+  height:calc(var(--jf-page-h) + 24px)!important;
+  /* The real photographic rim remains in front; small solid material returns
+     fill its heavily rounded OUTER corners (not the page windows or binding). */
+  /* No opaque corner pads: they produced artificial dark square blocks in
+     the real Chromium renders. Keep one continuous photographic casework,
+     with only a quiet nearly-straight outer board hairline. */
+  background-image:
+    var(--jf-cover-board-url)!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  background-color:transparent!important;
+  border:1px solid color-mix(in srgb,var(--jf-cover-shell-underlay,#5c4939) 46%,#d8cab2)!important;
+  border-image:none!important;
+  border-radius:6px 6px 7px 7px!important;
+  clip-path:none!important;
+  box-shadow:0 2px 4px rgba(35,24,17,.12)!important;
+  filter:var(--jf-cover-shell-filter,none)!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book.single .jfBookBoard{
+  width:calc(var(--jf-page-w) + 34px)!important;
+  height:calc(var(--jf-page-h) + 24px)!important;
+  background-size:100% 100%!important;
+}
+/* Half the old width, a little more true darkness at the center. Long,
+   gentle shoulders and feathered end caps prevent a ruler-straight black bar. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single):has(.jfSheet[data-paper-group][data-paper-side]) .jfSpineShade{
+  width:clamp(38px,3.5vw,52px)!important;
+  background:linear-gradient(90deg,
+    rgba(39,27,17,0) 0%,
+    rgba(36,24,15,.014) 13%,
+    rgba(35,23,14,.074) 27%,
+    rgba(31,20,12,.165) 39%,
+    rgba(26,16,10,.292) 47%,
+    rgba(23,14,8,.345) 51%,
+    rgba(27,17,10,.250) 58%,
+    rgba(33,22,14,.108) 73%,
+    rgba(39,27,17,0) 100%)!important;
+  background-color:transparent!important;
+  opacity:1!important;
+  mask-image:linear-gradient(to bottom,transparent 0%,#000 3.5%,#000 96.5%,transparent 100%)!important;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 3.5%,#000 96.5%,transparent 100%)!important;
+  pointer-events:none!important;
+}

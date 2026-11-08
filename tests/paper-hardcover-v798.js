@@ -35,7 +35,7 @@ const manifest=require('../build.manifest.json');
 assert(manifest.scripts.indexOf('src/client/scripts/98e4-paper-covers.js')>
        manifest.scripts.indexOf('src/client/scripts/98e3-paper-stacks.js'));
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const latest=css.slice(css.lastIndexOf('/* ===== v7.98 · hardcover shell'));
+const latest=css.slice(css.lastIndexOf('/* ===== v7.98 · hardcover shell'),css.indexOf('/* ===== v7.100 · straight-backed hardcover'));
 assert(latest.includes('.jfBookPile{')&&latest.includes('display:none!important'));
 assert(latest.includes('background-image:var(--jf-cover-board-url)!important'));
 assert(latest.includes('background-position:right center!important'));

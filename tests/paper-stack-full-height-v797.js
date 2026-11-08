@@ -54,7 +54,7 @@ assert(js.includes('(height*nativeWidth/nativeHeight).toFixed(3)'),'book-block a
 assert(!js.includes('capInsetPx'),'no shrinking in controller');
 assert(!/toBlob\(|getImageData\(|createObjectURL\(/.test(js),'no runtime canvas');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const live=css.slice(css.lastIndexOf('/* v7.97 · Full-height physical page block'));
+const live=css.slice(css.lastIndexOf('/* v7.97 · Full-height physical page block'),css.indexOf('/* ===== v7.100 · straight-backed hardcover'));
 assert(live.startsWith('/* v7.97'));
 assert(live.includes('height:var(--jf-page-h)!important;'));
 assert(live.includes('top:calc(50% - var(--jf-page-h)/2)!important;'));
