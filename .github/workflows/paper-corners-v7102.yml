@@ -1,0 +1,78 @@
+name: Refine actual Just Fun paper leaves v7.102
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/refine-paper-corners-v7102.py"
+      - ".github/workflows/paper-corners-v7102.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: justfun-paper-corners-v7102
+  cancel-in-progress: false
+jobs:
+  rebuild-approved-photographs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install image codec
+        run: python -m pip install -q pillow numpy
+      - name: Step 1 reconstruct 16 real WebP photos and 8 matching runtime groups
+        run: python scripts/refine-paper-corners-v7102.py
+      - name: Validate shape and the built-in verification manifest
+        run: |
+          python - <<'PY'
+          import hashlib,io,json
+          from pathlib import Path
+          from PIL import Image
+          root=Path("assets/paper-spreads")
+          m=json.loads((root/"manifest.json").read_text())
+          report=json.loads((root/"corner-refinement-v7102.json").read_text())
+          assert m["images"]==16 and m["pairs"]==8 and len(report["items"])==16
+          assert any(x["outer_pixels_reconstructed"]>0 for x in report["items"])
+          for i,row in enumerate(m["assets"]):
+              raw=(root/row["file"]).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==row["sha256"]
+              assert len(raw)==row["bytes"]
+              im=Image.open(io.BytesIO(raw)).convert("RGBA")
+              x=24 if row["side"]=="left" else 935
+              assert im.getpixel((x,24))[3]>180,(row["file"],"top")
+              assert im.getpixel((x,1415))[3]>180,(row["file"],"bottom")
+              rt=json.loads((root/"runtime"/f"group-{i//2+1:02}.json").read_text())["assets"][i%2]
+              assert row["sha256"]==rt["sourceSha256"]
+          print("PASS 16 physically repaired paper leaves and 8 runtime pairs")
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install pinned offline build dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Step 2 validate DOM CSS, old-paper mapping and final build
+        run: |
+          node tests/paper-corners-v791.js
+          node tests/paper-texture-v747.js
+          node tests/paper-hardcover-v7101.js
+          node scripts/build.js > paper-corners-build.log
+          node --check dist/douyin.js
+          node -e "const r=require('./dist/build-report.json'); if(r.paperTextures!==16||r.paperRuntimeAssetSha256.length!==16)throw Error('bad rebuilt offline asset array'); console.log('PASS real compiled page textures / '+r.sourceSha256);"
+      - name: Commit repaired photographic assets and real CSS integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/paper-spreads/ src/client/styles/41-reading.css tests/paper-corners-v791.js tests/paper-hardcover-v7101.js package.json
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo "Repaired assets already checked in."
+            exit 0
+          fi
+          git commit -m "fix(reading): v7.102 restore real old-paper corners in all 8 matched pairs"
+          git push origin HEAD:main
