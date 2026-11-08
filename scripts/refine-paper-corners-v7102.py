@@ -186,6 +186,14 @@ assert.equal(manifest.assets.length,16);
 assert(manifest.assets.every(x=>x.corner_revision&&x.original_sha256));
 console.log('PASS v7.102: photographed corner alpha, no CSS-rounded cards, 8 matched pairs');
 ""","utf8")
+    pkg_path=ROOT/"package.json"
+    pkg=json.loads(pkg_path.read_text("utf8"))
+    pkg["version"]="7.102.0"
+    pkg_path.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+"\n","utf8")
+    cover_test=ROOT/"tests/paper-hardcover-v7101.js"
+    cover_content=cover_test.read_text("utf8")
+    cover_content=cover_content.replace("assert.equal(pkg.version,'7.101.0');","assert(Number(pkg.version.split('.')[1])>=101);")
+    cover_test.write_text(cover_content,"utf8")
     print("PASS repaired 16 photographed leaves / 8 paired runtime bundles")
     for x in report["items"]:
         print(x["file"],"restored",x["outer_pixels_reconstructed"],"pixels","alpha@24",x["corner_rgba"])
