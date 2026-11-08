@@ -3899,3 +3899,16 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   color:#6c5841;
 }
 
+/* v7.106 · explicit image-caption grouping (one measured block).
+   Only jfDeskBlocksFor's verified standalone plate can receive this class.
+   The sheet and pagination probe both use .jfSheetBody; keep exactly the same
+   style in both so the folio cannot shift when an image caption is grouped.
+   The figure is still atomically paginated with its illustration. */
+.jfReader.paged #jfPageView .jfSheetBody figure.jfPrintPlateWithCaption > :is(p,div){
+  text-align:center;
+  text-indent:0;
+}
+.jfReader.paged #jfPageView .jfSheetBody figure.jfPrintPlateWithCaption > figcaption{
+  text-align:center;
+  text-indent:0;
+}
