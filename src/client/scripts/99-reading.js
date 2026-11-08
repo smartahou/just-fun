@@ -2747,22 +2747,14 @@ function jfDeskQueueForwardTurn(){
     }
   })();
   jfDeskForwardTask=task;
-  task.catch(error=>{if(alive())jfDeskMessage('翻页失败：'+(error.message||error),true);})
-    .finally(()=>{
-      if(jfDeskForwardTask!==task)return;
-      jfDeskForwardTask=null;
-      if(!alive())jfDeskForwardPending=0;
-      else if(jfDeskForwardPending)jfDeskQueueForwardResume();
-    });
+  task.catch(error=>{
+    if(alive())jfDeskMessage('翻页失败：'+(error.message||error),true);
+    jfDeskForwardPending=0;
+  }).finally(()=>{
+    if(jfDeskForwardTask===task)jfDeskForwardTask=null;
+    if(!alive())jfDeskForwardPending=0;
+  });
   return true;
-}
-function jfDeskQueueForwardResume(){
-  if(!jfDeskForwardPending||jfDeskForwardTask)return;
-  // Preserve the existing count; starting the new drain must not add a turn.
-  const count=jfDeskForwardPending;
-  jfDeskForwardPending=0;
-  jfDeskQueueForwardTurn();
-  jfDeskForwardPending=count;
 }
 function jfDeskPageTurn(delta){
   if(!jfDeskPaged||jfReader.hidden)return false;
