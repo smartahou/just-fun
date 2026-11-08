@@ -7,6 +7,7 @@ on:
       - "src/client/styles/41-reading.css"
       - "tests/epub-caption-v7106.js"
       - "tests/print-ink-v7105.js"
+      - "tests/imprint-typesetting-v767.js"
       - "tests/epub-caption-visual-v7106.py"
       - ".github/workflows/epub-caption-v7106.yml"
       - "package.json"
@@ -28,6 +29,7 @@ jobs:
       - name: Caption isolation and existing reader regressions
         run: |
           node tests/epub-caption-v7106.js
+          node tests/imprint-typesetting-v767.js
           npm run test:reading-print
           npm run test:epub-paper
           node tests/reader-interactions-v766.js
