@@ -3671,25 +3671,25 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   left:50%!important;
   top:50%!important;
   transform:translate(-50%,-50%)!important;
-  width:calc(var(--jf-page-w) * 2 + 20px)!important;
-  height:calc(var(--jf-page-h) + 14px)!important;
+  width:calc(var(--jf-page-w) * 2 + 14px)!important;
+  height:calc(var(--jf-page-h) + 10px)!important;
   max-width:none!important;
   background-image:var(--jf-cover-board-url)!important;
-  background-color:#584632!important;
+  background-color:#66503b!important;
   background-size:100% 100%!important;
   background-position:center center!important;
   background-repeat:no-repeat!important;
   border:0!important;
   border-radius:18px 18px 20px 20px / 15px 15px 18px 18px!important;
-  box-shadow:0 2px 2px rgba(48,34,19,.16),0 5px 10px rgba(48,34,19,.13)!important;
+  box-shadow:0 1px 3px rgba(48,34,19,.12),0 4px 7px rgba(48,34,19,.08)!important;
   filter:none!important;
   opacity:1!important;
   pointer-events:none!important;
 }
 /* Single-page mobile reading keeps the same book skin, using one half of it. */
 .jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book.single .jfBookBoard{
-  width:calc(var(--jf-page-w) + 18px)!important;
-  height:calc(var(--jf-page-h) + 14px)!important;
+  width:calc(var(--jf-page-w) + 14px)!important;
+  height:calc(var(--jf-page-h) + 10px)!important;
   background-size:200% 100%!important;
   background-position:right center!important;
 }
