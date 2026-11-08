@@ -9,7 +9,7 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 const pack=require('../assets/paper-stacks/embedded-v797.json');
 const older=require('../assets/paper-stacks/embedded-v796.json');
-assert.equal(require('../package.json').version,'7.97.0');
+assert(Number(require('../package.json').version.split('.')[1])>=97);
 assert.equal(pack.version,'7.97.0');
 assert.deepEqual(pack.canvas,{width:64,height:1440});
 assert.equal(pack.progress_states.length,11);

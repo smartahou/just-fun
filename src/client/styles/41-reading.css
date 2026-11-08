@@ -3654,3 +3654,42 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged.jf-aged-paper #jfPageView:not(.single).jf-image-stacks .jfBookPile[data-side='right']{
   left:calc(50% + var(--jf-page-w) - 11px)!important;
 }
+
+/* ===== v7.98 · hardcover shell, not a pile of pages ================
+   Never disturb the approved 8 paired old-paper photographs (::after),
+   existing per-page corner transparency, folios, or the central crease.
+   This bookboard sits BEHIND those surfaces and is independent of progress.
+   No fake stacked stripes, glow, white halo, or generated turn-time artwork. */
+.jfReader.paged #jfPageView .jfBookPile{
+  display:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book:has(.jfSheet[data-paper-group]) .jfBookBoard{
+  display:block!important;
+  position:absolute!important;
+  z-index:0!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:calc(var(--jf-page-w) * 2 + 20px)!important;
+  height:calc(var(--jf-page-h) + 14px)!important;
+  max-width:none!important;
+  background-image:var(--jf-cover-board-url)!important;
+  background-color:#584632!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  border:0!important;
+  border-radius:18px 18px 20px 20px / 15px 15px 18px 18px!important;
+  box-shadow:0 2px 2px rgba(48,34,19,.16),0 5px 10px rgba(48,34,19,.13)!important;
+  filter:none!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+/* Single-page mobile reading keeps the same book skin, using one half of it. */
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book.single .jfBookBoard{
+  width:calc(var(--jf-page-w) + 18px)!important;
+  height:calc(var(--jf-page-h) + 14px)!important;
+  background-size:200% 100%!important;
+  background-position:right center!important;
+}
