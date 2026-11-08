@@ -168,9 +168,9 @@ function build() {
     }
   }
   // v7.98 · Offline photographed hardcover boards; preserve all old-paper photos.
-  const coverSpec=JSON.parse(read('assets/paper-covers/embedded-v798.json'));
-  if(coverSpec.version!=='7.98.0'||coverSpec.canvas?.width!==960||
-     coverSpec.canvas?.height!==640||coverSpec.covers?.length!==6)
+  const coverSpec=JSON.parse(read('assets/paper-covers/embedded-v799.json'));
+  if(coverSpec.version!=='7.99.0'||coverSpec.type!=='transparent-hollow-hardcover-rim'||
+     coverSpec.canvas?.width!==960||coverSpec.canvas?.height!==600||coverSpec.covers?.length!==6)
     throw Error('Invalid offline hardcover set');
   const coverUrls=[];
   for(let n=0;n<6;n++){
@@ -178,6 +178,8 @@ function build() {
     if(c.filename!=='cover-'+String(n+1).padStart(2,'0')+'.webp'||
        raw.toString('base64')!==c.base64||raw.length!==c.bytes||
        raw.toString('ascii',0,4)!=='RIFF'||raw.toString('ascii',8,12)!=='WEBP'||
+       raw.toString('ascii',12,16)!=='VP8X'||!(raw[20]&0x10)||
+       raw.readUIntLE(24,3)+1!==960||raw.readUIntLE(27,3)+1!==600||
        crypto.createHash('sha256').update(raw).digest('hex')!==c.sha256)
       throw Error('Invalid hardcover photo '+n);
     coverUrls.push('data:image/webp;base64,'+c.base64);
