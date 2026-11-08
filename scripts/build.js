@@ -167,7 +167,22 @@ function build() {
       stackUrls[i*2+(side==='right'?1:0)]='data:image/webp;base64,'+b64;
     }
   }
-  let injected=false,stackInjected=false;
+  // v7.98 · Offline photographed hardcover boards; preserve all old-paper photos.
+  const coverSpec=JSON.parse(read('assets/paper-covers/embedded-v798.json'));
+  if(coverSpec.version!=='7.98.0'||coverSpec.canvas?.width!==960||
+     coverSpec.canvas?.height!==640||coverSpec.covers?.length!==6)
+    throw Error('Invalid offline hardcover set');
+  const coverUrls=[];
+  for(let n=0;n<6;n++){
+    const c=coverSpec.covers[n],raw=Buffer.from(c.base64,'base64');
+    if(c.filename!=='cover-'+String(n+1).padStart(2,'0')+'.webp'||
+       raw.toString('base64')!==c.base64||raw.length!==c.bytes||
+       raw.toString('ascii',0,4)!=='RIFF'||raw.toString('ascii',8,12)!=='WEBP'||
+       crypto.createHash('sha256').update(raw).digest('hex')!==c.sha256)
+      throw Error('Invalid hardcover photo '+n);
+    coverUrls.push('data:image/webp;base64,'+c.base64);
+  }
+  let injected=false,stackInjected=false,coverInjected=false;
   const browser=manifest.scripts.map(p=>{
     const code=read(p);
     if(p==='src/client/scripts/98e-paper-textures.js'){
@@ -178,10 +193,15 @@ function build() {
       stackInjected=true;
       return replaceOnce(code,'__JUSTFUN_PAPER_STACK_ASSETS__',JSON.stringify(stackUrls));
     }
+    if(p==='src/client/scripts/98e4-paper-covers.js'){
+      coverInjected=true;
+      return replaceOnce(code,'__JUSTFUN_PAPER_COVER_ASSETS__',JSON.stringify(coverUrls));
+    }
     return code;
   }).join('');
   if(!injected)throw Error('Paper texture module missing from build order');
   if(!stackInjected)throw Error('Paper stack module missing from build order');
+  if(!coverInjected)throw Error('Hardcover module missing from build order');
   // Build must fail before writing dist if any client script is invalid.
   new vm.Script(browser, {filename:'bundled-browser.js'});
   const layout = read(manifest.html);
