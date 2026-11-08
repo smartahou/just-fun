@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - "scripts/refine-paper-corners-v7103.py"
+      - "src/client/scripts/99-reading.js"
+      - "tests/paged-forward-boundary-v7103.js"
       - ".github/workflows/reading-v7103.yml"
   workflow_dispatch:
 permissions:

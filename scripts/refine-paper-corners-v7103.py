@@ -66,6 +66,11 @@ def soften(im,side,idx):
 
 def main():
     m=json.loads((ASSETS/"manifest.json").read_text("utf8"))
+    # Safe to rerun CI against a branch that already has the generated photos.
+    # The separate SHA checks in the workflow still verify every runtime byte.
+    if m["version"]=="3.2-subtle-natural-corners":
+        print("PASS v7.103 paper pack already present; no regeneration needed")
+        return
     if m["version"]!="3.1-corner-refined" or len(m["assets"])!=16:
         raise ValueError("This script expects the v7.102 masters")
     audit={"version":"7.103.0","source_commit":BASE,"method":"small asymmetric rubbed-paper alpha at outer corners only","assets":[]}
