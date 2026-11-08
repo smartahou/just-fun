@@ -58,7 +58,8 @@ const view={classList:{toggle(name,yes){if(yes)viewCls.add(name);else viewCls.de
   style:{values:{},setProperty(k,v){this.values[k]=v;},removeProperty(k){delete this.values[k];}},dataset:{}};
 const doc={getElementById(id){return id==='jfReader'?{classList:{contains:name=>cls.has(name)}}:null}};
 const win={};
-const make=()=>vm.runInNewContext(s.replace('__JUSTFUN_PAPER_COVER_ASSETS__',JSON.stringify(fake)),{
+const make=()=>vm.runInNewContext(s.replace('__JUSTFUN_PAPER_COVER_ASSETS__',JSON.stringify(fake))
+  .replace('__JUSTFUN_SINGLE_COVER_ASSETS__',JSON.stringify(fake)),{
   window:win,document:doc,localStorage,Math,JSON,Number,String,Object,Array,Error
 });
 make();
