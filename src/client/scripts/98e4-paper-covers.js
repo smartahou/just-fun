@@ -7,6 +7,9 @@
      covers.some(src=>typeof src!=='string'||!src.startsWith('data:image/webp;base64,')))
     throw Error('[JustFun] Expected six offline hardcover-board photos');
   const STORE_KEY='jf-reader-hardcover-board-v798';
+  // The old binding choice survives this texture-only upgrade.
+  // Matte board beneath the outer page corners; never behind the centre fold.
+  const boardColors=['#714d37','#42381c','#774324','#682b32','#71604d','#352823'];
   let cached=null;
   function saved(){
     if(cached)return cached;
@@ -42,11 +45,13 @@
     view.classList.toggle('jf-hardcover-book',enabled);
     if(!enabled){
       view.style.removeProperty('--jf-cover-board-url');
+      view.style.removeProperty('--jf-cover-board-color');
       delete view.dataset.coverStyle;
       return null;
     }
     const index=styleFor(bookId);
     view.style.setProperty('--jf-cover-board-url','url("'+covers[index]+'")');
+    view.style.setProperty('--jf-cover-board-color',boardColors[index]);
     view.dataset.coverStyle=String(index+1);
     view.dataset.coverMode=twoPages?'spread':'single';
     return index+1;

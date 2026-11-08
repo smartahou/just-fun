@@ -3733,3 +3733,25 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   height:calc(var(--jf-page-h) + 16px)!important;
   background:none!important;
 }
+
+
+/* v7.99 corner underlay: the original page has naturally rounded, partly
+   transparent outside corners. A real cloth/leather board exists BEHIND those
+   corners. These two matte outer-edge guards never cross the page centre,
+   never touch the paper photograph, and never add a false paper layer. */
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard::before,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard::after{
+  content:""!important;
+  position:absolute!important;
+  display:block!important;
+  top:9px!important;
+  bottom:9px!important;
+  width:25px!important;
+  background:var(--jf-cover-board-color,#6c503d)!important;
+  box-shadow:none!important;
+  border:0!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard::before{left:9px!important}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard::after{right:9px!important}
