@@ -171,6 +171,8 @@ function build() {
   const coverSpec=JSON.parse(read('assets/paper-covers/embedded-v799.json'));
   if(coverSpec.version!=='7.99.0'||coverSpec.canvas?.width!==960||
      coverSpec.canvas?.height!==600||coverSpec.covers?.length!==6||
+     coverSpec.singleCanvas?.width!==480||coverSpec.singleCanvas?.height!==960||
+     coverSpec.single_covers?.length!==6||
      coverSpec.render_strategy!=='hollow-cover-background'||coverSpec.purpose!=='cover-border-only-transparent-center')
     throw Error('Invalid offline hardcover set');
   const coverUrls=[];
@@ -182,6 +184,19 @@ function build() {
        crypto.createHash('sha256').update(raw).digest('hex')!==c.sha256)
       throw Error('Invalid hardcover photo '+n);
     coverUrls.push('data:image/webp;base64,'+c.base64);
+  }
+  // The same six cover styles have portrait singles, not a squeezed 2-page photo.
+  const singleCoverUrls=[];
+  for(let n=0;n<6;n++){
+    const c=coverSpec.single_covers[n],raw=Buffer.from(c.base64,'base64');
+    if(c.filename!=='cover-'+String(n+1).padStart(2,'0')+'-single.webp'||
+       raw.toString('base64')!==c.base64||raw.length!==c.bytes||
+       raw.toString('ascii',0,4)!=='RIFF'||raw.toString('ascii',8,12)!=='WEBP'||
+       raw.toString('ascii',12,16)!=='VP8X'||!(raw[20]&0x10)||
+       raw.readUIntLE(24,3)+1!==480||raw.readUIntLE(27,3)+1!==960||
+       crypto.createHash('sha256').update(raw).digest('hex')!==c.sha256)
+      throw Error('Invalid portrait hardcover photo '+n);
+    singleCoverUrls.push('data:image/webp;base64,'+c.base64);
   }
   let injected=false,stackInjected=false,coverInjected=false;
   const browser=manifest.scripts.map(p=>{
@@ -196,7 +211,8 @@ function build() {
     }
     if(p==='src/client/scripts/98e4-paper-covers.js'){
       coverInjected=true;
-      return replaceOnce(code,'__JUSTFUN_PAPER_COVER_ASSETS__',JSON.stringify(coverUrls));
+      return replaceOnce(replaceOnce(code,'__JUSTFUN_PAPER_COVER_ASSETS__',JSON.stringify(coverUrls)),
+        '__JUSTFUN_SINGLE_COVER_ASSETS__',JSON.stringify(singleCoverUrls));
     }
     return code;
   }).join('');

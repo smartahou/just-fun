@@ -3,7 +3,9 @@
 (function(){
   'use strict';
   const covers=__JUSTFUN_PAPER_COVER_ASSETS__;
-  if(!Array.isArray(covers)||covers.length!==6||
+  const singleCovers=__JUSTFUN_SINGLE_COVER_ASSETS__;
+  if(!Array.isArray(covers)||covers.length!==6||!Array.isArray(singleCovers)||singleCovers.length!==6||
+     singleCovers.some(src=>typeof src!=='string'||!src.startsWith('data:image/webp;base64,'))||
      covers.some(src=>typeof src!=='string'||!src.startsWith('data:image/webp;base64,')))
     throw Error('[JustFun] Expected six offline hardcover-board photos');
   const STORE_KEY='jf-reader-hardcover-board-v798';
@@ -46,7 +48,7 @@
       return null;
     }
     const index=styleFor(bookId);
-    view.style.setProperty('--jf-cover-board-url','url("'+covers[index]+'")');
+    view.style.setProperty('--jf-cover-board-url','url("'+(twoPages?covers[index]:singleCovers[index])+'")');
     view.dataset.coverStyle=String(index+1);
     view.dataset.coverMode=twoPages?'spread':'single';
     return index+1;
