@@ -3719,9 +3719,11 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   border:solid transparent!important;
   border-width:5px 9px!important;
   border-image-source:var(--jf-cover-board-url)!important;
-  border-image-slice:32 32 32 32!important;
+  border-image-slice:46 46 46 46!important;
   border-image-width:5px 9px 5px 9px!important;
   border-image-repeat:stretch!important;
+  /* Physical bookboard corners, hard geometry (no blur or translucent fog). */
+  clip-path:inset(0 round 22px 20px 23px 21px)!important;
   border-radius:0!important;
   box-shadow:none!important;
   filter:none!important;

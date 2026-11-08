@@ -171,7 +171,7 @@ function build() {
   const coverSpec=JSON.parse(read('assets/paper-covers/embedded-v799.json'));
   if(coverSpec.version!=='7.99.0'||coverSpec.canvas?.width!==960||
      coverSpec.canvas?.height!==600||coverSpec.covers?.length!==6||
-     coverSpec.border_slice!==32||coverSpec.purpose!=='cover-border-only-transparent-center')
+     coverSpec.border_slice!==46||coverSpec.purpose!=='cover-border-only-transparent-center')
     throw Error('Invalid offline hardcover set');
   const coverUrls=[];
   for(let n=0;n<6;n++){

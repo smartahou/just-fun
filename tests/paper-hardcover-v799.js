@@ -15,7 +15,7 @@ assert.equal(prior.version,'7.98.0','rollback source must remain');
 assert.equal(active.version,'7.99.0');
 assert.deepEqual(active.canvas,{width:960,height:600});
 assert.equal(active.purpose,'cover-border-only-transparent-center');
-assert.equal(active.border_slice,32);
+assert.equal(active.border_slice,46);
 assert.equal(active.covers.length,6);
 const hashes=new Set();
 for(let i=0;i<6;i++){
@@ -42,9 +42,10 @@ const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'ut
 const live=css.slice(css.lastIndexOf('/* ===== v7.99 · hollow hardcover')); 
 assert(live.startsWith('/* ===== v7.99'));
 assert(live.includes('border-image-source:var(--jf-cover-board-url)!important'));
-assert(live.includes('border-image-slice:32 32 32 32!important'));
+assert(live.includes('border-image-slice:46 46 46 46!important'));
 assert(live.includes('border-image-repeat:stretch!important'));
 assert(live.includes('background:none!important'),'paper cannot be replaced by the cover');
+assert(live.includes('clip-path:inset(0 round 22px 20px 23px 21px)!important'));
 assert(live.includes('border-radius:0!important'),'no artificial rectangular mask');
 assert(!/border-image-slice:[^;]*fill|background-size:|background-position:|blur\(|drop-shadow\(|linear-gradient\(|radial-gradient\(/.test(live),'no background photo or fog');
 assert(live.includes('#jfPageView.jf-hardcover-book.single .jfBookBoard'),'single mobile page border');
