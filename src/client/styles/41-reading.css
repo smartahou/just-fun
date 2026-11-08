@@ -3839,3 +3839,52 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 3.5%,#000 96.5%,transparent 100%)!important;
   pointer-events:none!important;
 }
+
+
+/* ===== v7.101 · Actual photographic hardback, no CSS counterfeit frame =====
+   The 24 reviewed v7.101 assets already contain the squared, distressed,
+   low-radius outer leather/cloth corners. The CSS only positions photographs
+   behind untouched original paper. No line, radius, padding or fake blur. */
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book:has(.jfSheet[data-paper-group]) .jfBookBoard{
+  width:calc(var(--jf-page-w) * 2 + 38px)!important;
+  height:calc(var(--jf-page-h) + 26px)!important;
+  background-image:var(--jf-cover-board-url)!important;
+  background-color:transparent!important;
+  background-position:center!important;
+  background-size:100% 100%!important;
+  background-repeat:no-repeat!important;
+  border:0!important;
+  outline:0!important;
+  border-image:none!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+  clip-path:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book.single .jfBookBoard{
+  width:calc(var(--jf-page-w) + 38px)!important;
+  height:calc(var(--jf-page-h) + 26px)!important;
+  background-size:100% 100%!important;
+}
+/* Horizontal narrowing ONLY: preserve the reader's full spine height and
+   vertical coverage, without an artificial end-cap mask. */
+.jfReader.paged.jf-aged-paper #jfPageView:not(.single):has(.jfSheet[data-paper-group][data-paper-side]) .jfSpineShade{
+  width:clamp(26px,2.45vw,36px)!important;
+  background:linear-gradient(90deg,
+    rgba(27,19,11,0) 0%,
+    rgba(29,20,12,.018) 12%,
+    rgba(30,20,12,.090) 26%,
+    rgba(27,18,10,.225) 39%,
+    rgba(22,14,8,.385) 49%,
+    rgba(23,15,9,.335) 55%,
+    rgba(28,19,12,.152) 69%,
+    rgba(30,21,13,.030) 86%,
+    rgba(27,19,11,0) 100%)!important;
+  background-color:transparent!important;
+  mask-image:none!important;
+  -webkit-mask-image:none!important;
+  opacity:1!important;
+  filter:none!important;
+  pointer-events:none!important;
+}

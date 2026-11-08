@@ -199,6 +199,37 @@ function build() {
       throw Error('Invalid portrait hardcover photo '+n);
     singleCoverUrls.push('data:image/webp;base64,'+c.base64);
   }
+  // v7.101 · checked-in actual photo assets, generated exactly once by tooling.
+  // Original v7.99 sources above are preserved and verified for rollback.
+  const actual=JSON.parse(read('assets/paper-covers/embedded-v7101.json'));
+  if(actual.version!=='7.101.0'||actual.render_strategy!=='photo-only-alpha'||
+     actual.canvas?.width!==960||actual.canvas?.height!==600||
+     actual.singleCanvas?.width!==480||actual.singleCanvas?.height!==960||
+     actual.covers?.length!==12||actual.single_covers?.length!==12)
+    throw Error('Invalid v7.101 real photographic hardcover pack');
+  coverUrls.length=0;singleCoverUrls.length=0;
+  const actualCoverHashes=[];
+  for(const [key,assets,urls,w,h,suffix] of [
+    ['covers',actual.covers,coverUrls,960,600,''],
+    ['single_covers',actual.single_covers,singleCoverUrls,480,960,'-single']
+  ]){
+    for(let i=0;i<12;i++){
+      const spec=assets[i],name='cover-'+String(i+1).padStart(2,'0')+suffix+'.webp';
+      if(spec.filename!==name||typeof spec.base64!=='string')throw Error('Unexpected bookcase name: '+name);
+      const raw=Buffer.from(spec.base64,'base64');
+      const fromDisk=fs.readFileSync(path.join(root,'assets/paper-covers/v7101/',name));
+      const digest=crypto.createHash('sha256').update(raw).digest('hex');
+      if(raw.toString('base64')!==spec.base64||raw.length!==spec.bytes||
+         digest!==spec.sha256||!raw.equals(fromDisk)||
+         raw.toString('ascii',0,4)!=='RIFF'||raw.toString('ascii',8,12)!=='WEBP'||
+         raw.toString('ascii',12,16)!=='VP8X'||!(raw[20]&0x10)||
+         raw.readUIntLE(24,3)+1!==w||raw.readUIntLE(27,3)+1!==h)
+        throw Error('Real bookcase file verification failed: '+name);
+      actualCoverHashes.push(digest);
+      urls.push('data:image/webp;base64,'+spec.base64);
+    }
+  }
+  if(new Set(actualCoverHashes).size!==24)throw Error('Duplicated bookcase photographs');
   let injected=false,stackInjected=false,coverInjected=false;
   const browser=manifest.scripts.map(p=>{
     const code=read(p);
@@ -298,6 +329,7 @@ function build() {
     paperStackAssetBytes:stackAssetBytes,
     paperStackPhotoStates:photoMeta.progress_states.length,paperStackPhotoSha256:photoHashes,
     paperStackPhotoBytes:photoBytes,
+    bookcasePhotoCount:coverUrls.length,bookcasePhotoHashes:actualCoverHashes,
     pdfjsVersion:pdfPkg.version,pdfjsAssets:Object.keys(pdfAssets).length,
     pdfjsModuleSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(pdfRoot,'build/pdf.min.mjs'))).digest('hex'),
     baselinePageIdentical:hash(html)===manifest.baselineRenderedHtmlSha256
