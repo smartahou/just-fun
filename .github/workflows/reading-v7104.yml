@@ -1,0 +1,99 @@
+name: Just Fun v7.104 restore authentic photographed leaves
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/restore-paper-source-v7104.py"
+      - ".github/workflows/reading-v7104.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: justfun-v7104-natural-paper
+  cancel-in-progress: false
+jobs:
+  source-restore-and-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 1 — Restore *unaltered* approved masters and runtime WebPs
+        run: python scripts/restore-paper-source-v7104.py
+      - name: 2 — Verify 16 masters + 8 runtime JSON exactly match historical approved bytes
+        run: |
+          python - <<'PY'
+          import subprocess,json,hashlib
+          from pathlib import Path
+          approved='ec22e318b383750d2483c95ff3bff2ca3d592b4b'
+          manifest=json.loads(Path('assets/paper-spreads/manifest.json').read_text())
+          assert manifest['version']=='3.0-approved'
+          assert len(manifest['assets'])==16 and manifest['pairs']==8
+          paths=['assets/paper-spreads/manifest.json']
+          paths += ['assets/paper-spreads/'+a['file'] for a in manifest['assets']]
+          paths += [f'assets/paper-spreads/runtime/group-{n:02}.json' for n in range(1,9)]
+          for path in paths:
+              current=Path(path).read_bytes()
+              known=subprocess.check_output(['git','show',f'{approved}:{path}'])
+              assert current==known,f'Approved binary differs: {path}'
+          css=Path('src/client/styles/41-reading.css').read_text()
+          note=css.split('/* v7.104 · Unaltered approved photographic paper edges.')[1].split('/* v7.92 ·')[0]
+          assert 'border-radius:0!important' in note
+          assert not any(x in note for x in ('clip-path:', 'mask-image:', 'clamp(18px', 'clamp(34px'))
+          assert len(paths)==25
+          print('PASS 25 exact approved files: 16 photos, 8 optimized runtime pairs, manifest')
+          print('PASS no synthetic alpha/radius/mask on 16 source silhouettes')
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: 3 — Install pinned modules
+        run: npm ci --no-audit --no-fund
+      - name: 4 — Verify paper, EPUB deferred-turn regression and built offline product
+        run: |
+          node tests/paper-corners-v791.js
+          node tests/paged-forward-boundary-v7103.js
+          npm run test:epub-paper
+          node tests/paper-texture-v747.js
+          node tests/reader-interactions-v766.js
+          node scripts/build.js > build-v7104.log
+          node --check dist/douyin.js
+          node -e "const b=require('./dist/build-report.json'); if(b.paperTextures!==16||b.paperRuntimeAssetSha256.length!==16)throw Error('Missing original WebPs'); console.log('PASS v7.104 build sha256',b.sourceSha256);"
+      - name: 5 — Install chromium and test EPUB pagination in browser
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: 6 — Verify no skipped pages after image rollback
+        run: python tests/paged-no-skip-v737.py
+      - name: 7 — Commit repaired photo versions to GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/paper-spreads/ src/client/styles/41-reading.css tests/paper-corners-v791.js package.json package-lock.json
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo "v7.104 source already restored"
+            exit 0
+          fi
+          git commit -m "fix(reading): v7.104 restore authentic paper alpha, retain reliable page turns"
+          git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: justfun-v7104-source-authenticity
+          path: |
+            assets/paper-spreads/paper-source-restore-v7104.json
+            build-v7104.log
+            dist/build-report.json
+          if-no-files-found: warn
