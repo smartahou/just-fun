@@ -13,7 +13,7 @@ assert(head>=0&&tail>head,'caption classifier and standalone plate helpers exist
 const code=js.slice(head,tail);
 const simple=(s,hasImage=false,opts={})=>({
   tagName:opts.tag||'P',textContent:s,
-  querySelector:()=>opts.nestedCaption?{}:null,
+  querySelector:(selector)=>(opts.nestedCaption&&selector.includes('figcaption'))||(hasImage&&selector.startsWith('img,'))?{}:null,
   querySelectorAll:()=>hasImage?[{}]:[],
   closest:()=>opts.insideTable?{}:null
 });
