@@ -1816,15 +1816,28 @@ function jfDeskLayoutSignature(geo){
   return [jfDeskBook?.id||'',jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
           geo.pageW,geo.pageH,geo.innerW,geo.innerH].join('|');
 }
-// EPUBS often express a caption as a separate short <p> after the image rather
-// than inside a <figure>. Detect that shape and bind the two so pagination can
-// never place the caption on the next page, away from its picture.
+// Real EPUBs often place a picture in an image-only paragraph and its short
+// labelled caption in the following paragraph. Bind both before pagination,
+// without changing the source EPUB or saved reading offsets.
+// v7.106: （画片） was not recognised by the old matcher.
 function jfDeskIsCaption(node){
   if(!node||node.tagName!=='P')return false;
-  const text=(node.textContent||'').trim();
+  if(node.querySelector?.('img,picture,svg,object,video,table'))return false;
+  const text=String(node.textContent||'').trim();
   if(!text||text.length>90)return false;
-  // Any short parenthetical that names a picture: （明信片）, （漫画明信片）, （图 3）...
-  return /^[（(]/.test(text)||/[（(][^）)]{0,12}(明信片|图片|图)[^）)]{0,12}[）)]/.test(text);
+  // An arbitrary parenthetical sentence is NOT necessarily a caption.
+  const labelled=/[（(][^）)]{0,14}(?:漫画明信片|明信片|画片|插画|插图|照片|相片|图片|图版|图像|图\s*[0-9一二三四五六七八九十]+)[^）)]{0,14}[）)]/;
+  return labelled.test(text)||
+    /^(?:图\s*[0-9一二三四五六七八九十]+[：:\s]|插图[：:\s])/.test(text);
+}
+function jfDeskIsStandalonePlate(node){
+  if(!node?.querySelectorAll||node.closest?.('table,li,blockquote,pre'))return false;
+  const images=node.querySelectorAll('img:not(.jfInlineGlyph)');
+  if(images.length!==1)return false;
+  if(node.querySelector?.('figcaption,video,object,table,svg'))return false;
+  // Do not mistake a text paragraph with a small inline image for a plate.
+  if(String(node.textContent||'').replace(/[\s\u00a0\u3000]+/g,'').length)return false;
+  return /^(P|DIV|FIGURE)$/i.test(node.tagName||'');
 }
 // v7.67 · Only physical-book publication metadata receives the imprint layout.
 // Detection is deliberately conservative: first chapters AND several bibliographic
@@ -2162,9 +2175,9 @@ function jfDeskBlocksFor(sec){
       continue;
     }
     const next=raw[k+1];
-    const carriesImage=node.querySelector&&node.querySelector('img:not(.jfInlineGlyph)');
-    if(next&&carriesImage&&jfDeskIsCaption(next)){
+    if(next&&jfDeskIsStandalonePlate(node)&&jfDeskIsCaption(next)){
       const wrap=document.createElement('figure');
+      wrap.className='jfPrintPlateWithCaption';
       wrap.appendChild(document.importNode(node,true));
       const caption=document.createElement('figcaption');
       caption.textContent=next.textContent.trim();
