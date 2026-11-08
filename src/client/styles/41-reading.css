@@ -3739,3 +3739,48 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 }
 
 
+
+
+/* ===== v7.99 · hollow hardcover, no duplicate paper or central texture ===
+   Casework-only RGBA, transparent in both page windows and at the binding.
+   Preserve the existing original old-paper photographs and central crease.
+   The continuous PHOTO silhouette has true rounded corners: the older
+   nine-slice treatment produced visually disconnected frame corners.
+   All four sides sit behind the existing pages, never in their text flow. */
+.jfReader.paged #jfPageView .jfBookPile{
+  display:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book:has(.jfSheet[data-paper-group]) .jfBookBoard{
+  display:block!important;
+  position:absolute!important;
+  z-index:0!important;
+  box-sizing:border-box!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:calc(var(--jf-page-w) * 2 + 22px)!important;
+  height:calc(var(--jf-page-h) + 16px)!important;
+  max-width:none!important;
+  background-image:var(--jf-cover-board-url)!important;
+  background-color:transparent!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  border:0!important;
+  border-image:none!important;
+  border-radius:0!important;
+  clip-path:none!important;
+  box-shadow:none!important;
+  filter:none!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+/* Portrait-specific photographic casework on single-page/mobile.
+   Same per-book material choice; no squeezed two-page cover or inner void. */
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book.single .jfBookBoard{
+  width:calc(var(--jf-page-w) + 22px)!important;
+  height:calc(var(--jf-page-h) + 16px)!important;
+  background-size:100% 100%!important;
+  background-position:center center!important;
+}

@@ -1,0 +1,101 @@
+#!/usr/bin/env node
+'use strict';
+// The book-case is a hollow border behind the user's approved old-paper textures.
+// No faux page area or extra center spine should ever be painted by this module.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const crypto=require('node:crypto');
+const vm=require('node:vm');
+const root=path.resolve(__dirname,'..');
+const active=require('../assets/paper-covers/embedded-v799.json');
+const prior=require('../assets/paper-covers/embedded-v798.json');
+assert.equal(require('../package.json').version,'7.99.0');
+assert.equal(prior.version,'7.98.0','rollback source must remain');
+assert.equal(active.version,'7.99.0');
+assert.deepEqual(active.canvas,{width:960,height:600});
+assert.equal(active.purpose,'cover-border-only-transparent-center');
+assert.equal(active.render_strategy,'hollow-cover-background');
+assert.equal(active.covers.length,6);
+assert.deepEqual(active.singleCanvas,{width:480,height:960});
+assert.equal(active.single_covers.length,6);
+const hashes=new Set();
+for(let i=0;i<6;i++){
+  const entry=active.covers[i];
+  assert.equal(entry.filename,'cover-'+String(i+1).padStart(2,'0')+'.webp');
+  const raw=Buffer.from(entry.base64,'base64');
+  assert.equal(raw.toString('base64'),entry.base64,'canonical base64');
+  assert.equal(entry.bytes,raw.length);
+  assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),entry.sha256);
+  assert.equal(raw.toString('ascii',0,4),'RIFF');
+  assert.equal(raw.toString('ascii',8,12),'WEBP');
+  assert.equal(raw.toString('ascii',12,16),'VP8X');
+  assert(raw[20]&0x10,'alpha enabled for center transparency');
+  assert.equal(raw.readUIntLE(24,3)+1,960,'width');
+  assert.equal(raw.readUIntLE(27,3)+1,600,'height');
+  hashes.add(entry.sha256);
+}
+assert.equal(hashes.size,6);
+const singleHashes=new Set();
+for(let i=0;i<6;i++){
+  const c=active.single_covers[i],raw=Buffer.from(c.base64,'base64');
+  assert.equal(c.filename,'cover-'+String(i+1).padStart(2,'0')+'-single.webp');
+  assert.equal(raw.length,c.bytes);
+  assert.equal(raw.toString('base64'),c.base64);
+  assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),c.sha256);
+  assert.equal(raw.toString('ascii',12,16),'VP8X');
+  assert(raw[20]&0x10,'portrait bookcase alpha');
+  assert.equal(raw.readUIntLE(24,3)+1,480);
+  assert.equal(raw.readUIntLE(27,3)+1,960);
+  singleHashes.add(c.sha256);
+}
+assert.equal(singleHashes.size,6);
+
+const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
+assert(build.includes("read('assets/paper-covers/embedded-v799.json')"));
+assert(build.includes("replaceOnce(code,'__JUSTFUN_PAPER_COVER_ASSETS__'"));
+assert(build.includes("read('assets/paper-stacks/embedded-v797.json')"),'preserved old assets for rollback');
+const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
+const live=css.slice(css.lastIndexOf('/* ===== v7.99 · hollow hardcover')); 
+assert(live.startsWith('/* ===== v7.99'));
+assert(live.includes('background-image:var(--jf-cover-board-url)!important'));
+assert(live.includes('background-color:transparent!important'));
+assert(live.includes('background-size:100% 100%!important'));
+assert(live.includes('border:0!important'));
+assert(live.includes('border-image:none!important'));
+assert(live.includes('clip-path:none!important'));
+assert(!/border-image-slice:|border-image-width:|background-color:#|blur\(|drop-shadow\(|linear-gradient\(|radial-gradient\(/.test(live),'never paint a second paper or a fake frame');
+assert(live.includes('#jfPageView.jf-hardcover-book.single .jfBookBoard'),'single mobile page border');
+assert(live.includes('.jfBookPile{')&&live.includes('display:none!important'),'no dynamic pile');
+const paper=fs.readFileSync(path.join(root,'src/client/scripts/98e-paper-textures.js'),'utf8');
+assert(paper.includes('Expected 8 paired WebP sets'),'original paper unchanged');
+const render=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
+assert(render.includes('window.JFPaperCovers?.apply(pageView,jfDeskBook?.id,twoPages)'));
+assert(!render.includes('window.JFPaperStacks?.apply('));
+const src=fs.readFileSync(path.join(root,'src/client/scripts/98e4-paper-covers.js'),'utf8');
+const mock=Array.from({length:6},(_,i)=>'data:image/webp;base64,'+Buffer.from('skin-'+i).toString('base64'));
+const mockSingle=Array.from({length:6},(_,i)=>'data:image/webp;base64,'+Buffer.from('single-'+i).toString('base64'));
+const storage={};let count=0;
+const localStorage={getItem:k=>storage[k]??null,setItem(k,v){storage[k]=v;count++}};
+const readerClasses=new Set(['paged','jf-aged-paper']);
+const viewClasses=new Set();
+const view={classList:{remove:x=>viewClasses.delete(x),toggle(x,on){on?viewClasses.add(x):viewClasses.delete(x)}},style:{properties:{},setProperty(k,v){this.properties[k]=v},removeProperty(k){delete this.properties[k]}},dataset:{}};
+const doc={getElementById:id=>id==='jfReader'?{classList:{contains:x=>readerClasses.has(x)}}:null};
+const win={};const activate=()=>vm.runInNewContext(src.replace('__JUSTFUN_PAPER_COVER_ASSETS__',JSON.stringify(mock))
+  .replace('__JUSTFUN_SINGLE_COVER_ASSETS__',JSON.stringify(mockSingle)),{window:win,document:doc,localStorage,Math,Number,JSON,String,Object,Array,Error});
+activate();
+const first=win.JFPaperCovers.apply(view,'same-book',true);
+assert(first>=1&&first<=6);
+assert(viewClasses.has('jf-hardcover-book'));
+assert.equal(view.dataset.coverMode,'spread');
+assert(view.style.properties['--jf-cover-board-url'].includes(mock[first-1]));
+assert.equal(win.JFPaperCovers.apply(view,'same-book',true),first);
+assert.equal(count,1);
+activate();
+assert.equal(win.JFPaperCovers.apply(view,'same-book',false),first);
+assert.equal(view.dataset.coverMode,'single');
+assert(view.style.properties['--jf-cover-board-url'].includes(mockSingle[first-1]),'portrait photo, same style');
+readerClasses.delete('jf-aged-paper');
+assert.equal(win.JFPaperCovers.apply(view,'same-book',false),null);
+assert(!viewClasses.has('jf-hardcover-book'));
+console.log('PASS v7.99: six hollow styles with distinct portrait/spread photos, stable book identity, old paper intact');
