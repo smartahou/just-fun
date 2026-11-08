@@ -43,7 +43,7 @@ def fixture(destination):
         z.writestr('META-INF/container.xml','<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>')
         z.writestr('OEBPS/content.opf',opf)
         for i,chapter in enumerate(chapters):
-            z.writestr('OEBPS/c%d.xhtml'%i,'<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>第%d章</title></head><body>%s</body></html>'%(i,i+1,chapter))
+            z.writestr('OEBPS/c%d.xhtml'%i,'<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>第%d章</title></head><body>%s</body></html>'%(i+1,chapter))
 
 def facts(page):
     return page.evaluate("""()=>{
