@@ -39,7 +39,7 @@
     delete view.dataset.coverVariant;
     delete view.dataset.coverFinish;
   }
-  const baseApply=original.apply;
+  const baseApply=original.apply.bind(original);
   function apply(view,bookId,twoPages){
     const base=baseApply(view,bookId,twoPages);
     if(!view||!base){clear(view);return base;}
