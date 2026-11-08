@@ -2701,7 +2701,20 @@ function jfDeskNextReadableAfterMounted(){
   for(let n=maxN+1;n<total;n++)if(!jfDeskPaperOmittedChapter(n))return n;
   return -1;
 }
+function jfDeskForwardInflightAppend(){
+  const prefix=jfDeskSession+'#'+jfDeskBook?.id+'#';
+  const lastPublished=jfDeskPages[jfDeskPages.length-1]?.[0]?.chapter??-1;
+  for(const [key,promise] of jfDeskAppendTasks){
+    if(!key.startsWith(prefix))continue;
+    const n=Number(key.slice(prefix.length));
+    // The section can already be mounted while its page list is still being
+    // measured. Waiting for this pending commit prevents a false "end of book".
+    if(Number.isInteger(n)&&n>=lastPublished)return promise;
+  }
+  return null;
+}
 function jfDeskPagedPrefetch(){
+  if(jfDeskForwardInflightAppend())return;
   const n=jfDeskNextReadableAfterMounted();
   if(n>=0)jfDeskFlowAppend(n).catch(()=>{});
 }
@@ -2728,17 +2741,18 @@ function jfDeskQueueForwardTurn(){
         if(jfDeskPageIndex>=last-2)jfDeskPagedPrefetch();
         continue;
       }
-      const n=jfDeskNextReadableAfterMounted();
-      if(n<0){jfDeskForwardPending=0;break;} // actual final chapter
+      const inflight=jfDeskForwardInflightAppend();
+      const n=inflight?-1:jfDeskNextReadableAfterMounted();
+      if(!inflight&&n<0){jfDeskForwardPending=0;break;} // actual final chapter
       try{
-        const loaded=await jfDeskFlowAppend(n);
+        const loaded=await (inflight||jfDeskFlowAppend(n));
         if(!alive())break;
-        if(!loaded&&!jfDeskFlow.some(x=>x.n===n)){
+        if(!inflight&&!loaded&&!jfDeskFlow.some(x=>x.n===n)){
           jfDeskForwardPending=0;break;
         }
         // If a concurrent layout superseded the append, publish it before
         // checking the boundary again. Empty chapters may yield zero pages.
-        if(jfDeskPages.length<=last&&jfDeskFlow.some(x=>x.n===n))
+        if(jfDeskPages.length<=last&&(inflight||jfDeskFlow.some(x=>x.n===n)))
           await jfDeskPagedLayout(true,'append');
       }catch(error){
         if(alive())jfDeskMessage('下一章节加载失败：'+(error.message||error),true);
@@ -2770,8 +2784,8 @@ function jfDeskPageTurn(delta){
   const lastAligned=Math.floor((jfDeskPages.length-1)/step)*step;
   const next=Math.max(0,Math.min(lastAligned,jfDeskPageIndex+delta*step));
   if(next===jfDeskPageIndex){
-    if(delta>0)return jfDeskNextReadableAfterMounted()>=0?
-      jfDeskQueueForwardTurn():false;
+    if(delta>0)return (jfDeskForwardInflightAppend()||
+      jfDeskNextReadableAfterMounted()>=0)?jfDeskQueueForwardTurn():false;
     if(jfDeskBackfillBusy||!jfDeskFlow.length)return false;
     // Restored EPUB sessions mount the current chapter and following chapters.
     // At index 0 this is *not* necessarily the start of the book. Fetch the
