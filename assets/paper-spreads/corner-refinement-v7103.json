@@ -1,0 +1,263 @@
+{
+  "version": "7.103.0",
+  "source_commit": "aa91dbde45a47275b9009faa3aa23c7519d31305",
+  "method": "small asymmetric rubbed-paper alpha at outer corners only",
+  "assets": [
+    {
+      "file": "spread-01-left.webp",
+      "before": "9d5b6226c987ea3dbdb863b1a2ddbc5eaeaa108603bea384fe4cbd827692fc22",
+      "after": "6baf564033463221829ada99488aacdf7ff779a9d6ca964352c417f202d1c999",
+      "alpha_pixels_refined": 493,
+      "radii_image_px": [
+        [
+          14,
+          18
+        ],
+        [
+          15,
+          14
+        ]
+      ]
+    },
+    {
+      "file": "spread-01-right.webp",
+      "before": "3943c450665727b4c44f7a790de80b9160c5b84de952128702afc498a4cb213d",
+      "after": "94e9f022c21f74d9be16630cdd164ff15588202af78ddd6e6518721a46ae5d2e",
+      "alpha_pixels_refined": 748,
+      "radii_image_px": [
+        [
+          12,
+          17
+        ],
+        [
+          13,
+          13
+        ]
+      ]
+    },
+    {
+      "file": "spread-02-left.webp",
+      "before": "14f40b95e94f36ba674b468e4a5fdd776e93e96b1352a713b721ebd351a56dc0",
+      "after": "513f00254f9fca88974b15ee01b1c6eaf258b36e99fd24abf5231df9e7fa7560",
+      "alpha_pixels_refined": 582,
+      "radii_image_px": [
+        [
+          15,
+          16
+        ],
+        [
+          11,
+          18
+        ]
+      ]
+    },
+    {
+      "file": "spread-02-right.webp",
+      "before": "fd36d018845f2717debc2461e12ae3ab1cc5c2689d0f896d4e0a789cbe21f71c",
+      "after": "3678efe2c3d651cde5cfee8f374d3a221360455ca5c6e08494b8a14c5de1de06",
+      "alpha_pixels_refined": 603,
+      "radii_image_px": [
+        [
+          13,
+          15
+        ],
+        [
+          14,
+          17
+        ]
+      ]
+    },
+    {
+      "file": "spread-03-left.webp",
+      "before": "0624fb72c9ff41eaf90c5070b712fd2da5b15afb8a5dec0f019db5c38174851a",
+      "after": "36baca91bdd3a3f69f1779d18a65f5ffbd8f4842ffd14efb2af8df55c6fe52cf",
+      "alpha_pixels_refined": 855,
+      "radii_image_px": [
+        [
+          11,
+          14
+        ],
+        [
+          12,
+          16
+        ]
+      ]
+    },
+    {
+      "file": "spread-03-right.webp",
+      "before": "95f9b8c893c79a8d74937ef00b7970f49c9d5ca32735aad227f8fce8595fad45",
+      "after": "114cf1ed3572f5c10c5b2d9d74ea6223081e667c8493fb78381c824b3b15e275",
+      "alpha_pixels_refined": 668,
+      "radii_image_px": [
+        [
+          14,
+          13
+        ],
+        [
+          15,
+          15
+        ]
+      ]
+    },
+    {
+      "file": "spread-04-left.webp",
+      "before": "22efa025a5f2248d0ce442d761ce2acd416887a535e82d7ec4f1c7e044a97b05",
+      "after": "71fb9f94f17b079327beff3565d6e7527a3ac8162998be6f4286a01e6199ea87",
+      "alpha_pixels_refined": 671,
+      "radii_image_px": [
+        [
+          12,
+          18
+        ],
+        [
+          13,
+          14
+        ]
+      ]
+    },
+    {
+      "file": "spread-04-right.webp",
+      "before": "7d6b9e595e5d17ec59000c7ef6af31cd0dfdeaa50378176cd2efe7cbd6f956ae",
+      "after": "5fb8c03c54e3f45a58e01b83e305b66f7cb236871042bb6e2cd8d8e564c82371",
+      "alpha_pixels_refined": 700,
+      "radii_image_px": [
+        [
+          15,
+          17
+        ],
+        [
+          11,
+          13
+        ]
+      ]
+    },
+    {
+      "file": "spread-05-left.webp",
+      "before": "ef96e1e51aad7eaa41e2a61b9e64e1e89eb997119a9f1b554e85ccb9d8355a2e",
+      "after": "6e6726a64b1ae494a6b5925934b8002ef0762926bf4b6b05d7d0f1cd326194cb",
+      "alpha_pixels_refined": 508,
+      "radii_image_px": [
+        [
+          13,
+          16
+        ],
+        [
+          14,
+          18
+        ]
+      ]
+    },
+    {
+      "file": "spread-05-right.webp",
+      "before": "34b93541b47d3a53092569d585612ce3aebfb81b01e029f129f5d9612f0e441c",
+      "after": "ae724f9e830b02a7686825649a3f398ce09117df5f90fbd6cc4958ceaee07658",
+      "alpha_pixels_refined": 747,
+      "radii_image_px": [
+        [
+          11,
+          15
+        ],
+        [
+          12,
+          17
+        ]
+      ]
+    },
+    {
+      "file": "spread-06-left.webp",
+      "before": "03ec023506ef9120963ac9d7983ef1f009981a6513a95dc047c1eed9a08a401c",
+      "after": "2735e585c94ca85beecf971b546c69e6133c1248ec6a02f63285c17f722c9504",
+      "alpha_pixels_refined": 563,
+      "radii_image_px": [
+        [
+          14,
+          14
+        ],
+        [
+          15,
+          16
+        ]
+      ]
+    },
+    {
+      "file": "spread-06-right.webp",
+      "before": "4baeb3d39b1e2634b4e91faf3ad5638d1cf7734eb6e29eb518ebaa4d594c9d59",
+      "after": "5fb8ecf0c6de70cc2f3c122ea005a686336db2daedbf428bfb6b7a23848c6d0d",
+      "alpha_pixels_refined": 802,
+      "radii_image_px": [
+        [
+          12,
+          13
+        ],
+        [
+          13,
+          15
+        ]
+      ]
+    },
+    {
+      "file": "spread-07-left.webp",
+      "before": "469b8013c7bda24d719a4b990ec626f9fafcd006b8476b367b0e40dc216977ea",
+      "after": "6d2964adad207f705d2a499cb3831f2f2a81c8b0e966fe68865c1a4e0e59343f",
+      "alpha_pixels_refined": 659,
+      "radii_image_px": [
+        [
+          15,
+          18
+        ],
+        [
+          11,
+          14
+        ]
+      ]
+    },
+    {
+      "file": "spread-07-right.webp",
+      "before": "9df18d8deb6a640fe0f1b6b494b3d1a86a74976e8d6d9b43f568b1761d4e3b2b",
+      "after": "8b9a33708325f79d395d7573713c642bde35255ce82310e82e9da9b100cd3c17",
+      "alpha_pixels_refined": 619,
+      "radii_image_px": [
+        [
+          13,
+          17
+        ],
+        [
+          14,
+          13
+        ]
+      ]
+    },
+    {
+      "file": "spread-08-left.webp",
+      "before": "dd40f0100f74405a9f6585d134743d1a51543603d01b08df27fcb8fcbfea7f79",
+      "after": "68eac58de6a08524511f3e94c84025e3cd0d3faf8d90c40c441d97a428aceddf",
+      "alpha_pixels_refined": 755,
+      "radii_image_px": [
+        [
+          11,
+          16
+        ],
+        [
+          12,
+          18
+        ]
+      ]
+    },
+    {
+      "file": "spread-08-right.webp",
+      "before": "6b3cef2eaed85cabccc6c97b467d4e22237f424185f4e91954aae2cfbb93d89e",
+      "after": "0a02e9faaccc5ad23af5d27602befa88695ad171f5dd8ebd553c232ee7ce0d62",
+      "alpha_pixels_refined": 496,
+      "radii_image_px": [
+        [
+          14,
+          15
+        ],
+        [
+          15,
+          17
+        ]
+      ]
+    }
+  ]
+}

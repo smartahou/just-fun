@@ -1,6 +1,6 @@
 {
   "name": "Just Fun · 用户验收通过的旧纸成组对页纹理",
-  "version": "3.1-corner-refined",
+  "version": "3.2-subtle-natural-corners",
   "created": "2026-11-08",
   "pairs": 8,
   "images": 16,
@@ -8,200 +8,216 @@
     960,
     1440
   ],
-  "source": "v7.101 approved 8 pairs; v7.102 repairs excessive rounded corners",
-  "texture_usage": "Matched left/right pages, original paper grain preserved; repaired alpha is embedded in offline runtime",
+  "source": "v7.102 photographed leaves, slight v7.103 corner abrasion",
+  "texture_usage": "Original matched photo grain retained; 16 revised alpha photos and 8 offline runtime groups SHA verified",
   "assets": [
     {
       "set": "01",
       "name": "珍藏浅旧",
       "side": "left",
       "file": "spread-01-left.webp",
-      "bytes": 256974,
-      "sha256": "9d5b6226c987ea3dbdb863b1a2ddbc5eaeaa108603bea384fe4cbd827692fc22",
+      "bytes": 256194,
+      "sha256": "6baf564033463221829ada99488aacdf7ff779a9d6ca964352c417f202d1c999",
       "width": 960,
       "height": 1440,
       "original_sha256": "b5f318c533ad9bc840f67763a39972c4a119ff86806adc64981cce1754c6100c",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "9d5b6226c987ea3dbdb863b1a2ddbc5eaeaa108603bea384fe4cbd827692fc22"
     },
     {
       "set": "01",
       "name": "珍藏浅旧",
       "side": "right",
       "file": "spread-01-right.webp",
-      "bytes": 293110,
-      "sha256": "3943c450665727b4c44f7a790de80b9160c5b84de952128702afc498a4cb213d",
+      "bytes": 290124,
+      "sha256": "94e9f022c21f74d9be16630cdd164ff15588202af78ddd6e6518721a46ae5d2e",
       "width": 960,
       "height": 1440,
       "original_sha256": "ef108d23f46669c33b51cc124d9871e9b98c30191f112c90e35c4407283e302d",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "3943c450665727b4c44f7a790de80b9160c5b84de952128702afc498a4cb213d"
     },
     {
       "set": "02",
       "name": "纸纤细痕",
       "side": "left",
       "file": "spread-02-left.webp",
-      "bytes": 270620,
-      "sha256": "14f40b95e94f36ba674b468e4a5fdd776e93e96b1352a713b721ebd351a56dc0",
+      "bytes": 269662,
+      "sha256": "513f00254f9fca88974b15ee01b1c6eaf258b36e99fd24abf5231df9e7fa7560",
       "width": 960,
       "height": 1440,
       "original_sha256": "5126e109e28922589619cccbe9d2cdb139fb7caa6de9b5d02406780098d00897",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "14f40b95e94f36ba674b468e4a5fdd776e93e96b1352a713b721ebd351a56dc0"
     },
     {
       "set": "02",
       "name": "纸纤细痕",
       "side": "right",
       "file": "spread-02-right.webp",
-      "bytes": 284198,
-      "sha256": "fd36d018845f2717debc2461e12ae3ab1cc5c2689d0f896d4e0a789cbe21f71c",
+      "bytes": 283816,
+      "sha256": "3678efe2c3d651cde5cfee8f374d3a221360455ca5c6e08494b8a14c5de1de06",
       "width": 960,
       "height": 1440,
       "original_sha256": "723d5d38fd3f35132ac4dfc7479708ab1f577d8ac6ca152686ac2a4ece7efb6a",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "fd36d018845f2717debc2461e12ae3ab1cc5c2689d0f896d4e0a789cbe21f71c"
     },
     {
       "set": "03",
       "name": "轻磨书角",
       "side": "left",
       "file": "spread-03-left.webp",
-      "bytes": 328974,
-      "sha256": "0624fb72c9ff41eaf90c5070b712fd2da5b15afb8a5dec0f019db5c38174851a",
+      "bytes": 323946,
+      "sha256": "36baca91bdd3a3f69f1779d18a65f5ffbd8f4842ffd14efb2af8df55c6fe52cf",
       "width": 960,
       "height": 1440,
       "original_sha256": "5109db4137041114a46edc75b3564fa8f72e589a122757300ad9d512b844c69f",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "0624fb72c9ff41eaf90c5070b712fd2da5b15afb8a5dec0f019db5c38174851a"
     },
     {
       "set": "03",
       "name": "轻磨书角",
       "side": "right",
       "file": "spread-03-right.webp",
-      "bytes": 355890,
-      "sha256": "95f9b8c893c79a8d74937ef00b7970f49c9d5ca32735aad227f8fce8595fad45",
+      "bytes": 351236,
+      "sha256": "114cf1ed3572f5c10c5b2d9d74ea6223081e667c8493fb78381c824b3b15e275",
       "width": 960,
       "height": 1440,
       "original_sha256": "7fb60f0a76a28022c0c8eba86e6e016bb339023921b46cabc36c67d1b7a92990",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "95f9b8c893c79a8d74937ef00b7970f49c9d5ca32735aad227f8fce8595fad45"
     },
     {
       "set": "04",
       "name": "经年氧化",
       "side": "left",
       "file": "spread-04-left.webp",
-      "bytes": 324742,
-      "sha256": "22efa025a5f2248d0ce442d761ce2acd416887a535e82d7ec4f1c7e044a97b05",
+      "bytes": 322400,
+      "sha256": "71fb9f94f17b079327beff3565d6e7527a3ac8162998be6f4286a01e6199ea87",
       "width": 960,
       "height": 1440,
       "original_sha256": "0863dce6b3f18d098d13776cddacd8ef2c28de96d5102be3a6bc7124ba9cde74",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "22efa025a5f2248d0ce442d761ce2acd416887a535e82d7ec4f1c7e044a97b05"
     },
     {
       "set": "04",
       "name": "经年氧化",
       "side": "right",
       "file": "spread-04-right.webp",
-      "bytes": 334716,
-      "sha256": "7d6b9e595e5d17ec59000c7ef6af31cd0dfdeaa50378176cd2efe7cbd6f956ae",
+      "bytes": 331668,
+      "sha256": "5fb8c03c54e3f45a58e01b83e305b66f7cb236871042bb6e2cd8d8e564c82371",
       "width": 960,
       "height": 1440,
       "original_sha256": "e1bad7f6005c2a01ee67f54e8bf9e3b6ef9cef0952c68134eebb4be7959a1488",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "7d6b9e595e5d17ec59000c7ef6af31cd0dfdeaa50378176cd2efe7cbd6f956ae"
     },
     {
       "set": "05",
       "name": "旧书折印",
       "side": "left",
       "file": "spread-05-left.webp",
-      "bytes": 291300,
-      "sha256": "ef96e1e51aad7eaa41e2a61b9e64e1e89eb997119a9f1b554e85ccb9d8355a2e",
+      "bytes": 289112,
+      "sha256": "6e6726a64b1ae494a6b5925934b8002ef0762926bf4b6b05d7d0f1cd326194cb",
       "width": 960,
       "height": 1440,
       "original_sha256": "ed85cf63fe8727c9b3e5f22866bf4d198eea3cbdab1ae453e40bb2ff7c183cbd",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "ef96e1e51aad7eaa41e2a61b9e64e1e89eb997119a9f1b554e85ccb9d8355a2e"
     },
     {
       "set": "05",
       "name": "旧书折印",
       "side": "right",
       "file": "spread-05-right.webp",
-      "bytes": 290556,
-      "sha256": "34b93541b47d3a53092569d585612ce3aebfb81b01e029f129f5d9612f0e441c",
+      "bytes": 288760,
+      "sha256": "ae724f9e830b02a7686825649a3f398ce09117df5f90fbd6cc4958ceaee07658",
       "width": 960,
       "height": 1440,
       "original_sha256": "61df0a3a8a9df8376da0fbab78faad9afda1b1ef07af17a4f742fcb51eff4a6c",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "34b93541b47d3a53092569d585612ce3aebfb81b01e029f129f5d9612f0e441c"
     },
     {
       "set": "06",
       "name": "浅淡污迹",
       "side": "left",
       "file": "spread-06-left.webp",
-      "bytes": 288070,
-      "sha256": "03ec023506ef9120963ac9d7983ef1f009981a6513a95dc047c1eed9a08a401c",
+      "bytes": 287696,
+      "sha256": "2735e585c94ca85beecf971b546c69e6133c1248ec6a02f63285c17f722c9504",
       "width": 960,
       "height": 1440,
       "original_sha256": "faeb759cafab7b339165531b9693495f51eb28aaaef17b942590679e565791cf",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "03ec023506ef9120963ac9d7983ef1f009981a6513a95dc047c1eed9a08a401c"
     },
     {
       "set": "06",
       "name": "浅淡污迹",
       "side": "right",
       "file": "spread-06-right.webp",
-      "bytes": 326094,
-      "sha256": "4baeb3d39b1e2634b4e91faf3ad5638d1cf7734eb6e29eb518ebaa4d594c9d59",
+      "bytes": 323516,
+      "sha256": "5fb8ecf0c6de70cc2f3c122ea005a686336db2daedbf428bfb6b7a23848c6d0d",
       "width": 960,
       "height": 1440,
       "original_sha256": "9bbcc6e64a2d4eda30706d82cf3e6da3cdc82aab8efa057d1c15b2f7302d1851",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "4baeb3d39b1e2634b4e91faf3ad5638d1cf7734eb6e29eb518ebaa4d594c9d59"
     },
     {
       "set": "07",
       "name": "常翻书页",
       "side": "left",
       "file": "spread-07-left.webp",
-      "bytes": 362164,
-      "sha256": "469b8013c7bda24d719a4b990ec626f9fafcd006b8476b367b0e40dc216977ea",
+      "bytes": 359230,
+      "sha256": "6d2964adad207f705d2a499cb3831f2f2a81c8b0e966fe68865c1a4e0e59343f",
       "width": 960,
       "height": 1440,
       "original_sha256": "a9d52d2316f98921e76e7759d118fb6f1753911b8cb27a3dec78925f5ab08987",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "469b8013c7bda24d719a4b990ec626f9fafcd006b8476b367b0e40dc216977ea"
     },
     {
       "set": "07",
       "name": "常翻书页",
       "side": "right",
       "file": "spread-07-right.webp",
-      "bytes": 301596,
-      "sha256": "9df18d8deb6a640fe0f1b6b494b3d1a86a74976e8d6d9b43f568b1761d4e3b2b",
+      "bytes": 300430,
+      "sha256": "8b9a33708325f79d395d7573713c642bde35255ce82310e82e9da9b100cd3c17",
       "width": 960,
       "height": 1440,
       "original_sha256": "cb5f89ca7de802fc575578e156093ab8bc8a206500ad8852a1e0b4e52839899f",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "9df18d8deb6a640fe0f1b6b494b3d1a86a74976e8d6d9b43f568b1761d4e3b2b"
     },
     {
       "set": "08",
       "name": "温润老书",
       "side": "left",
       "file": "spread-08-left.webp",
-      "bytes": 339568,
-      "sha256": "dd40f0100f74405a9f6585d134743d1a51543603d01b08df27fcb8fcbfea7f79",
+      "bytes": 336180,
+      "sha256": "68eac58de6a08524511f3e94c84025e3cd0d3faf8d90c40c441d97a428aceddf",
       "width": 960,
       "height": 1440,
       "original_sha256": "140ac86fd2c3d17bb4c904bec8b8be6547b20148034d0c671773ba1da2808e2f",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "dd40f0100f74405a9f6585d134743d1a51543603d01b08df27fcb8fcbfea7f79"
     },
     {
       "set": "08",
       "name": "温润老书",
       "side": "right",
       "file": "spread-08-right.webp",
-      "bytes": 257822,
-      "sha256": "6b3cef2eaed85cabccc6c97b467d4e22237f424185f4e91954aae2cfbb93d89e",
+      "bytes": 257272,
+      "sha256": "0a02e9faaccc5ad23af5d27602befa88695ad171f5dd8ebd553c232ee7ce0d62",
       "width": 960,
       "height": 1440,
       "original_sha256": "547c0fd49cbde1506e44b4f7bf3593324a450f3947481927a9ec97b6822cfabb",
-      "corner_revision": "v7.102 photographed edge reconstruction"
+      "corner_revision": "v7.103 slight asymmetric matte paper wear, source photograph preserved",
+      "v7102_sha256": "6b3cef2eaed85cabccc6c97b467d4e22237f424185f4e91954aae2cfbb93d89e"
     }
   ]
 }
