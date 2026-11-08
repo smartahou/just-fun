@@ -6,6 +6,7 @@ on:
       - "src/client/scripts/99-reading.js"
       - "src/client/styles/41-reading.css"
       - "tests/epub-caption-v7106.js"
+      - "tests/print-ink-v7105.js"
       - "tests/epub-caption-visual-v7106.py"
       - ".github/workflows/epub-caption-v7106.yml"
       - "package.json"
