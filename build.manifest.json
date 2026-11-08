@@ -61,6 +61,7 @@
     "src/client/scripts/98e-paper-textures.js",
     "src/client/scripts/98e3-paper-stacks.js",
     "src/client/scripts/98e4-paper-covers.js",
+    "src/client/scripts/98e45-paper-cover-finishes.js",
     "src/client/scripts/98e5-paper-tab-assets.js",
     "src/client/scripts/98f-epub-paper-tabs.js",
     "src/client/scripts/99-reading.js",
