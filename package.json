@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.98.0",
+  "version": "7.99.0",
   "private": true,
   "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
@@ -11,7 +11,7 @@
     "build": "node scripts/build.js",
     "test:reading-print": "node tests/epub-glyph-bridge-v773.js && node tests/print-glyph-ink-v774.js && node tests/glyph-tight-ink-v775.js && node tests/inline-gaiji-whitespace-v776.js && node tests/epub-empty-spacers-v777.js && node tests/paged-composition-v778.js",
     "test:paper-surface": "node tests/paper-surface-no-film-v7781.js",
-    "test:epub-paper": "node tests/epub-paper-slips-v780.js && node tests/epub-paper-slips-ui-v780.js && node tests/epub-visual-fixes-v782.js && node tests/epub-paper-tabs-v783.js && node tests/epub-size-tuning-v784.js && node tests/paper-spine-gutter-v785.js && node tests/paper-stage-and-spine-v786.js && node tests/paper-inner-edge-v787.js && node tests/paper-stack-images-v788.js && node tests/paper-stack-photo-v790.js && node tests/paper-corners-v791.js && node tests/paper-stack-corners-v792.js && node tests/paper-stack-shoulders-v793.js && node tests/paper-stack-solid-v794.js && node tests/paper-stack-physical-caps-v795.js && node tests/paper-stack-fine-lamina-v796.js && node tests/paper-stack-full-height-v797.js && node tests/paper-hardcover-v798.js"
+    "test:epub-paper": "node tests/epub-paper-slips-v780.js && node tests/epub-paper-slips-ui-v780.js && node tests/epub-visual-fixes-v782.js && node tests/epub-paper-tabs-v783.js && node tests/epub-size-tuning-v784.js && node tests/paper-spine-gutter-v785.js && node tests/paper-stage-and-spine-v786.js && node tests/paper-inner-edge-v787.js && node tests/paper-stack-images-v788.js && node tests/paper-stack-photo-v790.js && node tests/paper-corners-v791.js && node tests/paper-stack-corners-v792.js && node tests/paper-stack-shoulders-v793.js && node tests/paper-stack-solid-v794.js && node tests/paper-stack-physical-caps-v795.js && node tests/paper-stack-fine-lamina-v796.js && node tests/paper-stack-full-height-v797.js && node tests/paper-hardcover-v798.js && node tests/paper-hardcover-v799.js"
   },
   "license": "MIT",
   "dependencies": {

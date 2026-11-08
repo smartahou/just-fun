@@ -3693,3 +3693,42 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background-size:200% 100%!important;
   background-position:right center!important;
 }
+
+
+/* ===== v7.99 · hollow hardcover · preserve the original old-paper spread ====
+   Only the cloth/leather perimeter is drawn behind the page. No duplicate
+   paper photo, no center panel and no new shadow over the original spine.
+   Nine-slice leaves the centre UNPAINTED instead of stretching a whole book
+   photograph to the viewport. The existing paper is exactly unchanged. */
+.jfReader.paged #jfPageView .jfBookPile{
+  display:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book .jfBookBoard,
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book:has(.jfSheet[data-paper-group]) .jfBookBoard{
+  display:block!important;
+  position:absolute!important;
+  z-index:0!important;
+  box-sizing:border-box!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:calc(var(--jf-page-w) * 2 + 14px)!important;
+  height:calc(var(--jf-page-h) + 10px)!important;
+  max-width:none!important;
+  background:none!important;
+  border:solid transparent!important;
+  border-width:5px 9px!important;
+  border-image-source:var(--jf-cover-board-url)!important;
+  border-image-slice:32 32 32 32!important;
+  border-image-width:5px 9px 5px 9px!important;
+  border-image-repeat:stretch!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+.jfReader.paged.jf-aged-paper #jfPageView.jf-hardcover-book.single .jfBookBoard{
+  width:calc(var(--jf-page-w) + 14px)!important;
+  height:calc(var(--jf-page-h) + 10px)!important;
+}

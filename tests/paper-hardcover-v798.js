@@ -8,7 +8,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.98.0');
+assert(Number(pkg.version.split('.')[1])>=98,'v7.98 hardcover assignment preserved');
 const spec=require('../assets/paper-covers/embedded-v798.json');
 assert.equal(spec.version,'7.98.0');
 assert.deepEqual(spec.canvas,{width:960,height:640});
@@ -29,7 +29,7 @@ for(let i=0;i<6;i++){
 }
 assert.equal(hashes.size,6,'Six unique boards');
 const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
-assert(build.includes("read('assets/paper-covers/embedded-v798.json')"));
+assert(build.includes("read('assets/paper-covers/embedded-v799.json')"),'v7.98 stored as rollback asset');
 assert(build.includes("'src/client/scripts/98e4-paper-covers.js'"));
 const manifest=require('../build.manifest.json');
 assert(manifest.scripts.indexOf('src/client/scripts/98e4-paper-covers.js')>
