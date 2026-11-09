@@ -35,8 +35,8 @@ assert(!classify(asTable(mk('《唐诗三百首》','中二联当作三十层看
   'mixed-purpose tables must not be forced into annotated layout');
 assert(reader.includes("table.classList.add('jfPrintSourceSingle');"),
   'dedicated style marker only on printed clone');
-assert(reader.includes("for(const width of ['38%','62%'])"),
-  'single bibliography/comment split uses shared 38/62 paper-book grid');
+assert(reader.includes("for(const width of ['30%','70%'])"),
+  'single bibliography/comment split uses shared 30/70 paper-book grid');
 assert(reader.includes("table.style.setProperty('table-layout','fixed','important')"),
   'single-row independent auto-sizing is disabled');
 assert(reader.includes("table.insertBefore(cols,table.firstChild)"),
@@ -49,4 +49,4 @@ assert(engine.includes('function commentaryRowFragments(item,host)'),
   'multi-row split algorithm untouched');
 assert(css.includes('table.jfPrintSourceCommentary'),
   'existing commentary styling untouched');
-console.log('PASS v7.114: single short cited annotation is 38/62 two-column; ordinary and multirow unchanged');
+console.log('PASS v7.114: single short cited annotation is 30/70 two-column; ordinary and multirow unchanged');
