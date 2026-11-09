@@ -25,6 +25,11 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - name: Fast core pagination checks without network dependencies
+        run: |
+          node tests/reader-editorial-layout-v7112.js
+          node tests/reader-exact-folios-v7111.js
+          node tests/reading-progress-annotations-v7107.js
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Regression suite - semantic title, exact folios, annotations and pagination
