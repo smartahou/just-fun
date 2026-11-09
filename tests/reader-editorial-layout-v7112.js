@@ -8,7 +8,8 @@ const path=require('node:path');const root=path.resolve(__dirname,'..');
 const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-assert.equal(require('../package.json').version,'7.112.0');
+const [major,minor]=require('../package.json').version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=112),'v7.112 editorial semantics remain active');
 const a=reader.indexOf('function jfDeskIsEditorialHeading(node){');
 const b=reader.indexOf('function jfDeskBlocksFor(sec){',a);
 assert(a>=0&&b>a,'editorial heading classifier must precede printed clone');
@@ -45,7 +46,7 @@ assert(reader.includes("jfDeskStackState?.folio==='pending'")&&
        reader.includes('jfDeskPagesBefore(currentChapter)!=null'),
   'exact folio can appear immediately, without waiting for whole book census');
 assert(reader.includes('const jfDeskFolioCacheRevision=')&&
-  reader.includes("const jfDeskFolioCacheRevision='v7.112.0'"),
+  reader.includes("const jfDeskFolioCacheRevision='v7.113.0'"),
   'old pagination layout cache is invalidated by algorithm change');
 assert(css.includes(".jfSheet[data-folio-exact='false']::before{content:none!important}"),
   'inaccurate physical page numbers remain hidden');
