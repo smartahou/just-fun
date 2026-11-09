@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
 const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
-for(const line of ["function commentaryNoteFragments(item)","var notes=commentaryNoteFragments(sourceItem)","para.className='jfPrintCommentaryNote'","label.className='jfPrintCommentarySource'","comment.className='jfPrintCommentaryText'","if(para.textContent!==value)return null","offset:(item.offset||0)+offset"]){
+for(const line of ["function commentaryNoteFragments(item)","var notes=commentaryNoteFragments(sourceItem)","para.className='jfPrintCommentaryNote'","label.className='jfPrintCommentarySource'","comment.className='jfPrintCommentaryText'","if(para.textContent!==original.slice(offset,stop))return null","offset:(item.offset||0)+offset"]){
   assert(engine.includes(line),'source and text conservation: '+line);
 }
 assert(!engine.includes('commentarySetTracks('),'old fixed-column layout has been retired');
