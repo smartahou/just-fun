@@ -99,7 +99,7 @@ assert.equal(ui.jfReadProgress.textContent,'31%','back turn reflected in footer'
 assert.equal(ui.jfReadProgressFill.style.width,'31%');
 const marker=css.indexOf('/* v7.107 · Annotated poetry source/commentary top alignment.');
 assert(marker>0,'scoped vertical alignment appended');
-const scoped=css.slice(marker,css.indexOf('/* v7.108 ·',marker));
+const scoped=css.slice(marker,css.indexOf('/* v7.116 ·',marker));
 assert(scoped.includes('table.jfPrintSourceCommentary'),'class-guarded styling');
 assert(scoped.includes('vertical-align:top!important'),'override EPUB middle valign');
 assert(!scoped.includes('.jfSheetBody td{'),'no global td');
