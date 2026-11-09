@@ -53,9 +53,6 @@ def main():
                 errors=[]
                 page.on('pageerror',lambda e:errors.append(str(e)))
                 # The removed OFF switch must not strand anyone on bare pages.
-                page.add_init_script("""()=>{
-                  try {localStorage.setItem('jf-reader-aged-paper-v768','off')}catch(e){}
-                }""".replace('()=>{','{').replace('}""','}')) if False else None
                 page.add_init_script("try{localStorage.setItem('jf-reader-aged-paper-v768','off')}catch(e){}")
                 page.goto(base,wait_until='domcontentloaded',timeout=30000)
                 page.wait_for_function("typeof jfDeskOpenReader==='function'",timeout=20000)
