@@ -1779,6 +1779,7 @@ function jfDeskRecountBookPages(){
   const average=known?sum/known:0;
   const total=exact?sum:Math.round(average*totalChapters);
   jfDeskBookPages={total,exact,known,chapters:totalChapters};
+  jfDeskSaveFolioCounts();
   return jfDeskBookPages;
 }
 // Pages that precede a chapter, or null when an earlier chapter is still unknown.
@@ -1791,24 +1792,56 @@ function jfDeskPagesBefore(chapter){
   }
   return sum;
 }
-// v7.107: a background book census can replace chapter-based approximate
-// progress with physical page counts after the user is already reading. Never
-// make the footer and physical paper piles jump BACKWARD while the visible
-// reading position has stayed the same or advanced. Reversing pages must still
-// decrease the indicator immediately. Reflow, new books and new sessions reset.
-let jfDeskProgressContinuity=null;
-function jfDeskStabilizeBookProgress(value,chapter,inChapter){
-  const fraction=Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
-  const point={bookId:jfDeskBook?.id,session:jfDeskSession,
-    layout:jfDeskPagesSig,chapter,inChapter,progress:fraction};
-  const prev=jfDeskProgressContinuity;
-  if(prev&&prev.bookId===point.bookId&&prev.session===point.session&&
-     prev.layout===point.layout &&
-     (chapter>prev.chapter||(chapter===prev.chapter&&inChapter>=prev.inChapter))){
-    point.progress=Math.max(fraction,prev.progress);
-  }
-  jfDeskProgressContinuity=point;
-  return point.progress;
+// v7.111: folios are never guessed. A prefix of measured chapters makes a
+// physical page number exact even if later chapters are not yet counted.
+// Cache only verified page COUNTS, not rendered DOM, position or book content.
+// Book identity + layout signature include font, paper dimensions and renderer
+// revision; a stale/different font or viewport must never supply folios.
+const jfDeskFolioCacheRevision='v7.111.0';
+function jfDeskFolioCacheKey(){
+  return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
+}
+function jfDeskLoadFolioCounts(){
+  try{
+    const cached=JSON.parse(localStorage.getItem(jfDeskFolioCacheKey())||'null');
+    if(cached?.version!==jfDeskFolioCacheRevision||
+       cached.layout!==jfDeskPagesSig||
+       cached.chapters!==jfDeskOutline?.chapters?.length||
+       !Array.isArray(cached.counts))return 0;
+    let loaded=0;
+    for(const [n,count] of cached.counts){
+      if(!Number.isSafeInteger(n)||n<0||n>=cached.chapters||
+         !Number.isSafeInteger(count)||count<0||count>100000)continue;
+      jfDeskChapterPageCounts.set(n,count);
+      loaded++;
+    }
+    return loaded;
+  }catch{return 0;}
+}
+function jfDeskSaveFolioCounts(){
+  if(!jfDeskBook||!jfDeskPagesSig)return;
+  try{
+    localStorage.setItem(jfDeskFolioCacheKey(),JSON.stringify({
+      version:jfDeskFolioCacheRevision,layout:jfDeskPagesSig,
+      chapters:jfDeskOutline.chapters.length,
+      counts:Array.from(jfDeskChapterPageCounts.entries())
+        .filter(([n,count])=>Number.isSafeInteger(n)&&n>=0&&
+          Number.isSafeInteger(count)&&count>=0&&count<=100000)
+    }));
+  }catch{} // Storage may be disabled; counting remains correct in memory.
+}
+// Stable semantic reading fraction: source-text anchor inside the current
+// chapter, not measured page counts, a mounted window or a stale max(%).
+// The footer and paper-pile preview use exactly this same value. Physical
+// page numbers are exact separately, and can arrive asynchronously.
+function jfDeskStableReadingProgress(chapter,offset){
+  const first=jfDeskPaperFirstReadable(0);
+  const chapters=Math.max(1,(jfDeskOutline?.chapters?.length||1)-first);
+  const source=jfDeskFlow.find(sec=>sec.n===chapter)?.el;
+  const length=Math.max(1,source?.textContent?.length||1);
+  const ratio=source&&Number.isSafeInteger(offset)?
+    Math.max(0,Math.min(1,offset/length)):0;
+  return Math.max(0,Math.min(1,(chapter-first+ratio)/chapters));
 }
 
 // Background census: paginate the chapters that are not mounted, so the book's
@@ -1916,7 +1949,7 @@ async function jfDeskMeasureBook(geo){
 }
 
 function jfDeskLayoutSignature(geo){
-  return [jfDeskBook?.id||'',jfDeskBookFontVersion,jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
+  return [jfDeskBook?.id||'',jfDeskFolioCacheRevision,jfDeskBookFontVersion,jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
           geo.pageW,geo.pageH,geo.innerW,geo.innerH].join('|');
 }
 // Real EPUBs often place a picture in an image-only paragraph and its short
@@ -2377,9 +2410,11 @@ async function jfDeskPagedLayout(keepPage,reason){
     // Invalidate a census still using the previous font/viewport geometry.
     jfDeskCensusToken++;
     jfDeskChapterPages.clear();
-    // Page counts only mean anything for the layout they were measured under.
+    // Counts are only correct under the matching physical page geometry,
+    // font revision and book identity. Reload verified counts, never old DOM.
     jfDeskChapterPageCounts.clear();
     jfDeskPagesSig=signature;
+    jfDeskLoadFolioCounts();
   }
   const budget=Math.max(120,geo.innerH);
   const pages=[];
@@ -2714,35 +2749,19 @@ function jfDeskPagedRender(direction){
   const chapterPages=jfDeskChapterPages.get(chapterOfPage)||[];
   const inChapter=Math.max(0,chapterPages.indexOf(pageA0));
   const pagesBefore=jfDeskPagesBefore(chapterOfPage);
-  // A known prefix yields an exact folio even while later chapters are not
-  // counted. The book-wide total may still be estimated; do not mix the two.
+  // The chapter prefix is exact or unknown. Unknown physical numbers MUST NOT
+  // be extrapolated and painted as real folios (the old 90 -> 231 jump).
   const exactNumber=pagesBefore!=null;
-  // When earlier chapters have not been measured, extrapolate by chapter position
-  // and mark the folio as estimated so it is never presented as an exact one.
-  const estimatedNumber=Math.round((chapterOfPage/Math.max(1,book.chapters))*book.total)+inChapter+1;
-  const leftPageNumber=exactNumber?(pagesBefore+inChapter+1):estimatedNumber;
-  const rightPageNumber=leftPageNumber+(pageB.length?1:0);
+  const leftPageNumber=exactNumber?pagesBefore+inChapter+1:null;
+  const rightPageNumber=exactNumber&&pageB.length?leftPageNumber+1:null;
   const totalSheets=book.total>0?book.total:0;
-  const readPages=Math.max(0,leftPageNumber-1);
-  const unreadPages=Math.max(0,totalSheets-rightPageNumber);
-
-  // Use exact physical page counts as soon as the background chapter census
-  // finishes. Before then use the *readable chapter* position, never the local
-  // mounted-window array index or an unreliable extrapolated total.
-  const exactProgress=book.exact&&exactNumber&&totalSheets>0;
-  const firstReadable=jfDeskPaperFirstReadable(0);
-  const readableChapters=Math.max(1,book.chapters-firstReadable);
-  const chapterFraction=chapterPages.length?inChapter/chapterPages.length:0;
-  let progress=Math.max(0,Math.min(1,
-    (chapterOfPage-firstReadable+chapterFraction)/readableChapters));
-  if(exactProgress){
-    const pagesBetween=Math.max(1,totalSheets-Math.min(totalSheets,geo.two?2:1));
-    progress=Math.max(0,Math.min(1,readPages/pagesBetween));
-  }else if(chapterOfPage>=book.chapters-1&&
-           inChapter>=Math.max(0,chapterPages.length-(pageB.length?2:1))){
-    progress=1;
-  }
-  progress=jfDeskStabilizeBookProgress(progress,chapterOfPage,inChapter);
+  const readPages=exactNumber?Math.max(0,leftPageNumber-1):0;
+  const unreadPages=book.exact&&rightPageNumber!=null?
+    Math.max(0,totalSheets-rightPageNumber):0;
+  // A source-text anchor is stable under census updates and reopened chapter
+  // windows. Exact folio counts are independent metadata, not a new percent.
+  const progress=jfDeskStableReadingProgress(chapterOfPage,pageA0[0]?.offset);
+  const exactProgress=false; // retained only for earlier stack visibility guards
   const stacks=jfDeskStackForProgress(progress);
   const readVisible=exactProgress?readPages>0:progress>0;
   const unreadVisible=exactProgress?unreadPages>0:progress<1;
@@ -2750,17 +2769,17 @@ function jfDeskPagedRender(direction){
   const unreadWidth=unreadVisible?stacks.unread.toFixed(1)+'px':'0px';
   jfDeskStackState={total:totalSheets,exact:book.exact,left:leftPageNumber,right:rightPageNumber,
                     read:readPages,unread:unreadPages,readPx:readWidth,unreadPx:unreadWidth,
-                    progress:Math.round(progress*100),progressExact:exactProgress,
-                    folio:exactNumber?'exact':'estimated',
+                    progress:Math.round(progress*100),progressExact:false,
+                    folio:exactNumber?'exact':'pending',
                     bookId:jfDeskBook?.id,session:jfDeskSession,layout:jfDeskPagesSig,
                     page:pageA0};
   // Folio numbers are book-wide values, never the index into the mounted array.
   if(leftSheet){
-    leftSheet.dataset.page=String(leftPageNumber);
+    leftSheet.dataset.page=exactNumber?String(leftPageNumber):'';
     leftSheet.dataset.folioExact=exactNumber?'true':'false';
   }
   if(rightSheet){
-    rightSheet.dataset.page=pageB.length?String(rightPageNumber):'';
+    rightSheet.dataset.page=rightPageNumber!=null?String(rightPageNumber):'';
     rightSheet.dataset.folioExact=exactNumber?'true':'false';
   }
   const leftStack=left.parentElement&&left.parentElement.querySelector('.jfSheetStack');
