@@ -9,6 +9,7 @@ on:
       - "tests/reader-exact-folios-visual-v7111.py"
       - "tests/reading-progress-annotations-v7107.js"
       - "tests/book-font-v7110.js"
+      - "tests/book-font-visual-v7110.py"
       - "package.json"
       - ".github/workflows/reader-stable-folios-v7111.yml"
   workflow_dispatch:
