@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "tests/reader-interactions-v766.js"
       - "src/client/styles/41-reading.css"
       - "tests/print-ink-v7105.js"
       - "tests/printed-typography-v769.js"
