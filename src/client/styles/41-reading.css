@@ -750,8 +750,7 @@ body.jfNotesMode #jfDeskNotes .jfDeskEditor input[type="range"].jfNoteBulkImageR
 
 /* v7.00: natural TXT paragraphs, not one tall slot per physical source line. */
 .jfReader .jfReadText.jfTxtProse{white-space:pre-line;line-height:1.72;letter-spacing:.012em;padding-top:clamp(24px,3vw,42px)!important;padding-bottom:75px;text-wrap:wrap;word-break:normal;overflow-wrap:break-word}
-.jfReader .jfReadMaskBtn{font-size:14px;letter-spacing:0;border:1px solid transparent}
-.jfReader .jfReadMaskBtn[aria-pressed="true"]{color:#9ce3d1;background:#96dbc324;border-color:#a3e4d344}
+
 @media(max-width:620px){.jfReader .jfReadText.jfTxtProse{line-height:1.68;padding-top:22px!important}}
 
 
@@ -3941,4 +3940,16 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   content:'纸书固定';
   font:11px/1.3 system-ui,sans-serif;
   margin-left:2px;
+}
+
+/* v7.109: a photographed paper book has a fixed physical-paper theme.
+   Keep the night icon in the toolbar for consistent positions, but make
+   its unavailable state unmistakable and inert in paged mode only. */
+.jfReader.paged .jfReaderTools #jfReadTheme:disabled,
+.jfReader.paged .jfReaderTools #jfReadTheme:disabled:hover{
+  opacity:.30!important;
+  cursor:not-allowed!important;
+  border-color:transparent!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
