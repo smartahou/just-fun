@@ -1797,7 +1797,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.111.0';
+const jfDeskFolioCacheRevision='v7.112.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
@@ -1853,8 +1853,8 @@ let jfDeskCensusRunning=false;
 // Book-wide counting requires synchronous DOM measurement. Never start another
 // chapter while the user is actively turning pages.
 let jfDeskLastPageTurn=Date.now();
-async function jfDeskWaitReadingIdle(token){
-  while(Date.now()-jfDeskLastPageTurn<2200){
+async function jfDeskWaitReadingIdle(token,minQuiet=2200){
+  while(Date.now()-jfDeskLastPageTurn<minQuiet){
     if(token!==jfDeskCensusToken)return false;
     await new Promise(resolve=>setTimeout(resolve,160));
   }
@@ -1900,12 +1900,24 @@ async function jfDeskMeasureBook(geo){
     if(jfDeskCensusToken!==token||jfDeskSession!==session)return;
     const host=jfDeskMeasureHost(geo);
     const budget=Math.max(120,geo.innerH);
-    for(let n=0;n<totalChapters;n++){
+    // Count the missing prefix before spending time on later chapters. The
+    // current chapter is already measured by normal page layout. The prefix
+    // can become publishable well before the full book is counted.
+    const visible=jfDeskPages[jfDeskPageIndex]?.[0]?.chapter??jfDeskChapter;
+    const needed=Math.max(0,Math.min(totalChapters,visible));
+    const order=[
+      ...Array.from({length:needed},(_,i)=>i),
+      ...Array.from({length:totalChapters-needed},(_,i)=>i+needed)
+    ];
+    for(const n of order){
       if(jfDeskCensusToken!==token)return;              // superseded
       if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
       if(jfDeskPaperOmittedChapter(n)||jfDeskChapterPageCounts.has(n))continue;
+      const urgent=n<needed;
       await jfDeskIdle();
-      if(!await jfDeskWaitReadingIdle(token))return;
+      // A short quiet interval is enough for the missing folio prefix.
+      // Later background work keeps the previous 2.2s reading-idle policy.
+      if(!await jfDeskWaitReadingIdle(token,urgent?650:2200))return;
       let html=null;
       try{html=await jfDeskFlowFetch(n);}catch(error){continue;}
       if(!html)continue;
@@ -1915,7 +1927,10 @@ async function jfDeskMeasureBook(geo){
       const holder=document.createElement('div');
       holder.className='jfSheetBody';
       holder.style.cssText='position:absolute;left:-99999px;top:0;width:'+geo.innerW+'px;padding:0;height:auto';
-      document.body.appendChild(holder);
+      // The real printed sheets and probe are descendants of #jfPageView.
+      // Mount the census holder there too, or descendant-scoped CSS (including
+      // poetry tables, heading metrics and built-in fonts) is silently absent.
+      document.getElementById('jfPageView').appendChild(holder);
       try{
         // Same construction path as a mounted chapter, or the census would count
         // a different DOM (sanitiser, caption merging) and report other page counts.
@@ -1934,6 +1949,15 @@ async function jfDeskMeasureBook(geo){
         holder.remove();
       }
       jfDeskRecountBookPages();
+      // Once the preceding chapters are known, publish the now-exact folio
+      // on the *same* page without initiating a reflow or changing the anchor.
+      const currentChapter=jfDeskPages[jfDeskPageIndex]?.[0]?.chapter??jfDeskChapter;
+      if(jfDeskPaged&&jfDeskStackState?.folio==='pending'&&
+         jfDeskPagesBefore(currentChapter)!=null&&
+         jfDeskCensusToken===token&&jfDeskSession===session){
+        jfDeskPagedRender();
+        jfDeskUpdateProgress();
+      }
     }
   }finally{
     jfDeskCensusRunning=false;
@@ -2303,6 +2327,16 @@ function jfDeskIsBookBlank(node){
   if(node.querySelector?.('img,svg,picture,object,video,hr,table'))return false;
   return true;
 }
+// v7.112 · Keep only genuine short editorial labels with their first piece
+// of commentary. This is a pagination *semantic*, never an EPUB mutation.
+// The generic H1–H6 path is handled by the page engine separately.
+function jfDeskIsEditorialHeading(node){
+  if(!node||!['P','DIV','H1','H2','H3','H4'].includes(node.tagName))return false;
+  if(node.querySelector?.('table,img,svg,picture,figure,video'))return false;
+  const title=String(node.textContent||'').replace(/[\s\u00a0\u3000]+/g,'').trim();
+  return /^[【\[](?:辑评|评析|笺评|译注|赏析|题解|按语|注释)[】\]]$/.test(title);
+}
+
 function jfDeskBlocksFor(sec){
   // This runs after image decode in both normal paging and the book census.
   // The same inline-vs-plate classification is copied into measured blocks.
@@ -2352,6 +2386,7 @@ function jfDeskBlocksFor(sec){
       if(consecutiveBlanks>1)printed.classList.add('jfPrintRedundantBlank');
     }
     jfDeskDecorateImprintBlock(printed,sec.n,imprint,k);
+    if(jfDeskIsEditorialHeading(printed))printed.classList.add('jfPrintKeepWithNext');
     // EPUBs may wrap a commentary table in a div. Apply the class to the
     // exact table rather than its surrounding prose or unrelated siblings.
     const commentaryTables=printed.tagName==='TABLE'?[printed]:
@@ -2458,7 +2493,8 @@ async function jfDeskPagedLayout(keepPage,reason){
   jfDeskRecountBookPages();
   if(!jfDeskBookPages.exact&&!jfDeskCensusRunning){
     // Measure the rest of the book in the background, off the critical path.
-    setTimeout(()=>jfDeskMeasureBook(geo),1200);
+    const visible=jfDeskPages[jfDeskPageIndex]?.[0]?.chapter??jfDeskChapter;
+    setTimeout(()=>jfDeskMeasureBook(geo),jfDeskPagesBefore(visible)==null?450:1200);
   }
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
