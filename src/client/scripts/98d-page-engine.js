@@ -187,10 +187,28 @@
       });
     }))return null;
     var original=node.textContent||'',offset=0,notes=[];
-    if(rows.map(function(row){return row.textContent;}).join('')!==original)return null;
+    // Pretty-printed XHTML commonly has indentation/newlines between <tr>
+    // and <td>. Keep those *characters* in the printed clone for exact source
+    // offsets, but don't paint them as phantom spaces between citation parts.
+    function whitespaceOnly(str){return /^[\s\u00a0\u3000]*$/.test(str);}
+    function invisibleSourceWhitespace(str){
+      var gap=document.createElement('span');
+      gap.className='jfPrintCommentarySourceWhitespace';
+      gap.textContent=str;
+      return gap;
+    }
     for(var k=0;k<rows.length;k++){
       var row=rows[k],source=row.cells[0],body=row.cells[1],value=row.textContent;
       if(!source.textContent?.trim()||!body.textContent?.trim())return null;
+      var rowAt=original.indexOf(value,offset);
+      if(rowAt<0||!whitespaceOnly(original.slice(offset,rowAt)))return null;
+      var left=source.textContent,right=body.textContent;
+      var leftAt=value.indexOf(left),rightAt=value.indexOf(right,leftAt+left.length);
+      if(leftAt<0||rightAt<0)return null;
+      var pre=original.slice(offset,rowAt)+value.slice(0,leftAt);
+      var between=value.slice(leftAt+left.length,rightAt);
+      var post=value.slice(rightAt+right.length);
+      if(!whitespaceOnly(pre)||!whitespaceOnly(between)||!whitespaceOnly(post))return null;
       var para=document.createElement('div');
       para.className='jfPrintCommentaryNote';
       var label=document.createElement('span');
@@ -199,17 +217,24 @@
       var comment=document.createElement('span');
       comment.className='jfPrintCommentaryText';
       for(var part of Array.from(body.childNodes))comment.appendChild(part.cloneNode(true));
-      // Margin creates the visible source→comment gap, not a DOM text node.
-      para.append(label,comment);
-      if(para.textContent!==value)return null;
+      // All original whitespace is retained in textContent (and offset math)
+      // but hidden from paint. Only CSS supplies the visible editorial gap.
+      para.append(invisibleSourceWhitespace(pre),label,
+        invisibleSourceWhitespace(between),comment,
+        invisibleSourceWhitespace(post));
+      var stop=rowAt+value.length;
+      if(para.textContent!==original.slice(offset,stop))return null;
       notes.push({
         chapter:item.chapter,node:para,
         key:(item.key||'commentary')+'#note'+k,
         offset:(item.offset||0)+offset,sourceRow:true
       });
-      offset+=value.length;
+      offset=stop;
     }
-    return offset===original.length?notes:null;
+    var trailing=original.slice(offset);
+    if(!whitespaceOnly(trailing))return null;
+    if(trailing)notes[notes.length-1].node.appendChild(invisibleSourceWhitespace(trailing));
+    return notes.map(function(n){return n.node.textContent;}).join('')===original?notes:null;
   }
 
   function paginate(blocks,pageH,host){
