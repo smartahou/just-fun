@@ -16,8 +16,12 @@
   // A full book skin has only 16 leaves; low-memory devices keep a smaller LRU.
   const CAP=(typeof navigator!=='undefined'&&navigator.deviceMemory&&navigator.deviceMemory<=4)?10:16;
   const cache=new Map();
+  // v7.108: the legacy paper ON/OFF controls have been retired from the
+  // typography popover. Approved photographic leaves are the fixed default
+  // for paper-book mode. Reset a saved "off" value so nobody is stranded
+  // with plain white pages after losing the old toggle UI.
   let enabled=true;
-  try{enabled=localStorage.getItem(KEY)!=='off';}catch{}
+  try{localStorage.setItem(KEY,'on');}catch{}
   function stableHash(value){
     let hash=2166136261;
     for(const byte of new TextEncoder().encode(String(value))){hash^=byte;hash=Math.imul(hash,16777619);}
