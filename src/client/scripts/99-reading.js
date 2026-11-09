@@ -33,11 +33,45 @@ let jfDeskPrefs={font:18,theme:'dark',side:22,family:'serif'};
 // v7.69 · A print serif is the native reading default. Prefer a true
 // Chinese Song/Ming face; no remote font fetch and no font-synthesis trickery.
 const jfReadFamilyMap={
-  serif:"'Source Han Serif SC','Noto Serif CJK SC','Noto Serif SC','Songti SC',STSong,'SimSun',serif",
+  serif:"'JustFun Book Serif CN','Source Han Serif SC','Noto Serif CJK SC','Noto Serif SC','Songti SC',STSong,'SimSun',serif",
   sans:"'Noto Sans SC','Microsoft YaHei',sans-serif",
   kai:"'Kaiti SC','KaiTi','STKaiti',serif",
   mono:"'Sarasa Mono SC','Microsoft YaHei UI',monospace"
 };
+
+// v7.110 · Two exact user-provided faces are embedded in the HTML at build
+// time. Explicitly load both BEFORE the first print measure or page census;
+// document.fonts.ready alone does not necessarily request a hidden heading face.
+const jfDeskBookFontVersion='SourceHanSerifCN-1.000R-GBK-7.110';
+let jfDeskBookFontPromise=null,jfDeskBookFontsReady=false;
+async function jfDeskEnsureBookFonts(){
+  if(jfDeskPrefs.family!=='serif')return true;
+  if(!document.fonts?.load)return false;
+  if(!jfDeskBookFontPromise){
+    jfDeskBookFontPromise=(async()=>{
+      const results=await Promise.all([
+        document.fonts.load('400 18px "JustFun Book Serif CN"','旧书道光唐诗三百首'),
+        document.fonts.load('600 18px "JustFun Book Serif CN"','章节标题')
+      ]);
+      jfDeskBookFontsReady=results.every(faces=>
+        faces.length>0&&faces.every(face=>face.status==='loaded'));
+      if(!jfDeskBookFontsReady)
+        console.warn('[JustFun] 内置思源宋体未能加载，已保留系统宋体回退');
+      return jfDeskBookFontsReady;
+    })().catch(error=>{
+      console.warn('[JustFun] 内置字体加载失败，保留系统回退',error);
+      jfDeskBookFontsReady=false;
+      return false;
+    });
+  }
+  return jfDeskBookFontPromise;
+}
+window.JFReaderEmbeddedBookFonts=()=>({
+  version:jfDeskBookFontVersion,ready:jfDeskBookFontsReady,
+  loaded400:!!document.fonts?.check?.('400 18px "JustFun Book Serif CN"','旧书'),
+  loaded600:!!document.fonts?.check?.('600 18px "JustFun Book Serif CN"','章节')
+});
+
 // v7.108 · A real paper spread uses a fixed, measured page box: the historical
 // "side margin" slider only changes the continuous reader and cannot change
 // the paginated sheet. Disable it in paper mode instead of accepting a setting
@@ -92,7 +126,7 @@ function jfDeskPrintDiagnostics(){
   const painted=describe(page),measured=describe(probe);
   const fields=['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','wordSpacing','textAlign'];
   const parity=!!(painted&&measured&&fields.every(k=>painted[k]===measured[k]));
-  const familyCandidates=['Source Han Serif SC','Noto Serif CJK SC',
+  const familyCandidates=['JustFun Book Serif CN','Source Han Serif SC','Noto Serif CJK SC',
     'Noto Serif SC','Songti SC','STSong','SimSun'];
   const hint=[];
   try{
@@ -118,7 +152,8 @@ function jfDeskPrintDiagnostics(){
     userChoice:jfDeskPrefs.family,
     selectedStack:jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif,
     painted,measured,layoutMetricsMatch:parity,fontRasterHints:hint,
-    warning:'Canvas comparisons are indicative only. Chrome DevTools > Fonts shows actual rendered fonts. No external fonts are downloaded.'};
+    embeddedBookFonts:window.JFReaderEmbeddedBookFonts?.(),
+    warning:'Canvas comparisons are indicative only. Chrome DevTools > Fonts shows actual rendered fonts. Book fonts are embedded in the offline build, never loaded from a remote font host.'};
 }
 window.JFReaderPrintDiagnostics=jfDeskPrintDiagnostics;
 function jfApplyTextReadingPrefs(){
@@ -126,6 +161,7 @@ function jfApplyTextReadingPrefs(){
   jfReadText.style.fontSize=jfDeskFont+'px';
   jfReadText.style.setProperty('--jf-read-side',jfDeskPrefs.side+'px');
   jfReadText.style.fontFamily=jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif;
+  if(jfDeskPrefs.family==='serif')void jfDeskEnsureBookFonts();
   document.getElementById('jfReadFamily').value=jfDeskPrefs.family;
   document.getElementById('jfReadSide').value=String(jfDeskPrefs.side);
   document.getElementById('jfReadSideValue').textContent=jfDeskPrefs.side+'px';
@@ -410,6 +446,10 @@ async function jfDeskOpenReader(bookId,chapter){
     const outline=await jfDeskApi('outline?id='+encodeURIComponent(bookId));
     if(epoch!==jfDeskEpoch)return;
     jfDeskOutline=outline;jfDeskBook=outline.book;
+    if(!outline.nativePdf){
+      await jfDeskEnsureBookFonts();
+      if(epoch!==jfDeskEpoch)return;
+    }
     jfDeskPaperNotes.clear();window.JFEpubPaperToc?.close();
     document.getElementById('jfReadTitle').textContent=outline.book.title;
     document.getElementById('jfReadFormat').textContent=outline.format+' / JUST FUN';
@@ -1693,6 +1733,7 @@ let jfDeskPageGen=0;
 // reports its placeholder height, pagination is computed on a lie, and the page
 // is published with a clipped picture.
 async function jfDeskPrepareImages(){
+  await jfDeskEnsureBookFonts();
   try{ if(document.fonts&&document.fonts.ready)await document.fonts.ready; }catch{}
   const imgs=Array.prototype.slice.call(jfReadText.querySelectorAll('img'));
   if(!imgs.length)return;
@@ -1822,6 +1863,8 @@ async function jfDeskMeasureBook(geo){
   const bookId=jfDeskBook.id,session=jfDeskSession;
   jfDeskCensusRunning=true;
   try{
+    await jfDeskEnsureBookFonts();
+    if(jfDeskCensusToken!==token||jfDeskSession!==session)return;
     const host=jfDeskMeasureHost(geo);
     const budget=Math.max(120,geo.innerH);
     for(let n=0;n<totalChapters;n++){
@@ -1873,7 +1916,7 @@ async function jfDeskMeasureBook(geo){
 }
 
 function jfDeskLayoutSignature(geo){
-  return [jfDeskBook?.id||'',jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
+  return [jfDeskBook?.id||'',jfDeskBookFontVersion,jfDeskPrefs.font,jfDeskPrefs.family,jfDeskPrefs.side,
           geo.pageW,geo.pageH,geo.innerW,geo.innerH].join('|');
 }
 // Real EPUBs often place a picture in an image-only paragraph and its short

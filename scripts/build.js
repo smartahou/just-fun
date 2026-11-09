@@ -46,8 +46,44 @@ function bundleVendor() {
   return out.text;
 }
 
+
+// v7.110: the user's exact 2017 Source Han Serif CN OTFs were converted into
+// licensed, renamed WOFF2 subsets (400+600) by scripts/build-book-fonts-v7110.py.
+// Keep both files offline and fail the build on any unexpected font bytes.
+function bundleBookFonts(){
+  const spec=manifest.fontAssets;
+  if(!spec||spec.manifest!=='assets/fonts/book-serif/manifest.json')
+    throw Error('Missing pinned book-font manifest');
+  const metadata=JSON.parse(read(spec.manifest));
+  if(metadata.version!=='7.110.0'||metadata.family!=='JustFun Book Serif CN'||
+     metadata.source_tag!=='1.000R'||metadata.originals_match_user_upload!==true||
+     metadata.license!=='SIL OFL 1.1'||metadata.files?.length!==2)
+    throw Error('Unexpected source/font manifest');
+  const folder=path.dirname(spec.manifest);
+  const license=read(path.join(folder,metadata.license_file));
+  if(!license.includes('SIL OPEN FONT LICENSE Version 1.1'))
+    throw Error('Missing/invalid Source Han Serif OFL license');
+  let css='/* v7.110: verified offline Chinese book-serif fonts, no network. */\n';
+  const fonts=[];
+  for(const weight of [400,600]){
+    const entry=metadata.files.find(x=>x.weight===weight);
+    if(!entry||entry.filename!=='justfun-book-serif-cn-'+weight+'.woff2')
+      throw Error('Missing offline book-serif '+weight);
+    const raw=fs.readFileSync(path.join(root,folder,entry.filename));
+    if(raw.toString('ascii',0,4)!=='wOF2'||raw.length!==entry.bytes||
+       hash(raw)!==entry.sha256||entry.glyphs<8000)
+      throw Error('Book font WOFF2 SHA/dimensions invalid: '+entry.filename);
+    css+='@font-face{font-family:"JustFun Book Serif CN";font-style:normal;'+
+      'font-weight:'+weight+';font-display:block;'+
+      'src:url("data:font/woff2;base64,'+raw.toString('base64')+'") format("woff2");}\n';
+    fonts.push({weight,bytes:raw.length,sha256:entry.sha256,glyphs:entry.glyphs});
+  }
+  return {css,fonts,sourceVersion:metadata.source_tag};
+}
+
 function build() {
-  const style = manifest.styles.map(read).join('');
+  const bookFontBundle=bundleBookFonts();
+  const style = bookFontBundle.css+manifest.styles.map(read).join('');
   // These exact original WebPs are bundled into the offline HTML, NOT fetched
   // from the network. Verify every byte against the user's supplied manifest.
   const paper=manifest.paperAssets;
@@ -323,6 +359,7 @@ function build() {
     browserBytes:Buffer.byteLength(browser), browserSha256:hash(browser),
     cssBytes:Buffer.byteLength(style), cssSha256:hash(style),
     files:manifest.server.length+manifest.styles.length+manifest.scripts.length+2,
+    embeddedBookFonts:bookFontBundle.fonts,bookFontSourceVersion:bookFontBundle.sourceVersion,
     paperTextures:paperUrls.length,paperTextureAssetsSha256:paperAssetHashes,
     paperRuntimeAssetSha256:paperRuntimeHashes,paperRuntimeBytes,
     paperStackStates:stackMeta.progress_states.length,paperStackAssetsSha256:stackAssetHashes,

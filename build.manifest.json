@@ -128,5 +128,8 @@
       "assets/paper-stacks/stack-100-left.webp",
       "assets/paper-stacks/stack-100-right.webp"
     ]
+  },
+  "fontAssets": {
+    "manifest": "assets/fonts/book-serif/manifest.json"
   }
 }
