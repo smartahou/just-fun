@@ -54,7 +54,8 @@ const detect=vm.runInNewContext(tableSource+'\n({detect:jfDeskIsSourceCommentary
 assert(detect.detect(commentary),'source commentary table identified');
 assert(!detect.detect(ordinary),'ordinary table unchanged');
 assert(!detect.detect({tagName:'DIV',rows:commentary.rows}),'only real tables');
-assert(!detect.detect({tagName:'TABLE',rows:commentary.rows.slice(0,1)}),'single row untouched');
+assert(detect.detect({tagName:'TABLE',rows:commentary.rows.slice(0,1)}),
+  'v7.114 recognizes a single cited commentary row');
 assert(!detect.detect({tagName:'TABLE',rows:[
   {cells:[mk('《唐诗纪事》',2),mk('评论字数足够多超过最低限度')]},
   commentary.rows[1]
