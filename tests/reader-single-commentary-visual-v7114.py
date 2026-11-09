@@ -105,12 +105,12 @@ def main():
                 assert single['originalRows']==[[SINGLE_LABEL,SINGLE_COMMENT]],single
                 assert single['sourceColgroups']==0,'source EPUB DOM must stay unchanged'
                 assert single['annotatedCount']==1 and single['singleFlag'],single
-                assert single['printedColWidths']==['38%','62%'],single
+                assert single['printedColWidths']==['30%','70%'],single
                 assert len(single['actualRows'])==1,single
                 one=single['actualRows'][0]
                 assert one['first']==SINGLE_LABEL and one['second']==SINGLE_COMMENT,one
-                assert one['layout']=='fixed' and one['cols']==['38%','62%'],one
-                assert .35<one['leftWidth']/one['wholeWidth']<.41,one
+                assert one['layout']=='fixed' and one['cols']==['30%','70%'],one
+                assert .28<one['leftWidth']/one['wholeWidth']<.32,one
                 assert single['paperActive'] and single['font']['ready'],single
 
                 open_book(page,base,catalog['multi-note.epub'])
