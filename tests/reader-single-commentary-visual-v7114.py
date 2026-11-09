@@ -51,12 +51,16 @@ def page_metrics(page):
           const rect=t.getBoundingClientRect();
           const c1=t.rows[0].cells[0].getBoundingClientRect();
           const c2=t.rows[0].cells[1].getBoundingClientRect();
+          const labelRange=document.createRange();
+          labelRange.selectNodeContents(t.rows[0].cells[0]);
+          const labelRight=labelRange.getBoundingClientRect().right;
           rows.push({
             first:t.rows[0].cells[0].textContent,
             second:t.rows[0].cells[1].textContent,
             cols:Array.from(t.querySelectorAll(':scope > colgroup > col')).map(n=>n.style.width),
             leftWidth:c1.width,commentStart:c2.left-rect.left,
-            wholeWidth:rect.width,layout:getComputedStyle(t).tableLayout
+            wholeWidth:rect.width,layout:getComputedStyle(t).tableLayout,
+            gapPx:c2.left-labelRight,share:Number(t.dataset.jfSourceShare)
           });
         }
       }
@@ -105,12 +109,14 @@ def main():
                 assert single['originalRows']==[[SINGLE_LABEL,SINGLE_COMMENT]],single
                 assert single['sourceColgroups']==0,'source EPUB DOM must stay unchanged'
                 assert single['annotatedCount']==1 and single['singleFlag'],single
-                assert single['printedColWidths']==['30%','70%'],single
+                assert single['printedColWidths']==[],(
+                  'Column sizing must occur once under real page geometry, not when cloning',single)
                 assert len(single['actualRows'])==1,single
                 one=single['actualRows'][0]
                 assert one['first']==SINGLE_LABEL and one['second']==SINGLE_COMMENT,one
-                assert one['layout']=='fixed' and one['cols']==['30%','70%'],one
-                assert .28<one['leftWidth']/one['wholeWidth']<.32,one
+                assert one['layout']=='fixed' and len(one['cols'])==2,one
+                assert .16<=one['leftWidth']/one['wholeWidth']<.30,one
+                assert 6<=one['gapPx']<=40,('The source needs one natural glyph of air',one)
                 assert single['paperActive'] and single['font']['ready'],single
 
                 open_book(page,base,catalog['multi-note.epub'])
@@ -119,8 +125,12 @@ def main():
                 assert len(multi['actualRows'])==6,multi
                 assert not multi['singleFlag'],multi
                 assert all(r['layout']=='fixed' for r in multi['actualRows']),multi
-                assert abs(one['leftWidth']-multi['actualRows'][0]['leftWidth'])<5.5,(single,multi)
-                assert abs(one['commentStart']-multi['actualRows'][0]['commentStart'])<5.5,(single,multi)
+                # Unlike v7.114, a *short* single citation must reserve less
+                # space than a multi-row table with longer bibliography titles.
+                assert one['leftWidth']+5<multi['actualRows'][0]['leftWidth'],(single,multi)
+                assert one['commentStart']+5<multi['actualRows'][0]['commentStart'],(single,multi)
+                assert len({round(row['leftWidth'],1) for row in multi['actualRows']})==1,multi
+                assert len({round(row['commentStart'],1) for row in multi['actualRows']})==1,multi
                 assert not errors,errors
                 print('SINGLE_NOTE_V7114_METRICS',json.dumps({
                     'single':{'source':one['first'],'comment':one['second'],
@@ -130,7 +140,7 @@ def main():
                       'firstColumnPx':round(multi['actualRows'][0]['leftWidth'],2),
                       'commentStartPx':round(multi['actualRows'][0]['commentStart'],2)}
                 },ensure_ascii=False),flush=True)
-                print('PASS v7.114 Chrome EPUB: one short cited note uses same 2-column layout as multi-row notes',flush=True)
+                print('PASS v7.115 Chrome EPUB: short notes use a compact measured gutter, and multirow annotations share stable columns',flush=True)
                 browser.close()
         finally:
             stop(process,logs)
