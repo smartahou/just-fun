@@ -1,27 +1,12 @@
 #!/usr/bin/env node
 'use strict';
-// v7.113: isolated per-row tables may not independently size their columns.
-const fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
 const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
-const pkg=require('../package.json');
-const [major,minor]=pkg.version.split('.').map(Number);
-assert(major>7||(major===7&&minor>=113),'v7.113 column-grid contract survives later versions');
-for(const clause of [
- "function commentaryRowFragments(item,host)",
- "host.replaceChildren(probe)",
- "Math.ceil((max+gutter)*100/width)",
- "var group=document.createElement('colgroup')",
- "table.insertBefore(group,table.firstChild)",
- "table.style.setProperty('table-layout','fixed','important')",
- "table.style.setProperty('width','100%','important')",
- "var parts=commentaryRowFragments(next,host)",
- "var rows=commentaryRowFragments(item,host)"
-])assert(engine.includes(clause),'Missing fixed full-table column-grid contract: '+clause);
-assert(engine.includes('jfPrintSourceRowPart')&&engine.includes(
-  "measure(el,host)<=pageH+EPS"),
-  'normal citation/commentary row is atomic when it fits an empty leaf');
-assert(reader.includes("const jfDeskFolioCacheRevision='v7.115.0'"),
-  'new pagination invalidates stale verified folios');
-console.log('PASS v7.113: one original measured colgroup across independent source-commentary row fragments');
+for(const line of ["function commentaryNoteFragments(item)","var notes=commentaryNoteFragments(sourceItem)","para.className='jfPrintCommentaryNote'","label.className='jfPrintCommentarySource'","comment.className='jfPrintCommentaryText'","if(para.textContent!==value)return null","offset:(item.offset||0)+offset"]){
+  assert(engine.includes(line),'source and text conservation: '+line);
+}
+assert(!engine.includes('commentarySetTracks('),'old fixed-column layout has been retired');
+assert(reader.includes("const jfDeskFolioCacheRevision='v7.116.0'"));
+console.log('PASS old v7.113/v7.115 core citation invariants under v7.116 flowing prose');
