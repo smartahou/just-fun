@@ -1797,7 +1797,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.114.0';
+const jfDeskFolioCacheRevision='v7.115.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
@@ -2407,23 +2407,10 @@ function jfDeskBlocksFor(sec){
       if(!jfDeskIsSourceCommentaryTable(table))continue;
       table.classList.add('jfPrintSourceCommentary');
       if(table.rows.length===1){
-        // v7.114: one-row annotated poetry uses the same 30/70
-        // source/comment grid as a multi-row table split across leaves.
-        // Modify the PRINTED clone only: leave source text, cells and
-        // saved chapter offsets byte-for-byte unchanged.
+        // v7.115: the *same* source-width-aware grid is applied to single
+        // and multirow commentary by JFPageEngine.paginate().  No forced
+        // 30/70 here: short book titles need only a readable one-em gap.
         table.classList.add('jfPrintSourceSingle');
-        for(const group of table.querySelectorAll(':scope > colgroup'))group.remove();
-        const cols=document.createElement('colgroup');
-        for(const width of ['30%','70%']){
-          const col=document.createElement('col');
-          col.style.width=width;
-          cols.appendChild(col);
-        }
-        table.insertBefore(cols,table.firstChild);
-        table.style.setProperty('table-layout','fixed','important');
-        table.style.setProperty('width','100%','important');
-        table.style.setProperty('max-width','100%','important');
-        table.style.setProperty('margin','0','important');
       }
     }
     blocks.push({chapter:sec.n,node:printed,
