@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.108.0",
+  "version": "7.109.0",
   "private": true,
   "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
@@ -16,7 +16,8 @@
     "test:print-ink": "node tests/print-ink-v7105.js",
     "test:caption": "node tests/epub-caption-v7106.js",
     "test:reading-progress": "node tests/reading-progress-annotations-v7107.js",
-    "test:reading-controls": "node tests/reading-preferences-v7108.js && node tests/aged-paper-default-v768.js"
+    "test:reading-controls": "node tests/reading-preferences-v7108.js && node tests/aged-paper-default-v768.js",
+    "test:reader-toolbar": "node tests/reading-toolbar-v7109.js"
   },
   "license": "MIT",
   "dependencies": {
