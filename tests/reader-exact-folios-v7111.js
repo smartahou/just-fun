@@ -43,7 +43,7 @@ assert.equal(savedData.layout,'book-1|font-400|1360x840');
 assert.equal(savedData.chapters,8);
 counts.clear();
 assert.equal(model.before(4),null,'fresh session first has unknown folios');
-assert.equal(model.load(),5,'verified omitted chapter zero and 4 chapter counts restored');
+assert.equal(model.load(),4,'four measured chapters restored; omitted chapter zero is derived');
 assert.equal(model.before(4),23,'same book and layout gives identical folios on reopen');
 assert.equal(model.progress(4,450),mid,'reopening does not change percent');
 assert(model.progress(4,200)<mid,'backwards text offset decreases percent');
@@ -62,7 +62,7 @@ let malicious=JSON.parse(saved);
 malicious.counts.push([-2,99],[999,900],[2,-99],[3,2.5]);
 db.set(model.cacheKey(),JSON.stringify(malicious));
 counts.clear();
-assert.equal(model.load(),5,'corrupted cache entries are ignored');
+assert.equal(model.load(),4,'corrupted cache entries are ignored');
 const folioStart=js.indexOf('function jfDeskPagedRender(direction){');
 const folio=js.slice(folioStart,js.indexOf('let jfDeskTurnTimer=0;',folioStart));
 assert(folio.includes("const leftPageNumber=exactNumber?pagesBefore+inChapter+1:null;"),
