@@ -102,7 +102,7 @@
     return host.firstElementChild.getBoundingClientRect().height<=pageH+EPS?probe:null;
   }
   // Try to keep [0,offset) on the current page and push the rest forward.
-  function trySplit(el,avail,host,lh){
+  function trySplit(el,avail,host,lh,pageH){
     if(window.JF_DEBUG_SPLIT)console.info('[split] avail',Math.round(avail),'lh',Math.round(lh),'need',Math.round(lh*MIN_LINES),'tag',el.tagName,'len',el.textContent.length);
     // Never split a block that owns an image: the clone would lose it.
     if(hasImage(el))return null;
@@ -111,7 +111,7 @@
     // otherwise create a second fragment without its bibliography source.
     if((el.classList?.contains('jfPrintSourceRowPart')||
         el.querySelector?.('table.jfPrintSourceRowPart'))&&
-       measure(el,host)<=parseFloat(host.dataset.jfPageBudget||'0')+EPS)return null;
+       measure(el,host)<=pageH+EPS)return null;
     if(avail<lh*MIN_LINES)return null;
     var walk=textNodes(el);
     if(!walk.total)return null;
@@ -240,7 +240,6 @@
   }
 
   function paginate(blocks,pageH,host){
-    host.dataset.jfPageBudget=String(pageH);
     var lh=lineHeight(host);
     var pages=[],cur=[],used=0;
     var queue=blocks.slice();
@@ -306,7 +305,7 @@
       var split=null;
       var available=Math.max(0,pageH-used);
       for(var retry=0;retry<3&&available>=lh*MIN_LINES;retry++){
-        var proposal=trySplit(el,available,host,lh);
+        var proposal=trySplit(el,available,host,lh,pageH);
         if(!proposal)break;
         var projected=columnHeight(cur.concat([{
           chapter:item.chapter,node:proposal.head,key:item.key,offset:item.offset
