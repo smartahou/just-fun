@@ -1,0 +1,58 @@
+name: Just Fun v7.108 truthful typography controls
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/index.html"
+      - "src/client/scripts/99-reading.js"
+      - "src/client/scripts/98e-paper-textures.js"
+      - "src/client/styles/41-reading.css"
+      - "tests/reading-preferences-v7108.js"
+      - "tests/reading-preferences-visual-v7108.py"
+      - "tests/aged-paper-default-v768.js"
+      - "package.json"
+      - ".github/workflows/reading-controls-v7108.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  controls-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Test read-mode controls, legacy paper state and core reader
+        run: |
+          node tests/reading-preferences-v7108.js
+          node tests/aged-paper-default-v768.js
+          node tests/reading-progress-annotations-v7107.js
+          node tests/paged-forward-boundary-v7103.js
+          npm run test:reading-print
+          npm run test:epub-paper
+      - name: Build actual standalone app, check JS and approved textures
+        run: |
+          node scripts/build.js > /tmp/justfun-v7108-build.log
+          node --check dist/douyin.js
+          node -e "const b=require('./dist/build-report.json');if(b.paperTextures!==16||b.paperRuntimeAssetSha256.length!==16)throw Error('Approved photographed paper missing'); console.log('PASS 16 real paper WebP assets still embedded')"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium and browser fixture
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Real EPUB user-controls regression and screenshot
+        run: python tests/reading-preferences-visual-v7108.py
+      - name: Confirm unchanged EPUB pagination/turns
+        run: python tests/paged-no-skip-v737.py
