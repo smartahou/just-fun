@@ -27,7 +27,7 @@ assert(!detect(elem('TABLE','【辑评】')),'ordinary data tables are not headi
 assert(reader.includes("if(jfDeskIsEditorialHeading(printed))printed.classList.add('jfPrintKeepWithNext');"),
   'only printed clone gets semantic class');
 assert(engine.includes('function keepWithNext(el)'),'page engine knows editorial heading semantics');
-assert(engine.includes('function commentaryRowFragments(item)'),'commentary rows are splittable as pairs');
+assert(engine.includes('function commentaryRowFragments(item,host)'),'commentary rows are splittable as pairs');
 assert(engine.includes("table?.classList?.contains('jfPrintSourceCommentary')"),
   'ordinary tables remain unchanged');
 assert(engine.includes('fragment=node.cloneNode(true)'),'source markup and cell styling preserved');
