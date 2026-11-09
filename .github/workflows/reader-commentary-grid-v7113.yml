@@ -1,0 +1,76 @@
+name: Just Fun v7.113 original column grid across printed commentary leaves
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/scripts/98d-page-engine.js"
+      - "src/client/scripts/99-reading.js"
+      - "tests/reader-commentary-grid-v7113.js"
+      - "tests/reader-commentary-grid-visual-v7113.py"
+      - "tests/reader-exact-folios-v7111.js"
+      - "tests/reader-exact-folios-visual-v7111.py"
+      - "tests/reader-editorial-layout-v7112.js"
+      - "tests/reading-progress-annotations-v7107.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/reader-commentary-grid-v7113.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  grid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Check column-grid code, source-row semantics and exact-folio cache
+        run: |
+          node tests/reader-commentary-grid-v7113.js
+          node tests/reader-editorial-layout-v7112.js
+          node tests/reader-exact-folios-v7111.js
+          node tests/reading-progress-annotations-v7107.js
+      - name: Install exact dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Original paper, typography and pagination regressions
+        run: |
+          node tests/book-font-v7110.js
+          node tests/paged-forward-boundary-v7103.js
+          node tests/epub-caption-v7106.js
+          npm run test:reading-print
+          npm run test:epub-paper
+      - name: Build offline application
+        run: |
+          node scripts/build.js > /tmp/jf-v7113-build.log
+          node --check dist/douyin.js
+          node - <<'NODE'
+          const x=require('./dist/build-report.json');
+          if(x.paperTextures!==16||x.paperRuntimeAssetSha256?.length!==16)
+            throw Error('Original paper assets changed');
+          if(x.bookFontSourceVersion!=='1.000R'||x.embeddedBookFonts?.length!==2)
+            throw Error('Original 400/600 book fonts changed');
+          console.log('PASS untouched 16 old-paper assets and embedded fonts');
+          NODE
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium for real EPUB geometry tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Browser compare bibliography/comment x coordinates on two leaves
+        run: python tests/reader-commentary-grid-visual-v7113.py
+      - name: Browser verify title+comment, content and saved position
+        run: python tests/reader-editorial-layout-visual-v7112.py
+      - name: Browser verify exact folios and reopened progress
+        run: python tests/reader-exact-folios-visual-v7111.py
+      - name: Browser verify 200 forward page turns without text loss
+        run: python tests/paged-no-skip-v737.py
