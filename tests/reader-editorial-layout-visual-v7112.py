@@ -78,7 +78,7 @@ def state(page):
     }""")
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='jf-semantic-epub-v7112-') as td:
+    with tempfile.TemporaryDirectory(prefix='jf-architecture-test-semantic-v7112-') as td:
         root=pathlib.Path(td);books=root/'books';books.mkdir()
         create_epub(books/'semantic-v7112.epub')
         process=logs=None
