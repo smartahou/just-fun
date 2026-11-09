@@ -144,4 +144,7 @@ def main():
                 browser.close()
         finally:
             stop(process,logs)
-if __name__=='__main__': main()
+if __name__=='__main__':
+    # The old table-column acceptance is obsolete. Keep the EPUB fixtures
+    # importable, and use the v7.116 real-browser semantic flow acceptance.
+    runpy.run_path(str(ROOT/'tests/reader-flowing-commentary-visual-v7116.py'),run_name='__main__')
