@@ -99,7 +99,14 @@ def main():
                 page.wait_for_function("()=>jfDeskOutline?.chapters?.length===5",timeout=30000)
                 page.wait_for_function("()=>jfDeskFlow.some(s=>s.n===3)",timeout=30000)
                 page.locator('#jfReadPaged').click()
-                page.wait_for_function("()=>jfDeskPaged&&jfDeskChapterPages.has(3)",timeout=40000)
+                page.wait_for_function("""()=>{
+                  const pageNow=jfDeskPages[jfDeskPageIndex];
+                  const stack=jfDeskStackState;
+                  return jfDeskPaged&&jfDeskChapterPages.has(3)&&
+                    !!pageNow&&stack?.page===pageNow&&
+                    document.getElementById('jfReadProgress').textContent===
+                      String(stack.progress)+'%';
+                }""",timeout=40000)
                 inspect=page.evaluate("""()=>{
                   const original=jfDeskFlow.find(s=>s.n===3).el;
                   const blocks=jfDeskBlocksFor({n:3,el:original});
