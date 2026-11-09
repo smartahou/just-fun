@@ -1,0 +1,70 @@
+name: Just Fun v7.112 semantic editorial pagination and exact folio priority
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/scripts/98d-page-engine.js"
+      - "src/client/scripts/99-reading.js"
+      - "tests/reader-editorial-layout-v7112.js"
+      - "tests/reader-editorial-layout-visual-v7112.py"
+      - "tests/reader-exact-folios-v7111.js"
+      - "tests/reader-exact-folios-visual-v7111.py"
+      - "tests/reading-progress-annotations-v7107.js"
+      - "package.json"
+      - ".github/workflows/reader-editorial-v7112.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  semantic-reader:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Regression suite - semantic title, exact folios, annotations and pagination
+        run: |
+          node tests/reader-editorial-layout-v7112.js
+          node tests/reader-exact-folios-v7111.js
+          node tests/reading-progress-annotations-v7107.js
+          node tests/book-font-v7110.js
+          node tests/paged-forward-boundary-v7103.js
+          node tests/epub-caption-v7106.js
+          node tests/reading-toolbar-v7109.js
+          npm run test:reading-print
+          npm run test:epub-paper
+      - name: Offline build - verify original fonts and paper textures
+        run: |
+          node scripts/build.js > /tmp/jf-v7112-build.log
+          node --check dist/douyin.js
+          node - <<'NODE'
+          const report=require('./dist/build-report.json');
+          if(report.embeddedBookFonts?.length!==2 || report.bookFontSourceVersion!=='1.000R')
+            throw Error('Original approved 400/600 book serif missing');
+          if(report.paperTextures!==16 || report.paperRuntimeAssetSha256?.length!==16)
+            throw Error('Approved paper textures have changed');
+          console.log('PASS v7.112 original book fonts and old-paper assets unchanged');
+          NODE
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium and EPUB integration dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Browser - no orphan editorial headings, row pairs or lost anchors
+        run: python tests/reader-editorial-layout-visual-v7112.py
+      - name: Browser - earlier exact folio/pagination contract
+        run: python tests/reader-exact-folios-visual-v7111.py
+      - name: Browser - no skipped or duplicated prose across turns
+        run: python tests/paged-no-skip-v737.py

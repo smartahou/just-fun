@@ -7,7 +7,8 @@ const root=path.resolve(__dirname,'..');
 const js=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.111.0');
+const [major,minor]=pkg.version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=111),'exact folio contract must survive later releases');
 const counts=new Map(),db=new Map();
 const store={getItem(k){return db.has(k)?db.get(k):null},
   setItem(k,v){db.set(k,v)}};
@@ -38,7 +39,7 @@ assert.equal(model.progress(4,450),mid,'partial census cannot change percent');
 const saved=db.get(model.cacheKey());
 assert(saved,'verified page counts persisted');
 const savedData=JSON.parse(saved);
-assert.equal(savedData.version,'v7.111.0');
+assert.equal(savedData.version,'v7.112.0');
 assert.equal(savedData.layout,'book-1|font-400|1360x840');
 assert.equal(savedData.chapters,8);
 counts.clear();
