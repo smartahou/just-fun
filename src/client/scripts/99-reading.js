@@ -2359,6 +2359,11 @@ async function jfDeskPagedLayout(keepPage,reason){
   const beforePrepend=reason==='prepend'?jfDeskPages[jfDeskPageIndex]:null;
   const geo=jfDeskPagedGeometry();
   const view=document.getElementById('jfPageView');
+  // v7.110: the user can enter paper mode from continuous mode without ever
+  // invoking jfApplyTextReadingPrefs. Publish the chosen family/size on the
+  // page container itself BEFORE the hidden probe measures a single line.
+  view.style.setProperty('--jf-read-font',jfDeskFont+'px');
+  view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
   view.style.setProperty('--jf-page-w',geo.pageW+'px');
   view.style.setProperty('--jf-page-h',geo.pageH+'px');
   view.style.setProperty('--jf-pad-x',geo.padX+'px');
@@ -2975,6 +2980,14 @@ async function jfDeskPagedToggle(){
     jfDeskPaged=!oldMode;
     jfReader.classList.toggle('paged',jfDeskPaged);
     jfDeskSyncTypographyControls();
+    if(jfDeskPaged){
+      // The printed sheets and the measurement host inherit from jfPageView,
+      // NOT the continuous jfReadText element.
+      const view=document.getElementById('jfPageView');
+      view.style.setProperty('--jf-read-font',jfDeskFont+'px');
+      view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
+      await jfDeskEnsureBookFonts();
+    }
     window.JFEpubPaperToc?.close();window.JFEpubPaperToc?.sync();
     jfDeskPaperNotes.clear();
     window.JFPaperTextures?.syncButton();
