@@ -3939,6 +3939,9 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   line-height:inherit!important;
   color:inherit;
 }
+.jfReader.paged #jfPageView .jfSheetBody .jfPrintCommentarySourceWhitespace{
+  display:none!important;
+}
 .jfReader.paged #jfPageView .jfSheetBody .jfPrintCommentarySource{
   display:inline!important;
   white-space:normal!important;
