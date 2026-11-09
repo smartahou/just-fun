@@ -1696,7 +1696,9 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfSheetStack{transition:width .28s ease}
 @media (prefers-reduced-motion:reduce){.jfSheetStack{transition:none}}
 /* A folio computed from an extrapolated page count is dimmer than an exact one. */
-.jfSheet[data-folio-exact='false']::before{opacity:.28}
+/* v7.111: an unmeasured chapter prefix has NO physical page number.
+   Do not show extrapolated digits, however faint or dark later rules paint. */
+.jfSheet[data-folio-exact='false']::before{content:none!important}
 
 /* 书口是纸页断面：每张纸是一条水平线，从上到下排列。之前用 90deg 画成了
    竖向条纹，那是错的——竖线看起来像装饰纹理，不像一叠纸。 */
@@ -1961,7 +1963,7 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfReader.paged #jfPageView .jfSheet::before{
   left:auto;right:auto;bottom:30px!important;
   z-index:3!important;
-  font-family:'Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif!important;
+  font-family:'JustFun Book Serif CN','Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif!important;
   color:#746044!important;
   font-size:clamp(12px,calc(var(--jf-read-font,18px) * .74),14px)!important;
   font-weight:400!important;
