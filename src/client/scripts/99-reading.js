@@ -1797,7 +1797,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.115.0';
+const jfDeskFolioCacheRevision='v7.116.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
