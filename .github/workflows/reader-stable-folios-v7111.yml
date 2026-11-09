@@ -61,11 +61,11 @@ jobs:
           CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
           test -n "$CHROME"
           sudo ln -sf "$CHROME" /usr/bin/chromium
-      - name: Actual EPUB: pending/exact folios, cache reopen, stable percent and resizing
+      - name: "Actual EPUB: pending/exact folios, cache reopen, stable percent and resizing"
         run: python tests/reader-exact-folios-visual-v7111.py
-      - name: Actual EPUB: source citation and previous progress/UI contract
+      - name: "Actual EPUB: source citation and previous progress/UI contract"
         run: python tests/reading-progress-visual-v7107.py
-      - name: Actual EPUB: embedded 400/600 glyphs and reflow anchor
+      - name: "Actual EPUB: embedded 400/600 glyphs and reflow anchor"
         run: python tests/book-font-visual-v7110.py
-      - name: Actual EPUB: sequential page turning with no lost prose
+      - name: "Actual EPUB: sequential page turning with no lost prose"
         run: python tests/paged-no-skip-v737.py
