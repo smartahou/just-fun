@@ -106,11 +106,10 @@
     if(window.JF_DEBUG_SPLIT)console.info('[split] avail',Math.round(avail),'lh',Math.round(lh),'need',Math.round(lh*MIN_LINES),'tag',el.tagName,'len',el.textContent.length);
     // Never split a block that owns an image: the clone would lose it.
     if(hasImage(el))return null;
-    // v7.113: a bibliography+commentary pair is an indivisible table row when
-    // it fits a fresh leaf. DOM Range splitting across <td> boundaries would
-    // otherwise create a second fragment without its bibliography source.
-    if((el.classList?.contains('jfPrintSourceRowPart')||
-        el.querySelector?.('table.jfPrintSourceRowPart'))&&
+    // A note and its source must stay together when it fits one fresh leaf.
+    // A genuinely oversized annotation may split with original DOM Range
+    // offsets, while its continuation carries no duplicated source text.
+    if(el.classList?.contains('jfPrintCommentaryNote')&&
        measure(el,host)<=pageH+EPS)return null;
     if(avail<lh*MIN_LINES)return null;
     var walk=textNodes(el);
@@ -166,125 +165,64 @@
     return /^H[1-6]$/.test(el?.tagName||'') ||
       !!el?.classList?.contains('jfPrintKeepWithNext');
   }
-  // v7.115: An old-book commentary needs a *measured* bibliography gutter,
-  // not a universal 30% source column. Reserve the width of the widest
-  // printed source plus about one em of air. Each source table still has ONE
-  // stable track allocation, shared by its continuation fragments.
+  // v7.116 · A bibliographic note is *one flowing piece of prose*, not a
+  // two-column table. Turn each verified source/commentary row in a PRINTED
+  // clone into an inline source label + annotation paragraph. No whitespace is
+  // inserted into textContent: source character offsets remain reconstructible.
   function commentaryTable(node){
     var table=node?.tagName==='TABLE'?node:
       node?.querySelector?.('table.jfPrintSourceCommentary');
     return table?.classList?.contains('jfPrintSourceCommentary')?table:null;
   }
-  function commentarySourceShare(node,host){
-    if(!host?.ownerDocument||!node?.cloneNode)return 30;
-    var probe=node.cloneNode(true);
-    host.replaceChildren(probe);
-    var table=commentaryTable(probe);
-    if(!table?.rows?.length)return 30;
-    // Measure with the same available width, typography and ancestor CSS as
-    // the physical leaf; percentages on a shrink-to-fit EPUB table lie here.
-    table.style.setProperty('width','100%','important');
-    table.style.setProperty('max-width','100%','important');
-    table.style.setProperty('table-layout','fixed','important');
-    var width=table.getBoundingClientRect().width;
-    if(!Number.isFinite(width)||width<=0)return 30;
-    var max=0,fontSize=16;
-    var canvas=document.createElement('canvas');
-    var ctx=canvas.getContext?.('2d');
-    for(var row of Array.from(table.rows)){
-      var cell=row.cells?.[0];
-      if(!cell)continue;
-      var style=getComputedStyle(cell);
-      var txt=String(cell.textContent||'').replace(/[\s\u00a0\u3000]+/g,'').trim();
-      if(!txt)continue;
-      var size=parseFloat(style.fontSize)||16;
-      fontSize=Math.max(fontSize,size);
-      if(ctx)ctx.font=style.font||size+'px serif';
-      var glyphs=ctx?ctx.measureText(txt).width:txt.length*size;
-      var spacing=parseFloat(style.letterSpacing)||0;
-      var padding=(parseFloat(style.paddingLeft)||0)+(parseFloat(style.paddingRight)||0);
-      max=Math.max(max,glyphs+txt.length*spacing+padding);
-    }
-    // The longest source receives ~one full glyph of breathing room, while
-    // short citations no longer create a huge blank strip. Extremely long
-    // sources may wrap at 44% instead of starving the commentary text.
-    var gutter=Math.max(13,fontSize*1.08);
-    return Math.min(44,Math.max(16,Math.ceil((max+gutter)*100/width)));
-  }
-  function commentarySetTracks(table,share){
-    if(!table)return;
-    table.querySelectorAll(':scope > colgroup').forEach(function(g){g.remove();});
-    var group=document.createElement('colgroup');
-    [share,100-share].forEach(function(percent){
-      var col=document.createElement('col');
-      col.style.width=percent+'%';
-      group.appendChild(col);
-    });
-    table.insertBefore(group,table.firstChild);
-    table.style.setProperty('table-layout','fixed','important');
-    table.style.setProperty('width','100%','important');
-    table.style.setProperty('max-width','100%','important');
-    table.style.setProperty('margin','0','important');
-    table.dataset.jfSourceShare=String(share);
-  }
-  // A large source/commentary TABLE is semantically a sequence of source +
-  // annotation ROWS, not one indivisible book plate. A row's two cells stay
-  // paired. Each fragment is still a valid TABLE under the same markup, width,
-  // columns and typography; unrelated EPUB/data tables are never touched.
-  function commentaryRowFragments(item,host){
-    var node=item.node;
-    var table=node?.tagName==='TABLE'?node:
-      node?.querySelector?.('table.jfPrintSourceCommentary');
-    if(!table?.classList?.contains('jfPrintSourceCommentary')||
-       table.classList.contains('jfPrintSourceRowPart'))return null;
-    var rows=Array.from(table.rows||[]);
-    if(rows.length<2||rows.length>30)return null;
-    if(node!==table && (node.textContent||'').trim()!==(table.textContent||'').trim())return null;
-    // The prepared full table owns a measured track share. Every later
-    // page fragment reuses it, so facing pages can never disagree.
-    var share=Number(table.dataset?.jfSourceShare);
-    if(!Number.isFinite(share)||share<16||share>44)
-      share=commentarySourceShare(node,host);
-    var text=node.textContent||'',searchFrom=0,output=[];
-    for(var k=0;k<rows.length;k++){
-      var rowText=rows[k].textContent||'';
-      if(!rowText.trim())return null;
-      var at=text.indexOf(rowText,searchFrom);
-      // Never manufacture an offset when the EPUB contains mixed text outside
-      // a row; the source reading anchor must remain reconstructible.
-      if(at<0)return null;
-      searchFrom=at+rowText.length;
-      var fragment=node.cloneNode(true);
-      var part=fragment.tagName==='TABLE'?fragment:
-        fragment.querySelector('table.jfPrintSourceCommentary');
-      if(!part)return null;
-      var all=Array.from(part.rows||[]);
-      all.forEach(function(r,index){if(index!==k)r.remove();});
-      part.classList.add('jfPrintSourceRowPart');
-      // Re-apply the identical book-level column allocation to each
-      // individual row, including the rows printed on the facing leaf.
-      commentarySetTracks(part,share);
-      output.push({
-        chapter:item.chapter,node:fragment,
-        key:(item.key||'source')+'#row'+k,
-        offset:(item.offset||0)+at,sourceRow:true
+  function commentaryNoteFragments(item){
+    var node=item.node,table=commentaryTable(node);
+    if(!table||!table.rows?.length||table.rows.length>30)return null;
+    // Other EPUB content, captions, and wrappers must remain untouched.
+    if(node!==table&&node.textContent!==table.textContent)return null;
+    if(table.querySelector('caption,thead,th,figure,img:not(.jfInlineGlyph),picture,svg'))return null;
+    var rows=Array.from(table.rows);
+    if(rows.some(function(row){
+      return row.cells.length!==2||Array.from(row.cells).some(function(cell){
+        return cell.colSpan!==1||cell.rowSpan!==1;
       });
+    }))return null;
+    var original=node.textContent||'',offset=0,notes=[];
+    if(rows.map(function(row){return row.textContent;}).join('')!==original)return null;
+    for(var k=0;k<rows.length;k++){
+      var row=rows[k],source=row.cells[0],body=row.cells[1],value=row.textContent;
+      if(!source.textContent?.trim()||!body.textContent?.trim())return null;
+      var para=document.createElement('div');
+      para.className='jfPrintCommentaryNote';
+      var label=document.createElement('span');
+      label.className='jfPrintCommentarySource';
+      for(var child of Array.from(source.childNodes))label.appendChild(child.cloneNode(true));
+      var comment=document.createElement('span');
+      comment.className='jfPrintCommentaryText';
+      for(var part of Array.from(body.childNodes))comment.appendChild(part.cloneNode(true));
+      // Margin creates the visible source→comment gap, not a DOM text node.
+      para.append(label,comment);
+      if(para.textContent!==value)return null;
+      notes.push({
+        chapter:item.chapter,node:para,
+        key:(item.key||'commentary')+'#note'+k,
+        offset:(item.offset||0)+offset,sourceRow:true
+      });
+      offset+=value.length;
     }
-    return output;
+    return offset===original.length?notes:null;
   }
 
   function paginate(blocks,pageH,host){
     var lh=lineHeight(host);
     var pages=[],cur=[],used=0;
-    var queue=blocks.slice();
-    // A table is measured as a WHOLE once per paginate() call. Single-row
-    // tables use precisely the same path as multirow and split tables.
-    // Only cloned print nodes are changed, never the EPUB source DOM.
-    for(var sourceItem of queue){
-      var sourceTable=commentaryTable(sourceItem.node);
-      if(!sourceTable||sourceTable.classList.contains('jfPrintSourceRowPart'))continue;
-      var sourceShare=commentarySourceShare(sourceItem.node,host);
-      commentarySetTracks(sourceTable,sourceShare);
+    var queue=[];
+    // Expand annotated tables into sequential prose notes BEFORE page fitting.
+    // Both one-row and multirow editorial tables follow the same path; other
+    // EPUB tables retain the original pagination behavior.
+    for(var sourceItem of blocks){
+      var notes=commentaryNoteFragments(sourceItem);
+      if(notes)queue.push.apply(queue,notes);
+      else queue.push(sourceItem);
     }
     function flush(){if(cur.length){pages.push(cur);cur=[];used=0;}}
     function fits(h){return used+h<=pageH-EPS;}
@@ -304,9 +242,7 @@
         // 【辑评】 from being stranded on a near-empty left sheet.
         if(keepWithNext(el)&&queue.length){
           var next=queue[0];
-          var parts=commentaryRowFragments(next,host);
-          var lead=parts?.[0]||next;
-          var together=columnHeight(candidate.concat([lead]),host);
+          var together=columnHeight(candidate.concat([next]),host);
           if(together>pageH-EPS&&cur.length){
             // Reconsider the same heading on the next page, so even a title
             // appearing near the bottom never remains on the old page.
@@ -315,14 +251,6 @@
         }
         cur.push({chapter:item.chapter,node:el,key:item.key,offset:item.offset});
         used=candidateHeight;
-        continue;
-      }
-
-      // Only source/commentary tables are decomposed, and only if they do not
-      // fit beside preceding content. Other tables retain original behavior.
-      var rows=commentaryRowFragments(item,host);
-      if(rows){
-        queue.unshift.apply(queue,rows);
         continue;
       }
 
@@ -365,6 +293,8 @@
         // Only a carried-over paragraph should start flush-left on the new
         // page. A genuinely new paragraph at the top keeps its 2em indent.
         if(split.tail.tagName==='P')split.tail.classList.add('jfPrintContinuation');
+        if(split.tail.classList?.contains('jfPrintCommentaryNote'))
+          split.tail.classList.add('jfPrintCommentaryContinuation');
         flush();
         queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',offset:tailOffset,split:true});
         continue;
