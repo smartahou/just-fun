@@ -19,7 +19,7 @@ for(const clause of [
  "var rows=commentaryRowFragments(item,host)"
 ])assert(engine.includes(clause),'Missing fixed full-table column-grid contract: '+clause);
 assert(engine.includes('jfPrintSourceRowPart')&&engine.includes(
-  "measure(el,host)<=parseFloat(host.dataset.jfPageBudget||'0')+EPS"),
+  "measure(el,host)<=pageH+EPS"),
   'normal citation/commentary row is atomic when it fits an empty leaf');
 assert(reader.includes("const jfDeskFolioCacheRevision='v7.113.0'"),
   'new pagination invalidates stale verified folios');
