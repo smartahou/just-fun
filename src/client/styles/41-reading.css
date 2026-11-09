@@ -3934,6 +3934,9 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   cursor:not-allowed;
   pointer-events:none;
 }
+/* The saved flow margin is not the paper-book margin. Do not show its px
+   value next to a disabled slider as though it described this fixed page. */
+.jfReader.paged #jfReadTypographyPanel #jfReadSideValue{display:none!important}
 .jfReader.paged #jfReadTypographyPanel .jfReadSideControl.jfPrefUnavailable::after{
   content:'纸书固定';
   font:11px/1.3 system-ui,sans-serif;
