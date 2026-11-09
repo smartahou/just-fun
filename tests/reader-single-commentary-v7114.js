@@ -35,15 +35,15 @@ assert(!classify(asTable(mk('《唐诗三百首》','中二联当作三十层看
   'mixed-purpose tables must not be forced into annotated layout');
 assert(reader.includes("table.classList.add('jfPrintSourceSingle');"),
   'dedicated style marker only on printed clone');
-assert(reader.includes("for(const width of ['30%','70%'])"),
-  'single bibliography/comment split uses shared 30/70 paper-book grid');
-assert(reader.includes("table.style.setProperty('table-layout','fixed','important')"),
-  'single-row independent auto-sizing is disabled');
-assert(reader.includes("table.insertBefore(cols,table.firstChild)"),
-  'fixed colgroup inserted into copy before printing');
+assert(engine.includes('function commentarySourceShare(node,host)'),
+  'single and multirow source widths are determined from printed text');
+assert(engine.includes("table.style.setProperty('table-layout','fixed','important')"),
+  'printed commentary tracks retain stable fixed sizing');
+assert(engine.includes("table.insertBefore(group,table.firstChild)"),
+  'measured bibliography colgroup inserted into printed copy');
 assert(reader.includes("const printed=document.importNode(node,true);"),
   'original EPUB preserved; the printed clone is edited');
-assert(reader.includes("const jfDeskFolioCacheRevision='v7.114.0'"),
+assert(reader.includes("const jfDeskFolioCacheRevision='v7.115.0'"),
   'new pagination metrics cannot reuse previous book-page count');
 assert(engine.includes('function commentaryRowFragments(item,host)'),
   'multi-row split algorithm untouched');
