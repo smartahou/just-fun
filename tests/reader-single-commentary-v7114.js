@@ -49,4 +49,4 @@ assert(engine.includes('function commentaryRowFragments(item,host)'),
   'multi-row split algorithm untouched');
 assert(css.includes('table.jfPrintSourceCommentary'),
   'existing commentary styling untouched');
-console.log('PASS v7.114: single short cited annotation is 30/70 two-column; ordinary and multirow unchanged');
+console.log('PASS v7.115: single short cited annotation uses measured two-column spacing, ordinary and multirow unchanged');
