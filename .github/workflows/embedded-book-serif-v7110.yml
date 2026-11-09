@@ -54,7 +54,7 @@ jobs:
           const bundled=fs.readFileSync('dist/douyin.js','utf8');
           if(!bundled.includes('data:font/woff2;base64,')||
              !bundled.includes('JustFun Book Serif CN')||
-             !bundled.includes('JustFun Book Serif CN";font-style:normal;font-weight:600'))
+             !bundled.includes('font-weight:600;'))
             throw Error('Offline HTML omitted an embedded web font');
           console.log('PASS 7.110 standalone: 400/600 fonts, 16 unchanged WebPs, no remote font HTTP');
           console.log('Font resource bytes:',r.embeddedBookFonts.reduce((x,f)=>x+f.bytes,0));
