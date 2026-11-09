@@ -1963,7 +1963,15 @@ async function jfDeskMeasureBook(geo){
     jfDeskCensusRunning=false;
     if(jfDeskCensusToken===token){
       jfDeskRecountBookPages();
-      if(jfDeskPaged)jfDeskPagedLayout(true,'census');
+      // The census ONLY changes page-count metadata, not any mounted page
+      // content or geometry. Publishing a full jfDeskPagedLayout here can
+      // relocate the current spread during reading. Refresh the exact folio
+      // and stack labels in place instead, retaining the same page objects.
+      if(jfDeskPaged&&jfDeskSession===session&&jfDeskBook?.id===bookId&&
+         jfDeskPagesSig===jfDeskLayoutSignature(geo)&&jfDeskPages.length){
+        jfDeskPagedRender();
+        jfDeskUpdateProgress();
+      }
     }else if(jfDeskPaged && jfDeskBook && !jfDeskBookPages.exact){
       // The old census was invalidated by a new font/viewport/book session.
       // It must not block a fresh census at the current page geometry.
