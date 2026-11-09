@@ -9,7 +9,8 @@ const js=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const paper=fs.readFileSync(path.join(root,'src/client/scripts/98e-paper-textures.js'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.108.0');
+const [major,minor]=pkg.version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=108),'v7.108 control contract retained in later versions');
 assert(html.includes('id="jfReadTypographyPanel"'));
 assert(html.includes('id="jfReadFamily"'),'font family selector preserved');
 assert(html.includes('id="jfReadSide"'),'continuous-flow margin preserved');
