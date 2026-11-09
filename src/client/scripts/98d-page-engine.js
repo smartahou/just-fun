@@ -170,7 +170,7 @@
   // annotation ROWS, not one indivisible book plate. A row's two cells stay
   // paired. Each fragment is still a valid TABLE under the same markup, width,
   // columns and typography; unrelated EPUB/data tables are never touched.
-  function commentaryRowFragments(item){
+  function commentaryRowFragments(item,host){
     var node=item.node;
     var table=node?.tagName==='TABLE'?node:
       node?.querySelector?.('table.jfPrintSourceCommentary');
@@ -262,7 +262,7 @@
         // 【辑评】 from being stranded on a near-empty left sheet.
         if(keepWithNext(el)&&queue.length){
           var next=queue[0];
-          var parts=commentaryRowFragments(next);
+          var parts=commentaryRowFragments(next,host);
           var lead=parts?.[0]||next;
           var together=columnHeight(candidate.concat([lead]),host);
           if(together>pageH-EPS&&cur.length){
@@ -278,7 +278,7 @@
 
       // Only source/commentary tables are decomposed, and only if they do not
       // fit beside preceding content. Other tables retain original behavior.
-      var rows=commentaryRowFragments(item);
+      var rows=commentaryRowFragments(item,host);
       if(rows){
         queue.unshift.apply(queue,rows);
         continue;
