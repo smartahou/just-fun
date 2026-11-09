@@ -1,0 +1,76 @@
+name: Just Fun v7.110 embedded Song serif, layout and browser acceptance
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build.js"
+      - "build.manifest.json"
+      - "src/client/scripts/99-reading.js"
+      - "assets/fonts/book-serif/**"
+      - "tests/book-font-v7110.js"
+      - "tests/book-font-visual-v7110.py"
+      - "tests/printed-typography-v769.js"
+      - "package.json"
+      - ".github/workflows/embedded-book-serif-v7110.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-reader-fonts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install exact build dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify uploaded OTF provenance, font readiness and retained reader invariants
+        run: |
+          node tests/book-font-v7110.js
+          node tests/printed-typography-v769.js
+          node tests/print-ink-v7105.js
+          node tests/reading-progress-annotations-v7107.js
+          node tests/reading-toolbar-v7109.js
+          node tests/paged-forward-boundary-v7103.js
+          npm run test:reading-print
+          npm run test:epub-paper
+      - name: Build standalone Just Fun with both inlined WOFF2 fonts
+        run: |
+          node scripts/build.js > /tmp/jf-v7110-build.log
+          node --check dist/douyin.js
+          node - <<'NODE'
+          const r=require('./dist/build-report.json');
+          const crypto=require('node:crypto');
+          const fs=require('node:fs');
+          if(r.bookFontSourceVersion!=='1.000R'||r.embeddedBookFonts?.length!==2||
+             ![400,600].every(w=>r.embeddedBookFonts.some(f=>f.weight===w&&f.glyphs>=20000)))
+            throw Error('Missing the 400/600 official uploaded book font');
+          if(r.paperTextures!==16||r.paperRuntimeAssetSha256?.length!==16)
+            throw Error('Original user-approved 16 paper photos changed');
+          const bundled=fs.readFileSync('dist/douyin.js','utf8');
+          if(!bundled.includes('data:font/woff2;base64,')||
+             !bundled.includes('JustFun Book Serif CN')||
+             !bundled.includes('JustFun Book Serif CN";font-style:normal;font-weight:600'))
+            throw Error('Offline HTML omitted an embedded web font');
+          console.log('PASS 7.110 standalone: 400/600 fonts, 16 unchanged WebPs, no remote font HTTP');
+          console.log('Font resource bytes:',r.embeddedBookFonts.reduce((x,f)=>x+f.bytes,0));
+          NODE
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium and real-EPUB test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Verify native font actually used on a photographed paper EPUB
+        run: python tests/book-font-visual-v7110.py
+      - name: Verify continuous page turns do not skip text under the new typeface
+        run: python tests/paged-no-skip-v737.py
