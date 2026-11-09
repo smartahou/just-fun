@@ -95,5 +95,6 @@ assert(!scoped.includes('.jfSheetBody td{'),'no global td');
 assert(!/font-size:|line-height:|border-radius:|background-image:/.test(scoped),
   'no font or original paper changes');
 const packageJson=require('../package.json');
-assert.equal(packageJson.version,'7.107.0');
+const [major,minor]=packageJson.version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=107),'v7.107 progress fix must remain valid after later releases');
 console.log('PASS v7.107: footer/piles same %, census continuity, reversed turns, source table isolation');
