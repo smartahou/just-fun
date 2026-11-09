@@ -1,0 +1,34 @@
+{
+  "version": "7.110.0",
+  "family": "JustFun Book Serif CN",
+  "source_tag": "1.000R",
+  "source_commit": "f6cf97d92b22e7bd77e355a61fe549ae44b6de76",
+  "source_repository": "https://github.com/adobe-fonts/source-han-serif",
+  "license": "SIL OFL 1.1",
+  "license_file": "OFL-1.1.txt",
+  "originals_match_user_upload": true,
+  "subset_policy": "GBK repertoires + typographic punctuation; no added content or visual transformations",
+  "fallback_for_missing_codepoints": true,
+  "files": [
+    {
+      "weight": 400,
+      "filename": "justfun-book-serif-cn-400.woff2",
+      "bytes": 4545884,
+      "sha256": "341a8551ef517aeb310677ee74b885604c80bc0fdba10732527018791cdaa8f7",
+      "glyphs": 22209,
+      "original_otf_path": "SubsetOTF/CN/SourceHanSerifCN-Regular.otf",
+      "original_sha256": "1ddaf8183212f81e5b9a5b8c87a24aab8b7d2ff8f05eb3f6eaab341a7a285e58",
+      "original_git_sha": "91b48b7fc680b2c887e8d1f6527719e60b0fd098"
+    },
+    {
+      "weight": 600,
+      "filename": "justfun-book-serif-cn-600.woff2",
+      "bytes": 4680676,
+      "sha256": "07ebff49502fea7a2cbfb4a1a5ce320d41a37acb78ca9beb26fa5af4323c5469",
+      "glyphs": 22209,
+      "original_otf_path": "SubsetOTF/CN/SourceHanSerifCN-SemiBold.otf",
+      "original_sha256": "c058c0bd712ff3d9e9176a22650de8d0dcdb15396235cb6e3e373e6dc455d7bc",
+      "original_git_sha": "efa94cb5ecca0290da770c6d691717f74bc17fad"
+    }
+  ]
+}
