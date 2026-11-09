@@ -1,0 +1,71 @@
+name: Just Fun v7.111 deterministic page folios and reading anchor
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/scripts/99-reading.js"
+      - "src/client/styles/41-reading.css"
+      - "tests/reader-exact-folios-v7111.js"
+      - "tests/reader-exact-folios-visual-v7111.py"
+      - "tests/reading-progress-annotations-v7107.js"
+      - "tests/book-font-v7110.js"
+      - "package.json"
+      - ".github/workflows/reader-stable-folios-v7111.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deterministic-reader:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install locked build dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Unit tests - folio prefix, cache, reading anchor and established regressions
+        run: |
+          node tests/reader-exact-folios-v7111.js
+          node tests/reading-progress-annotations-v7107.js
+          node tests/book-font-v7110.js
+          node tests/printed-typography-v769.js
+          node tests/paged-forward-boundary-v7103.js
+          node tests/reading-toolbar-v7109.js
+          node tests/epub-caption-v7106.js
+          npm run test:reading-print
+          npm run test:epub-paper
+      - name: Offline build with embedded font and original paper textures
+        run: |
+          node scripts/build.js > /tmp/jf-v7111-build.log
+          node --check dist/douyin.js
+          node - <<'NODE'
+          const b=require('./dist/build-report.json');
+          if(b.bookFontSourceVersion!=='1.000R'||b.embeddedBookFonts?.length!==2)
+            throw Error('Missing user's Source Han Serif 400/600 font');
+          if(b.paperTextures!==16||b.paperRuntimeAssetSha256?.length!==16)
+            throw Error('Original 16 paper leaves changed');
+          console.log('PASS 7.111 original 400/600 book fonts and 16 paper textures');
+          NODE
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium and EPUB integration dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Actual EPUB: pending/exact folios, cache reopen, stable percent and resizing
+        run: python tests/reader-exact-folios-visual-v7111.py
+      - name: Actual EPUB: source citation and previous progress/UI contract
+        run: python tests/reading-progress-visual-v7107.py
+      - name: Actual EPUB: embedded 400/600 glyphs and reflow anchor
+        run: python tests/book-font-visual-v7110.py
+      - name: Actual EPUB: sequential page turning with no lost prose
+        run: python tests/paged-no-skip-v737.py
