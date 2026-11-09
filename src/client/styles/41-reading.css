@@ -3921,3 +3921,21 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged #jfPageView .jfSheetBody table.jfPrintSourceCommentary > tr > :is(td,th){
   vertical-align:top!important;
 }
+
+/* v7.108 · Retired paper controls / honest margin affordance.
+   In paginated books the page geometry is fixed by jfDeskPagedGeometry(), not
+   --jf-read-side. Never suggest this slider adjusts visible paper margins.
+   The same control remains enabled in continuous EPUB/TXT reading. */
+.jfReader.paged #jfReadTypographyPanel .jfReadSideControl.jfPrefUnavailable{
+  opacity:.48;
+  cursor:not-allowed;
+}
+.jfReader.paged #jfReadTypographyPanel #jfReadSide:disabled{
+  cursor:not-allowed;
+  pointer-events:none;
+}
+.jfReader.paged #jfReadTypographyPanel .jfReadSideControl.jfPrefUnavailable::after{
+  content:'纸书固定';
+  font:11px/1.3 system-ui,sans-serif;
+  margin-left:2px;
+}
