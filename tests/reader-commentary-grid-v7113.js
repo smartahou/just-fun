@@ -14,8 +14,8 @@ for(const clause of [
  "Math.ceil((max+gutter)*100/width)",
  "var group=document.createElement('colgroup')",
  "table.insertBefore(group,table.firstChild)",
- "part.style.setProperty('table-layout','fixed','important')",
- "part.style.setProperty('width','100%','important')",
+ "table.style.setProperty('table-layout','fixed','important')",
+ "table.style.setProperty('width','100%','important')",
  "var parts=commentaryRowFragments(next,host)",
  "var rows=commentaryRowFragments(item,host)"
 ])assert(engine.includes(clause),'Missing fixed full-table column-grid contract: '+clause);
