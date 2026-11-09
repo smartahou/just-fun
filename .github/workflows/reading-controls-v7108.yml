@@ -10,6 +10,7 @@ on:
       - "tests/reading-preferences-v7108.js"
       - "tests/reading-preferences-visual-v7108.py"
       - "tests/aged-paper-default-v768.js"
+      - "tests/reading-progress-annotations-v7107.js"
       - "package.json"
       - ".github/workflows/reading-controls-v7108.yml"
   workflow_dispatch:
