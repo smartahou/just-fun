@@ -152,6 +152,54 @@
     return host.scrollHeight;
   }
 
+
+  // v7.112: Editorial headings and their first commentary must share a page.
+  // EPUBs commonly use <p><b>【辑评】</b></p> rather than H2. The reader
+  // tags that *specific* printed clone; the generic engine also respects H1-H6.
+  function keepWithNext(el){
+    return /^H[1-6]$/.test(el?.tagName||'') ||
+      !!el?.classList?.contains('jfPrintKeepWithNext');
+  }
+  // A large source/commentary TABLE is semantically a sequence of source +
+  // annotation ROWS, not one indivisible book plate. A row's two cells stay
+  // paired. Each fragment is still a valid TABLE under the same markup, width,
+  // columns and typography; unrelated EPUB/data tables are never touched.
+  function commentaryRowFragments(item){
+    var node=item.node;
+    var table=node?.tagName==='TABLE'?node:
+      node?.querySelector?.('table.jfPrintSourceCommentary');
+    if(!table?.classList?.contains('jfPrintSourceCommentary')||
+       table.classList.contains('jfPrintSourceRowPart'))return null;
+    var rows=Array.from(table.rows||[]);
+    if(rows.length<2||rows.length>30)return null;
+    if(node!==table && (node.textContent||'').trim()!==(table.textContent||'').trim())return null;
+    var text=node.textContent||'',searchFrom=0,output=[];
+    for(var k=0;k<rows.length;k++){
+      var rowText=rows[k].textContent||'';
+      if(!rowText.trim())return null;
+      var at=text.indexOf(rowText,searchFrom);
+      // Never manufacture an offset when the EPUB contains mixed text outside
+      // a row; the source reading anchor must remain reconstructible.
+      if(at<0)return null;
+      searchFrom=at+rowText.length;
+      var fragment=node.cloneNode(true);
+      var part=fragment.tagName==='TABLE'?fragment:
+        fragment.querySelector('table.jfPrintSourceCommentary');
+      if(!part)return null;
+      var all=Array.from(part.rows||[]);
+      all.forEach(function(r,index){if(index!==k)r.remove();});
+      part.classList.add('jfPrintSourceRowPart');
+      // CSS is unchanged. The copied table and cells retain EPUB's own
+      // column widths and the v7.107 source-commentary top alignment.
+      output.push({
+        chapter:item.chapter,node:fragment,
+        key:(item.key||'source')+'#row'+k,
+        offset:(item.offset||0)+at,sourceRow:true
+      });
+    }
+    return output;
+  }
+
   function paginate(blocks,pageH,host){
     var lh=lineHeight(host);
     var pages=[],cur=[],used=0;
@@ -169,19 +217,30 @@
       var candidate=cur.concat([{chapter:item.chapter,node:el,key:item.key}]);
       var candidateHeight=columnHeight(candidate,host);
       if(candidateHeight<=pageH){
-        // A heading must not be the last thing on a page.
-        if(/^H[1-6]$/.test(el.tagName)&&queue.length&&cur.length){
-          var withNext=columnHeight(candidate.concat([queue[0]]),host);
-          if(withNext>pageH){
-            // Move the heading to the fresh page — it must not be dropped.
-            flush();
-                cur.push({chapter:item.chapter,node:el,key:item.key,offset:item.offset});
-            used=measure(el,host);
-            continue;
+        // Keep a heading with the first meaningful content, not merely a
+        // whole large TABLE. Looking ahead at its first *complete row* prevents
+        // 【辑评】 from being stranded on a near-empty left sheet.
+        if(keepWithNext(el)&&queue.length){
+          var next=queue[0];
+          var parts=commentaryRowFragments(next);
+          var lead=parts?.[0]||next;
+          var together=columnHeight(candidate.concat([lead]),host);
+          if(together>pageH-EPS&&cur.length){
+            // Reconsider the same heading on the next page, so even a title
+            // appearing near the bottom never remains on the old page.
+            flush();queue.unshift(item);continue;
           }
         }
         cur.push({chapter:item.chapter,node:el,key:item.key,offset:item.offset});
         used=candidateHeight;
+        continue;
+      }
+
+      // Only source/commentary tables are decomposed, and only if they do not
+      // fit beside preceding content. Other tables retain original behavior.
+      var rows=commentaryRowFragments(item);
+      if(rows){
+        queue.unshift.apply(queue,rows);
         continue;
       }
 
