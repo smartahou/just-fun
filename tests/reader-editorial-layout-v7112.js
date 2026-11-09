@@ -27,14 +27,15 @@ assert(!detect(elem('TABLE','【辑评】')),'ordinary data tables are not headi
 assert(reader.includes("if(jfDeskIsEditorialHeading(printed))printed.classList.add('jfPrintKeepWithNext');"),
   'only printed clone gets semantic class');
 assert(engine.includes('function keepWithNext(el)'),'page engine knows editorial heading semantics');
-assert(engine.includes('function commentaryRowFragments(item,host)'),'commentary rows are splittable as pairs');
+assert(engine.includes('function commentaryNoteFragments(item)'),'commentary rows are splittable as pairs');
 assert(engine.includes("table?.classList?.contains('jfPrintSourceCommentary')"),
   'ordinary tables remain unchanged');
-assert(engine.includes('fragment=node.cloneNode(true)'),'source markup and cell styling preserved');
-assert(engine.includes('if(index!==k)r.remove()'),'each page fragment contains one complete row');
-assert(engine.includes("part.classList.add('jfPrintSourceRowPart')"),
-  'row fragment never recursively splits into more tables');
-assert(engine.includes('offset:(item.offset||0)+at,sourceRow:true'),
+assert(engine.includes('child.cloneNode(true)'),'bibliography markup retained in flowing note');
+assert(engine.includes("para.className='jfPrintCommentaryNote'"),
+  'each editorial row is now one flowing paragraph');
+assert(engine.includes('if(para.textContent!==value)return null'),
+  'each commentary paragraph preserves original characters exactly');
+assert(engine.includes('offset:(item.offset||0)+offset,sourceRow:true'),
   'each row remains anchored to original text offset');
 assert(engine.includes('if(together>pageH-EPS&&cur.length)'),
   'short editorial heading is pushed with first full annotation');
@@ -46,7 +47,7 @@ assert(reader.includes("jfDeskStackState?.folio==='pending'")&&
        reader.includes('jfDeskPagesBefore(currentChapter)!=null'),
   'exact folio can appear immediately, without waiting for whole book census');
 assert(reader.includes('const jfDeskFolioCacheRevision=')&&
-  reader.includes("const jfDeskFolioCacheRevision='v7.115.0'"),
+  reader.includes("const jfDeskFolioCacheRevision='v7.116.0'"),
   'old pagination layout cache is invalidated by algorithm change');
 assert(css.includes(".jfSheet[data-folio-exact='false']::before{content:none!important}"),
   'inaccurate physical page numbers remain hidden');
