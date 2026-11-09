@@ -54,6 +54,32 @@ const jfReadFamilyMap={
   kai:"'Kaiti SC','KaiTi','STKaiti',serif",
   mono:"'Sarasa Mono SC','Microsoft YaHei UI',monospace"
 };
+// v7.108 · A real paper spread uses a fixed, measured page box: the historical
+// "side margin" slider only changes the continuous reader and cannot change
+// the paginated sheet. Disable it in paper mode instead of accepting a setting
+// that makes no visible change. Keep it available when reading continuously.
+function jfDeskSyncTypographyControls(){
+  const slider=document.getElementById('jfReadSide');
+  const label=document.getElementById('jfReadSideControl');
+  const heading=document.getElementById('jfReadTypographyTitle');
+  const toggle=document.getElementById('jfReadTypographyToggle');
+  const paged=!!jfDeskPaged;
+  if(slider){
+    slider.disabled=paged;
+    slider.setAttribute('aria-disabled',String(paged));
+    if(paged)slider.value=String(jfDeskPrefs.side);
+  }
+  if(label){
+    label.title=paged?'纸书翻页模式使用固定版心，边距不可调整':'调整连续滚动模式的左右边距';
+    label.classList.toggle('jfPrefUnavailable',paged);
+  }
+  if(heading)heading.textContent=paged?'字体':'字体与边距';
+  if(toggle){
+    const title=paged?'字体设置':'字体与边距';
+    toggle.title=title;
+    toggle.setAttribute('aria-label',title);
+  }
+}
 // v7.71 · Typeface diagnostics are opt-in, not a guessed "installed font"
 // badge. getComputedStyle reports a CSS fallback list, not the actual raster
 // face; a canvas comparison is only a hint. Chrome DevTools > Fonts remains
@@ -108,6 +134,7 @@ function jfApplyTextReadingPrefs(){
   document.getElementById('jfReadFamily').value=jfDeskPrefs.family;
   document.getElementById('jfReadSide').value=String(jfDeskPrefs.side);
   document.getElementById('jfReadSideValue').textContent=jfDeskPrefs.side+'px';
+  jfDeskSyncTypographyControls();
   jfReader.classList.toggle('paper',jfDeskPrefs.theme==='paper'||jfDeskPaged);
   // Font, measure and family all change line breaking, so the paper-book pages
   // must be measured again; the anchor keeps the reader where they were.
@@ -399,6 +426,7 @@ async function jfDeskOpenReader(bookId,chapter){
     const savedMode=jfDeskWorkspace.progress[bookId]?.mode;
     jfDeskPaged=outline.format==='EPUB'&&savedMode==='paged';
     jfReader.classList.toggle('paged',jfDeskPaged);
+    jfDeskSyncTypographyControls();
     window.JFEpubPaperToc?.sync();
     jfReader.classList.toggle('paper',jfDeskPaged||jfDeskPrefs.theme==='paper');
     // Restore the selected old-paper skin whenever a book is reopened. The
@@ -1585,6 +1613,7 @@ document.getElementById('jfReadChapters').addEventListener('change',e=>{jfDeskFl
 document.getElementById('jfReadSmaller').addEventListener('click',()=>jfDeskSetPref({font:Math.max(13,jfDeskFont-2)}));
 document.getElementById('jfReadLarger').addEventListener('click',()=>jfDeskSetPref({font:Math.min(28,jfDeskFont+2)}));
 document.getElementById('jfReadTypographyToggle').addEventListener('click',()=>{
+  jfDeskSyncTypographyControls();
   const panel=document.getElementById('jfReadTypographyPanel');panel.hidden=!panel.hidden;
   document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded',String(!panel.hidden));
 });
@@ -1595,8 +1624,17 @@ document.addEventListener('pointerdown',event=>{
   }
 });
 document.getElementById('jfReadFamily').addEventListener('change',e=>jfDeskSetPref({family:e.target.value}));
-document.getElementById('jfReadSide').addEventListener('input',e=>{jfReadText.style.setProperty('--jf-read-side',e.target.value+'px');document.getElementById('jfReadSideValue').textContent=e.target.value+'px';});
-document.getElementById('jfReadSide').addEventListener('change',e=>jfDeskSetPref({side:Number(e.target.value)}));
+document.getElementById('jfReadSide').addEventListener('input',e=>{
+  // Guard synthetic/programmatic events too; disabled HTML inputs already
+  // reject pointer and keyboard edits in normal interaction.
+  if(jfDeskPaged){jfDeskSyncTypographyControls();return;}
+  jfReadText.style.setProperty('--jf-read-side',e.target.value+'px');
+  document.getElementById('jfReadSideValue').textContent=e.target.value+'px';
+});
+document.getElementById('jfReadSide').addEventListener('change',e=>{
+  if(jfDeskPaged){jfDeskSyncTypographyControls();return;}
+  jfDeskSetPref({side:Number(e.target.value)});
+});
 // ---- v7.32 paged (paper book) mode -----------------------------------------
 // Opt-in only. The continuous reader stays the default; this mode lays the text
 // out as viewport-height columns and turns pages by scrolling one column at a
@@ -2898,6 +2936,7 @@ async function jfDeskPagedToggle(){
   const task=(async()=>{
     jfDeskPaged=!oldMode;
     jfReader.classList.toggle('paged',jfDeskPaged);
+    jfDeskSyncTypographyControls();
     window.JFEpubPaperToc?.close();window.JFEpubPaperToc?.sync();
     jfDeskPaperNotes.clear();
     window.JFPaperTextures?.syncButton();
@@ -2931,6 +2970,7 @@ async function jfDeskPagedToggle(){
       clearTimeout(jfDeskProgressTimer);
       jfDeskPaged=oldMode;
       jfReader.classList.toggle('paged',oldMode);
+      jfDeskSyncTypographyControls();
       jfReader.classList.toggle('paper',oldMode||jfDeskPrefs.theme==='paper');
       window.JFPaperTextures?.syncButton();
       const btn=document.getElementById('jfReadPaged');
