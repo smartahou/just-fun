@@ -1,0 +1,78 @@
+name: Just Fun v7.114 one-row annotated poetry layout
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/scripts/99-reading.js"
+      - "src/client/scripts/98d-page-engine.js"
+      - "tests/reader-single-commentary-v7114.js"
+      - "tests/reader-single-commentary-visual-v7114.py"
+      - "tests/reader-commentary-grid-v7113.js"
+      - "tests/reader-editorial-layout-v7112.js"
+      - "tests/reader-exact-folios-v7111.js"
+      - "tests/reader-exact-folios-visual-v7111.py"
+      - "tests/reading-progress-annotations-v7107.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/reader-single-commentary-v7114.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  one-row-commentary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Unit regression for single cited notes, multirow grid and accurate folios
+        run: |
+          node tests/reader-single-commentary-v7114.js
+          node tests/reader-commentary-grid-v7113.js
+          node tests/reader-editorial-layout-v7112.js
+          node tests/reader-exact-folios-v7111.js
+          node tests/reading-progress-annotations-v7107.js
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Font, paging and paper regressions
+        run: |
+          node tests/book-font-v7110.js
+          node tests/epub-caption-v7106.js
+          node tests/paged-forward-boundary-v7103.js
+          npm run test:reading-print
+          npm run test:epub-paper
+      - name: Compile standalone Just Fun with original fonts and paper
+        run: |
+          node scripts/build.js > /tmp/jf-v7114-build.log
+          node --check dist/douyin.js
+          node - <<'NODE'
+          const report=require('./dist/build-report.json');
+          if(report.embeddedBookFonts?.length!==2 || report.bookFontSourceVersion!=='1.000R')
+            throw Error('Embedded book fonts changed');
+          if(report.paperTextures!==16 || report.paperRuntimeAssetSha256?.length!==16)
+            throw Error('Approved paper artwork changed');
+          console.log('PASS fonts/paper retained in v7.114');
+          NODE
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium and real EPUB integration dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q pillow playwright
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Browser compare one short cited note against six-row commentary grid
+        run: python tests/reader-single-commentary-visual-v7114.py
+      - name: Browser verify multirow grid geometry is unchanged
+        run: python tests/reader-commentary-grid-visual-v7113.py
+      - name: Browser verify source-comment heading and saved reading position
+        run: python tests/reader-editorial-layout-visual-v7112.py
+      - name: Browser verify no skipped or repeated pages
+        run: python tests/paged-no-skip-v737.py

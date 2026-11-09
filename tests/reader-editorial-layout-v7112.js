@@ -46,7 +46,7 @@ assert(reader.includes("jfDeskStackState?.folio==='pending'")&&
        reader.includes('jfDeskPagesBefore(currentChapter)!=null'),
   'exact folio can appear immediately, without waiting for whole book census');
 assert(reader.includes('const jfDeskFolioCacheRevision=')&&
-  reader.includes("const jfDeskFolioCacheRevision='v7.113.0'"),
+  reader.includes("const jfDeskFolioCacheRevision='v7.114.0'"),
   'old pagination layout cache is invalidated by algorithm change');
 assert(css.includes(".jfSheet[data-folio-exact='false']::before{content:none!important}"),
   'inaccurate physical page numbers remain hidden');
