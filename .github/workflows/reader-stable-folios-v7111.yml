@@ -44,7 +44,7 @@ jobs:
           node - <<'NODE'
           const b=require('./dist/build-report.json');
           if(b.bookFontSourceVersion!=='1.000R'||b.embeddedBookFonts?.length!==2)
-            throw Error('Missing user's Source Han Serif 400/600 font');
+            throw Error('Missing embedded Source Han Serif 400/600 font');
           if(b.paperTextures!==16||b.paperRuntimeAssetSha256?.length!==16)
             throw Error('Original 16 paper leaves changed');
           console.log('PASS 7.111 original 400/600 book fonts and 16 paper textures');
