@@ -27,7 +27,7 @@ assert(reader.includes("if(jfDeskIsEditorialHeading(printed))printed.classList.a
   'only printed clone gets semantic class');
 assert(engine.includes('function keepWithNext(el)'),'page engine knows editorial heading semantics');
 assert(engine.includes('function commentaryRowFragments(item)'),'commentary rows are splittable as pairs');
-assert(engine.includes("classList.contains('jfPrintSourceCommentary')"),
+assert(engine.includes("table?.classList?.contains('jfPrintSourceCommentary')"),
   'ordinary tables remain unchanged');
 assert(engine.includes('fragment=node.cloneNode(true)'),'source markup and cell styling preserved');
 assert(engine.includes('if(index!==k)r.remove()'),'each page fragment contains one complete row');

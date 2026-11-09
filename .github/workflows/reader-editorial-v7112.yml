@@ -11,6 +11,7 @@ on:
       - "tests/reader-exact-folios-visual-v7111.py"
       - "tests/reading-progress-annotations-v7107.js"
       - "package.json"
+      - "package-lock.json"
       - ".github/workflows/reader-editorial-v7112.yml"
   workflow_dispatch:
 permissions:
