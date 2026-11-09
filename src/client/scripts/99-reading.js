@@ -7,34 +7,18 @@ const jfReadText=document.getElementById('jfReadText');
 let jfReadRawText='',jfReadRawToDisplay=null,jfReadHtml='';
 function jfTxtSmartReflow(raw){return jfTextPresentation.reflow(raw);}
 
-// Screenshot-safe display mask. Full-width replacement glyphs preserve
-// the space occupied by Han characters, unlike ASCII substitutions.
-let jfReadVisualText='',jfReadMaskEnabled=false;
-function jfReadMaskString(value){return jfTextPresentation.mask(value);}
-function jfReadApplyMask(){
-  if(jfReadHtml&&!jfReadMaskEnabled){
-    // Restricted fragment from the server: no scripts, no remote resources.
+// The ordinary chapter renderer has one content path: sanitized EPUB HTML,
+// or reflowed TXT text. The retired screenshot-scramble mode is not involved.
+let jfReadVisualText='';
+function jfReadRenderChapterContent(){
+  if(jfReadHtml){
+    // Restricted fragment from the server: no scripts or remote resources.
     jfReadText.innerHTML=jfReadHtml;
     jfReadText.classList.add('jfReadHtml');
   }else{
     jfReadText.classList.remove('jfReadHtml');
-    jfReadText.textContent=jfReadMaskEnabled?jfReadMaskString(jfReadVisualText):jfReadVisualText;
+    jfReadText.textContent=jfReadVisualText;
   }
-  if(jfDeskBook)document.getElementById('jfReadTitle').textContent=jfReadMaskEnabled?jfReadMaskString(jfDeskBook.title):jfDeskBook.title;
-  for(const option of document.getElementById('jfReadChapters').options){
-    const original=option.dataset.jfOriginalChapter||option.textContent;
-    if(!option.dataset.jfOriginalChapter)option.dataset.jfOriginalChapter=original;
-    option.textContent=jfReadMaskEnabled?jfReadMaskString(original):original;
-  }
-  const button=document.getElementById('jfReadMask');
-  if(button){button.setAttribute('aria-pressed',String(jfReadMaskEnabled));button.classList.toggle('active',jfReadMaskEnabled);button.title=jfReadMaskEnabled?'关闭截图乱码':'截图乱码（仅修改显示）';}
-  const excerpt=document.getElementById('jfReadExcerpt');
-  if(excerpt)excerpt.disabled=jfReadMaskEnabled;
-}
-function jfReadToggleMask(){
-  jfReadMaskEnabled=!jfReadMaskEnabled;
-  if(!jfDeskOutline?.nativePdf&&!jfReadText.hidden)jfReadApplyMask();
-  else{const b=document.getElementById('jfReadMask');b?.setAttribute('aria-pressed',String(jfReadMaskEnabled));}
 }
 
 const jfNotesPanel=document.getElementById('jfDeskNotes');
@@ -78,6 +62,17 @@ function jfDeskSyncTypographyControls(){
     const title=paged?'字体设置':'字体与边距';
     toggle.title=title;
     toggle.setAttribute('aria-label',title);
+  }
+  // v7.109: the photographed book deliberately forces a paper theme.
+  // Do not leave a clickable night-mode icon that silently changes only the
+  // stored FLOW preference. Restore the real control in continuous reading.
+  const theme=document.getElementById('jfReadTheme');
+  if(theme){
+    theme.disabled=paged;
+    theme.setAttribute('aria-disabled',String(paged));
+    theme.title=paged?'真书模式使用固定纸张，夜间模式不可用':'切换阅读主题';
+    theme.setAttribute('aria-label',theme.title);
+    theme.classList.toggle('jfPrefUnavailable',paged);
   }
 }
 // v7.71 · Typeface diagnostics are opt-in, not a guessed "installed font"
@@ -393,7 +388,7 @@ document.getElementById('jfPdfZoomIn').addEventListener('click',()=>jfDeskPdfSca
 document.getElementById('jfPdfFit').addEventListener('click',()=>jfDeskPdfScale(1));
 async function jfDeskOpenReader(bookId,chapter){
   jfDeskPdfClear();jfDeskPdfInfo=null;jfDeskPdfZoom=1;
-  jfReadRawText='';jfReadRawToDisplay=null;jfReadVisualText='';jfReadMaskEnabled=false;jfReadHtml='';
+  jfReadRawText='';jfReadRawToDisplay=null;jfReadVisualText='';jfReadHtml='';
   document.getElementById('jfReadExcerpt').disabled=false;
   jfPdfJsMarksListClose();document.getElementById('jfPdfMarksListToggle').hidden=true;
   const epoch=++jfDeskEpoch;
@@ -416,7 +411,6 @@ async function jfDeskOpenReader(bookId,chapter){
     if(epoch!==jfDeskEpoch)return;
     jfDeskOutline=outline;jfDeskBook=outline.book;
     jfDeskPaperNotes.clear();window.JFEpubPaperToc?.close();
-    document.getElementById('jfReadMask').hidden=outline.format==='PDF';
     document.getElementById('jfReadTitle').textContent=outline.book.title;
     document.getElementById('jfReadFormat').textContent=outline.format+' / JUST FUN';
     const select=document.getElementById('jfReadChapters');select.replaceChildren();
@@ -750,7 +744,7 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null,anch
 }
 function jfDeskFlowOnScroll(){
   if(jfDeskRestoring)return;
-  if(jfDeskPaged||jfReadMaskEnabled||!jfDeskFlow.length||jfDeskFlowBusy)return;
+  if(jfDeskPaged||!jfDeskFlow.length||jfDeskFlowBusy)return;
   const total=jfDeskOutline?.chapters.length||0;
   if(!total)return;
   const c=jfReadCenter;
@@ -772,8 +766,9 @@ async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null,anchorY=
   if(jfDeskOutline?.nativePdf)return jfDeskShowPdfPage(number);
   if(!jfDeskBook||!jfDeskOutline||number<0||number>=jfDeskOutline.chapters.length)return;
   number=jfDeskPaperFirstReadable(number);
-  // EPUB reads as one continuous document; TXT and the mask mode keep the paged path.
-  if(jfDeskOutline.format==='EPUB'&&!jfReadMaskEnabled)return jfDeskShowChapterFlow(number,ratio,offset,scroll,anchorY);
+  // EPUB always uses the normal chapter-window flow; TXT has its own prose
+  // branch. The retired screenshot mode no longer redirects EPUB reads.
+  if(jfDeskOutline.format==='EPUB')return jfDeskShowChapterFlow(number,ratio,offset,scroll,anchorY);
   const epoch=++jfDeskEpoch;
   try{
     const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+number);
@@ -786,7 +781,7 @@ async function jfDeskShowChapter(number,ratio=0,offset=null,scroll=null,anchorY=
       const flowing=jfTxtSmartReflow(data.text);
       jfReadVisualText=flowing.text;jfReadRawToDisplay=flowing.rawToDisplay;
     }else{jfReadVisualText=data.text;jfReadRawToDisplay=null;}
-    jfReadApplyMask();
+    jfReadRenderChapterContent();
     jfReadText.classList.toggle('jfTxtProse',jfDeskOutline.format==='TXT');
     document.getElementById('jfPdfMarksListToggle').hidden=false;
     if(!document.getElementById('jfPdfMarksList').hidden)jfPdfJsMarksListRender();
@@ -955,7 +950,7 @@ async function jfDeskCloseReader(){
   jfDeskSyncImmersive(false);
   document.getElementById('jfReadTypographyPanel').hidden=true;
   document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded','false');
-  jfReadMaskEnabled=false;jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
+  jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
   document.getElementById('jfPdfPages').hidden=true;
   document.getElementById('jfReadPdf').removeAttribute('src');
   if(document.body.classList.contains('jfNotesMode'))jfDeskOpenNotes();
@@ -2987,7 +2982,10 @@ async function jfDeskPagedToggle(){
   }
 }
 
-document.getElementById('jfReadTheme').addEventListener('click',()=>jfDeskSetPref({theme:jfDeskPrefs.theme==='paper'?'dark':'paper'}));
+document.getElementById('jfReadTheme').addEventListener('click',()=>{
+  if(jfDeskPaged){jfDeskSyncTypographyControls();return;}
+  jfDeskSetPref({theme:jfDeskPrefs.theme==='paper'?'dark':'paper'});
+});
 document.getElementById('jfReadPaged').addEventListener('click',jfDeskPagedToggle);
 document.getElementById('jfReadImmersive').addEventListener('click',jfDeskImmersiveToggle);
 // ---- v7.32 immersive reading ------------------------------------------------
@@ -3017,7 +3015,6 @@ function jfDeskImmersiveOnScroll(){
 }
 
 document.getElementById('jfReadNotes').addEventListener('click',jfDeskOpenNotes);
-document.getElementById('jfReadMask').addEventListener('click',jfReadToggleMask);
 document.getElementById('jfReadExcerpt').addEventListener('click',jfDeskExcerpt);
 let jfDeskFlowScrollAt=0;
 jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden||jfDeskRestoring)return;
