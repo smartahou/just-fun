@@ -3923,6 +3923,45 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   vertical-align:top!important;
 }
 
+/* v7.116 · Editorial notes read as prose, not as two-column spreadsheets.
+   Keep one modest source→annotation gap. Continuation lines hang in by 1.25em
+   rather than inheriting an artificial 26–44% bibliography column.
+   This applies equally to hidden pagination and the visible printed leaf. */
+.jfReader.paged #jfPageView .jfSheetBody > .jfPrintCommentaryNote{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 0 .26em!important;
+  padding:0 0 0 1.25em!important;
+  text-indent:-1.25em!important;
+  text-align:left!important;
+  line-height:inherit!important;
+  color:inherit;
+}
+.jfReader.paged #jfPageView .jfSheetBody .jfPrintCommentarySource{
+  display:inline!important;
+  white-space:normal!important;
+  margin:0 .8em 0 0!important;
+  padding:0!important;
+  font:inherit!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody .jfPrintCommentaryText{
+  display:inline!important;
+  margin:0!important;
+  padding:0!important;
+  font:inherit!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody .jfPrintCommentaryNote :is(p,div){
+  display:inline!important;
+  margin:0!important;
+  padding:0!important;
+  text-indent:0!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody > .jfPrintCommentaryContinuation{
+  text-indent:0!important;
+}
+
 /* v7.108 · Retired paper controls / honest margin affordance.
    In paginated books the page geometry is fixed by jfDeskPagedGeometry(), not
    --jf-read-side. Never suggest this slider adjusts visible paper margins.
