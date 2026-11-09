@@ -79,6 +79,14 @@ def main():
                 page.locator('#jfReadTypographyToggle').click() # close panel
                 page.locator('#jfReadPaged').click()
                 page.wait_for_function("()=>jfDeskPaged&&jfDeskPages.length>2",timeout=30000)
+                # The async layout publishes jfDeskPages BEFORE its WebP warm
+                # phase and visible jfDeskPagedRender() finish. Wait for the
+                # actual photographed paper sheet, not merely measured pages.
+                page.wait_for_function("""()=>{
+                  const sheet=document.querySelector('#jfPageView .jfSheet[data-side="left"]');
+                  return !!(sheet?.dataset.paperGroup &&
+                    getComputedStyle(sheet,'::after').backgroundImage.includes('data:image/webp'));
+                }""",timeout=30000)
                 page.locator('#jfReadTypographyToggle').click()
                 fixed=inspect(page)
                 assert fixed['paged'] and fixed['marginDisabled'],fixed
