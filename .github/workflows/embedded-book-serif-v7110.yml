@@ -10,6 +10,7 @@ on:
       - "tests/book-font-v7110.js"
       - "tests/book-font-visual-v7110.py"
       - "tests/printed-typography-v769.js"
+      - "tests/reading-toolbar-v7109.js"
       - "package.json"
       - ".github/workflows/embedded-book-serif-v7110.yml"
   workflow_dispatch:
