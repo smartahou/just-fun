@@ -30,7 +30,7 @@ def main():
                   const records=[];
                   jfDeskChapterPages.get(3).forEach((blocks,i)=>{
                     for(const block of blocks){
-                      if(!block.sourceRow)continue;
+                      if(!(block.node.classList?.contains('jfPrintSourceRowPart')||block.node.querySelector?.('table.jfPrintSourceRowPart')))continue;
                       host.replaceChildren(block.node.cloneNode(true));
                       const table=host.querySelector('table.jfPrintSourceRowPart');
                       if(!table||table.rows.length!==1||table.rows[0].cells.length!==2)
