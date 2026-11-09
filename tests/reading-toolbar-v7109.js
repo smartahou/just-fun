@@ -8,7 +8,8 @@ const html=fs.readFileSync(path.join(root,'src/client/index.html'),'utf8');
 const js=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const version=require('../package.json').version;
-assert.equal(version,'7.109.0');
+const [major,minor]=version.split('.').map(Number);
+assert(major>7||(major===7&&minor>=109),'v7.109 toolbar contract still applies to later readers');
 assert(!html.includes('id="jfReadMask"'),'obsolete scramble toggle removed from header');
 assert(!js.includes('jfReadMaskEnabled')&&!js.includes('jfReadToggleMask')&&
   !js.includes('jfReadApplyMask')&&!js.includes("getElementById('jfReadMask')"),
