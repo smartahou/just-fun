@@ -166,6 +166,67 @@
     return /^H[1-6]$/.test(el?.tagName||'') ||
       !!el?.classList?.contains('jfPrintKeepWithNext');
   }
+  // v7.115: An old-book commentary needs a *measured* bibliography gutter,
+  // not a universal 30% source column. Reserve the width of the widest
+  // printed source plus about one em of air. Each source table still has ONE
+  // stable track allocation, shared by its continuation fragments.
+  function commentaryTable(node){
+    var table=node?.tagName==='TABLE'?node:
+      node?.querySelector?.('table.jfPrintSourceCommentary');
+    return table?.classList?.contains('jfPrintSourceCommentary')?table:null;
+  }
+  function commentarySourceShare(node,host){
+    if(!host?.ownerDocument||!node?.cloneNode)return 30;
+    var probe=node.cloneNode(true);
+    host.replaceChildren(probe);
+    var table=commentaryTable(probe);
+    if(!table?.rows?.length)return 30;
+    // Measure with the same available width, typography and ancestor CSS as
+    // the physical leaf; percentages on a shrink-to-fit EPUB table lie here.
+    table.style.setProperty('width','100%','important');
+    table.style.setProperty('max-width','100%','important');
+    table.style.setProperty('table-layout','fixed','important');
+    var width=table.getBoundingClientRect().width;
+    if(!Number.isFinite(width)||width<=0)return 30;
+    var max=0,fontSize=16;
+    var canvas=document.createElement('canvas');
+    var ctx=canvas.getContext?.('2d');
+    for(var row of Array.from(table.rows)){
+      var cell=row.cells?.[0];
+      if(!cell)continue;
+      var style=getComputedStyle(cell);
+      var txt=String(cell.textContent||'').replace(/[\s\u00a0\u3000]+/g,'').trim();
+      if(!txt)continue;
+      var size=parseFloat(style.fontSize)||16;
+      fontSize=Math.max(fontSize,size);
+      if(ctx)ctx.font=style.font||size+'px serif';
+      var glyphs=ctx?ctx.measureText(txt).width:txt.length*size;
+      var spacing=parseFloat(style.letterSpacing)||0;
+      var padding=(parseFloat(style.paddingLeft)||0)+(parseFloat(style.paddingRight)||0);
+      max=Math.max(max,glyphs+txt.length*spacing+padding);
+    }
+    // The longest source receives ~one full glyph of breathing room, while
+    // short citations no longer create a huge blank strip. Extremely long
+    // sources may wrap at 44% instead of starving the commentary text.
+    var gutter=Math.max(13,fontSize*1.08);
+    return Math.min(44,Math.max(16,Math.ceil((max+gutter)*100/width)));
+  }
+  function commentarySetTracks(table,share){
+    if(!table)return;
+    table.querySelectorAll(':scope > colgroup').forEach(function(g){g.remove();});
+    var group=document.createElement('colgroup');
+    [share,100-share].forEach(function(percent){
+      var col=document.createElement('col');
+      col.style.width=percent+'%';
+      group.appendChild(col);
+    });
+    table.insertBefore(group,table.firstChild);
+    table.style.setProperty('table-layout','fixed','important');
+    table.style.setProperty('width','100%','important');
+    table.style.setProperty('max-width','100%','important');
+    table.style.setProperty('margin','0','important');
+    table.dataset.jfSourceShare=String(share);
+  }
   // A large source/commentary TABLE is semantically a sequence of source +
   // annotation ROWS, not one indivisible book plate. A row's two cells stay
   // paired. Each fragment is still a valid TABLE under the same markup, width,
@@ -179,26 +240,11 @@
     var rows=Array.from(table.rows||[]);
     if(rows.length<2||rows.length>30)return null;
     if(node!==table && (node.textContent||'').trim()!==(table.textContent||'').trim())return null;
-    // v7.113: the v7.112 row-per-TABLE split accidentally gave each fragment
-    // its *own* automatic column sizing. A short bibliography item could occupy
-    // 30px while a longer item used 220px, turning the facing leaf into a jagged
-    // run of labels and comments. Measure the ORIGINAL full table ONCE with
-    // the same CSS as the printed pages; pin that ratio on every cloned row.
-    // Only the printed clones change, never the source EPUB's table.
-    var original=host?.ownerDocument?node.cloneNode(true):null;
-    var share=38;
-    if(original){
-      host.replaceChildren(original);
-      var full=original.tagName==='TABLE'?original:
-        original.querySelector('table.jfPrintSourceCommentary');
-      var cells=full?.rows?.[0]?.cells;
-      if(cells?.length===2){
-        var span=full.getBoundingClientRect().width;
-        var measured=cells[0].getBoundingClientRect().width;
-        if(span>1&&measured>1&&isFinite(measured/span))
-          share=Math.max(30,Math.min(44,Math.round(measured/span*100)));
-      }
-    }
+    // The prepared full table owns a measured track share. Every later
+    // page fragment reuses it, so facing pages can never disagree.
+    var share=Number(table.dataset?.jfSourceShare);
+    if(!Number.isFinite(share)||share<16||share>44)
+      share=commentarySourceShare(node,host);
     var text=node.textContent||'',searchFrom=0,output=[];
     for(var k=0;k<rows.length;k++){
       var rowText=rows[k].textContent||'';
@@ -215,21 +261,9 @@
       var all=Array.from(part.rows||[]);
       all.forEach(function(r,index){if(index!==k)r.remove();});
       part.classList.add('jfPrintSourceRowPart');
-      // A cloned one-row table MUST keep the full table's two column tracks.
-      // A colgroup takes precedence over copied EPUB <td width=...> hints,
-      // and inline !important sizing makes hidden measurement and paint equal.
-      part.querySelectorAll(':scope > colgroup').forEach(function(g){g.remove();});
-      var group=document.createElement('colgroup');
-      [share,100-share].forEach(function(pct){
-        var col=document.createElement('col');
-        col.style.width=pct+'%';
-        group.appendChild(col);
-      });
-      part.insertBefore(group,part.firstChild);
-      part.style.setProperty('table-layout','fixed','important');
-      part.style.setProperty('width','100%','important');
-      part.style.setProperty('max-width','100%','important');
-      part.style.setProperty('margin','0','important');
+      // Re-apply the identical book-level column allocation to each
+      // individual row, including the rows printed on the facing leaf.
+      commentarySetTracks(part,share);
       output.push({
         chapter:item.chapter,node:fragment,
         key:(item.key||'source')+'#row'+k,
@@ -243,6 +277,15 @@
     var lh=lineHeight(host);
     var pages=[],cur=[],used=0;
     var queue=blocks.slice();
+    // A table is measured as a WHOLE once per paginate() call. Single-row
+    // tables use precisely the same path as multirow and split tables.
+    // Only cloned print nodes are changed, never the EPUB source DOM.
+    for(var sourceItem of queue){
+      var sourceTable=commentaryTable(sourceItem.node);
+      if(!sourceTable||sourceTable.classList.contains('jfPrintSourceRowPart'))continue;
+      var sourceShare=commentarySourceShare(sourceItem.node,host);
+      commentarySetTracks(sourceTable,sourceShare);
+    }
     function flush(){if(cur.length){pages.push(cur);cur=[];used=0;}}
     function fits(h){return used+h<=pageH-EPS;}
 
