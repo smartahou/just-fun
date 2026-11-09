@@ -2407,14 +2407,14 @@ function jfDeskBlocksFor(sec){
       if(!jfDeskIsSourceCommentaryTable(table))continue;
       table.classList.add('jfPrintSourceCommentary');
       if(table.rows.length===1){
-        // v7.114: one-row annotated poetry must match the same 38/62
+        // v7.114: one-row annotated poetry uses the same 30/70
         // source/comment grid as a multi-row table split across leaves.
         // Modify the PRINTED clone only: leave source text, cells and
         // saved chapter offsets byte-for-byte unchanged.
         table.classList.add('jfPrintSourceSingle');
         for(const group of table.querySelectorAll(':scope > colgroup'))group.remove();
         const cols=document.createElement('colgroup');
-        for(const width of ['38%','62%']){
+        for(const width of ['30%','70%']){
           const col=document.createElement('col');
           col.style.width=width;
           cols.appendChild(col);
