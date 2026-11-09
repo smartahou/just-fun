@@ -32,24 +32,24 @@ function session(initial){
   vm.runInNewContext(code,context,{timeout:1500});
   return {api:window.JFPaperTextures,classes,state,rules,readerEl,button,select};
 }
-// Legacy OFF is intentionally reset ON exactly once at this release boundary.
-const previous=session({'jf-reader-aged-paper':'off'});
-assert(previous.api.isEnabled(),'legacy OFF no longer makes a newly updated book plain white');
-assert(previous.classes.has('jf-aged-paper'),'photographic paper class restored');
+// v7.108: paper ON/OFF and wear controls were removed from Aa. An explicit
+// previous OFF must no longer survive when users cannot access that toggle.
+const previous=session({'jf-reader-aged-paper':'off','jf-reader-aged-paper-v768':'off'});
+assert(previous.api.isEnabled(),'both legacy OFF keys must restore approved photographic leaves');
+assert(previous.classes.has('jf-aged-paper'),'real old-paper imagery remains enabled');
+assert.equal(previous.state['jf-reader-aged-paper-v768'],'on','retired preference migrates ON');
 assert.equal(previous.api.count,16,'all 8 original left/right texture pairs retained');
 assert.equal((previous.rules.get('jf-paper-static-rules').textContent.match(/background-image:url/g)||[]).length,16);
-assert.equal(previous.button.getAttribute('aria-pressed'),'true');
-// Explicit new OFF remains respected, and the setting is available in Aa.
-previous.api.toggle();
-assert.equal(previous.state['jf-reader-aged-paper-v768'],'off');
-assert(!previous.classes.has('jf-aged-paper'));
-const reopened=session(previous.state);
-assert(!reopened.api.isEnabled(),'a NEW deliberate OFF stays off across reloads');
-reopened.api.toggle();
-assert(reopened.api.isEnabled());
+assert.equal(previous.button.getAttribute('aria-pressed'),'true','legacy button API still syncs harmlessly');
+const html=fs.readFileSync(path.join(root,'src/client/index.html'),'utf8');
+assert(!html.includes('id="jfReadPaperAged"'),'retired ON/OFF button removed from visible toolbar');
+assert(!html.includes('id="jfReadPaperWear"'),'ineffective light/medium/heavy menu removed');
+assert(!html.includes('jfReadPaperSettings'),'paper row fully removed');
+const reopened=session({...previous.state,'jf-reader-aged-paper-v768':'off'});
+assert(reopened.api.isEnabled(),'saved OFF cannot strand a user without the now-retired switch');
 assert.equal(reopened.state['jf-reader-aged-paper-v768'],'on');
 const restored=session(reopened.state);
-assert(restored.classes.has('jf-aged-paper'),'explicit ON persists');
+assert(restored.classes.has('jf-aged-paper'),'reopened book retains fixed photo paper');
 const left={dataset:{}},right={dataset:{}};
 restored.api.applySpread(left,right,'book-A',[{chapter:0,offset:0,key:'0'}],
   [{chapter:0,offset:180,key:'1'}],true);
@@ -58,4 +58,4 @@ assert.equal(left.dataset.paperGroup,right.dataset.paperGroup,'physical pair sha
 assert.equal(left.dataset.paperSide,'left');assert.equal(right.dataset.paperSide,'right');
 assert(restored.rules.get('jf-paper-static-rules').textContent.includes(
   '[data-paper-group="'+left.dataset.paperGroup+'"][data-paper-side="left"]::after'));
-console.log('PASS v7.68: legacy OFF migration, new OFF/ON persistence, 16 photographic assets, left/right spread and mode sync');
+console.log('PASS v7.108: retired paper UI, legacy OFF migration to approved ON, 16 photographed leaves, matched spread and mode sync');
