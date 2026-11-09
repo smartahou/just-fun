@@ -33,7 +33,7 @@ assert(engine.includes("table?.classList?.contains('jfPrintSourceCommentary')"),
 assert(engine.includes('child.cloneNode(true)'),'bibliography markup retained in flowing note');
 assert(engine.includes("para.className='jfPrintCommentaryNote'"),
   'each editorial row is now one flowing paragraph');
-assert(engine.includes('if(para.textContent!==value)return null'),
+assert(engine.includes('if(para.textContent!==original.slice(offset,stop))return null'),
   'each commentary paragraph preserves original characters exactly');
 assert(engine.includes('offset:(item.offset||0)+offset,sourceRow:true'),
   'each row remains anchored to original text offset');
