@@ -77,7 +77,21 @@ def main():
                 # CDP is authoritative: actual rasterised font, not a CSS
                 # font-family list whose first entry may still be unavailable.
                 prose_fonts=font_faces(page,'#jfPageView .jfSheetBody p')
+                # A restored spread often does not display a chapter heading.
+                # Inspect a temporary styled heading under the same *actual*
+                # book sheet, rather than asking DevTools for a missing node.
+                page.evaluate("""()=>{
+                  const sheet=document.querySelector('#jfPageView .jfSheetBody');
+                  if(!sheet.querySelector(':scope > h1')){
+                    const title=document.createElement('h1');
+                    title.id='jfBookFontHeadingAudit';
+                    title.textContent='章节标题';
+                    title.style.cssText='position:absolute;left:20px;top:20px;opacity:.01;pointer-events:none';
+                    sheet.appendChild(title);
+                  }
+                }""")
                 title_fonts=font_faces(page,'#jfPageView .jfSheetBody h1')
+                page.evaluate("()=>document.getElementById('jfBookFontHeadingAudit')?.remove()")
                 def local(f):
                     return 'justfun' in (f.get('familyName') or '').lower() or 'justfun' in (f.get('postScriptName') or '').lower()
                 assert any(local(f) for f in prose_fonts),prose_fonts
