@@ -10,10 +10,10 @@ const [major,minor]=pkg.version.split('.').map(Number);
 assert(major>7||(major===7&&minor>=113),'v7.113 column-grid contract survives later versions');
 for(const clause of [
  "function commentaryRowFragments(item,host)",
- "host.replaceChildren(original)",
- "measured/span*100",
+ "host.replaceChildren(probe)",
+ "Math.ceil((max+gutter)*100/width)",
  "var group=document.createElement('colgroup')",
- "part.insertBefore(group,part.firstChild)",
+ "table.insertBefore(group,table.firstChild)",
  "part.style.setProperty('table-layout','fixed','important')",
  "part.style.setProperty('width','100%','important')",
  "var parts=commentaryRowFragments(next,host)",
@@ -22,6 +22,6 @@ for(const clause of [
 assert(engine.includes('jfPrintSourceRowPart')&&engine.includes(
   "measure(el,host)<=pageH+EPS"),
   'normal citation/commentary row is atomic when it fits an empty leaf');
-assert(reader.includes("const jfDeskFolioCacheRevision='v7.114.0'"),
+assert(reader.includes("const jfDeskFolioCacheRevision='v7.115.0'"),
   'new pagination invalidates stale verified folios');
 console.log('PASS v7.113: one original measured colgroup across independent source-commentary row fragments');
