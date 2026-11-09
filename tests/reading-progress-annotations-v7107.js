@@ -11,19 +11,29 @@ const part=(from,to)=>{
   assert(a>=0&&b>a,'Missing reader section: '+from);
   return js.slice(a,b);
 };
-const stableSource=part('let jfDeskProgressContinuity=null;','// Background census:');
-const stability=vm.runInNewContext(stableSource+'\n({run:jfDeskStabilizeBookProgress,reset:()=>{jfDeskProgressContinuity=null;}})',{
-  Math,Number,jfDeskBook:{id:'test-book'},jfDeskSession:1,jfDeskPagesSig:'18px|two'
-});
-assert.equal(stability.run(.48,8,3),.48);
-assert.equal(stability.run(.41,8,3),.48,'census cannot reverse displayed progress');
-assert.equal(stability.run(.44,8,4),.48,'forward turn cannot regress as exact census catches up');
-assert.equal(stability.run(.53,8,5),.53,'exact progress resumes after catching up');
-assert.equal(stability.run(.33,8,4),.33,'backward turn lowers progress');
-assert.equal(stability.run(.32,7,14),.32,'backward chapter lowers progress');
-assert.equal(stability.run(5,7,15),1,'clamp >100%');
-assert.equal(stability.run(-3,7,13),0,'clamp <0%');
-assert.equal(stability.run(Number.NaN,7,14),0,'no NaN');
+// v7.111 supersedes the old max-percent overlay. Percent is now a pure
+// function of source anchor, not of known page counts or a prior display.
+const source=part("const jfDeskFolioCacheRevision='v7.111.0';",'// Background census:');
+const progressContext={
+  jfDeskBook:{id:'test-book'},jfDeskPagesSig:'sig-test',
+  jfDeskOutline:{chapters:Array.from({length:15})},
+  jfDeskFlow:[{n:8,el:{textContent:'x'.repeat(1000)}},
+              {n:7,el:{textContent:'x'.repeat(1000)}}],
+  jfDeskPaperFirstReadable:()=>0,jfDeskChapterPageCounts:new Map(),
+  Number,Math,String,Array,JSON,localStorage:{
+    state:new Map(),getItem(k){return this.state.get(k)||null;},
+    setItem(k,v){this.state.set(k,v);}
+  }
+};
+const model=vm.runInNewContext(source+'\n({progress:jfDeskStableReadingProgress,load:jfDeskLoadFolioCounts,save:jfDeskSaveFolioCounts})',progressContext);
+const initial=model.progress(8,300);
+assert(Math.abs(initial-(8.3/15))<1e-9,'anchor-based progress is deterministic');
+progressContext.jfDeskChapterPageCounts.set(7,27);
+progressContext.jfDeskChapterPageCounts.set(8,2);
+assert.equal(model.progress(8,300),initial,'background page counts do not change percent');
+assert(model.progress(8,600)>initial,'forward text anchor increases percent');
+assert(model.progress(8,120)<initial,'backwards anchor decreases percent immediately');
+assert(model.progress(7,999)<initial,'backwards chapter decreases percent');
 
 const mk=(text,colSpan=1,rowSpan=1)=>({textContent:text,colSpan,rowSpan});
 const row=(left,right)=>({cells:[mk(left),mk(right)]});
@@ -39,8 +49,8 @@ const ordinary={tagName:'TABLE',rows:[
   row('1','二年级一班'),
   row('2','三年级一班')
 ]};
-const source=part('function jfDeskIsSourceCommentaryTable(node){','// v7.67 ·');
-const detect=vm.runInNewContext(source+'\n({detect:jfDeskIsSourceCommentaryTable})',{Array,Math,Number,String});
+const tableSource=part('function jfDeskIsSourceCommentaryTable(node){','// v7.67 ·');
+const detect=vm.runInNewContext(tableSource+'\n({detect:jfDeskIsSourceCommentaryTable})',{Array,Math,Number,String});
 assert(detect.detect(commentary),'source commentary table identified');
 assert(!detect.detect(ordinary),'ordinary table unchanged');
 assert(!detect.detect({tagName:'DIV',rows:commentary.rows}),'only real tables');
@@ -50,7 +60,7 @@ assert(!detect.detect({tagName:'TABLE',rows:[
   commentary.rows[1]
 ]}),'merged cells untouched');
 const stackPart=part('// Reading progress drives how much paper is stacked on each outer edge:','  // Folio numbers are book-wide values, never the index into the mounted array.');
-assert(stackPart.includes('progress=jfDeskStabilizeBookProgress(progress,chapterOfPage,inChapter)'));
+assert(stackPart.includes('const progress=jfDeskStableReadingProgress(chapterOfPage,pageA0[0]?.offset)'));
 assert(stackPart.includes('progress:Math.round(progress*100)'));
 assert(stackPart.includes('page:pageA0'),'render snapshot includes page identity');
 const footer=part('function jfDeskUpdateProgress(){','async function jfDeskCloseReader(){');
@@ -97,4 +107,4 @@ assert(!/font-size:|line-height:|border-radius:|background-image:/.test(scoped),
 const packageJson=require('../package.json');
 const [major,minor]=packageJson.version.split('.').map(Number);
 assert(major>7||(major===7&&minor>=107),'v7.107 progress fix must remain valid after later releases');
-console.log('PASS v7.107: footer/piles same %, census continuity, reversed turns, source table isolation');
+console.log('PASS v7.111: footer/piles same %, stable anchor progress, reversed turns, source table isolation');
