@@ -8,17 +8,18 @@ const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'ut
 const js=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 function section(from,to){const a=js.indexOf(from),b=js.indexOf(to,a+from.length);assert(a>=0&&b>a,'missing '+from);return js.slice(a,b);}
 const panelStart=html.indexOf('<div id="jfReadTypographyPanel"');
-const paperStart=html.indexOf('id="jfReadPaperAged"');
-const wearStart=html.indexOf('id="jfReadPaperWear"');
-const panelEnd=html.indexOf('</div></div>',panelStart);
-assert(panelStart>=0&&paperStart>panelStart&&wearStart>paperStart&&panelEnd>wearStart,'paper controls are inside typography popover');
+const familyStart=html.indexOf('id="jfReadFamily"',panelStart);
+const sideStart=html.indexOf('id="jfReadSide"',familyStart);
+const panelEnd=html.indexOf('id="jfReadTheme"',panelStart);
+assert(panelStart>=0&&familyStart>panelStart&&sideStart>familyStart&&panelEnd>sideStart,
+  'usable typography controls remain inside Aa popover');
+assert(!html.includes('id="jfReadPaperAged"')&&!html.includes('id="jfReadPaperWear"'),
+  'v7.108 retires misleading paper toggle and fake light/medium/heavy menu');
 const pagedStart=html.indexOf('id="jfReadPaged"'),excerptStart=html.indexOf('id="jfReadExcerpt"');
 assert(pagedStart>0&&excerptStart>pagedStart,'book and excerpt controls retain order');
-assert(!html.slice(pagedStart,excerptStart).includes('id="jfReadPaperAged"'),'old paper no longer inserts a new header button');
-assert(!html.slice(pagedStart,excerptStart).includes('id="jfReadPaperWear"'),'wear select no longer shifts header');
-assert.equal((html.match(/id="jfReadPaperAged"/g)||[]).length,1);
-assert.equal((html.match(/id="jfReadPaperWear"/g)||[]).length,1);
-assert(css.includes('.jfReader.paged .jfReadTypographyPanel .jfReadPaperSettings'),'popover paper group in paper mode');
+assert(js.includes('jfDeskSyncTypographyControls()'),'per-mode margin control sync exists');
+assert(css.includes('.jfReadSideControl.jfPrefUnavailable'),
+  'paged margin control is visibly disabled instead of accepting false edits');
 const esc=section("document.addEventListener('keydown',event=>{","// v6.85 · Adjustable divider");
 const modal=esc.indexOf("if(!jfNotesPanel.hidden)"),immersive=esc.indexOf("else if(!jfReader.hidden&&jfDeskImmersive)"),close=esc.indexOf("else if(!jfReader.hidden){jfDeskCloseReader()");
 assert(modal>=0&&immersive>modal&&close>immersive,'Escape closes nested overlays first, then immersive, then book');
@@ -49,5 +50,6 @@ assert(mode.includes('clearTimeout(jfDeskProgressTimer);'),'rollback clears pend
 assert(mode.includes('try{await jfDeskShowChapter(Math.max(0,position.chapter)'),'rollback restores old layout');
 assert(js.includes("const savedMode=jfDeskWorkspace.progress[bookId]?.mode;"),'per-book mode restored');
 assert(js.includes("jfDeskPaged=outline.format==='EPUB'&&savedMode==='paged';"),'EPUB opens in saved mode');
-assert(css.includes('#jfReadPaperWear'),'paper wear styles retained');
-console.log('PASS v7.66 reader interactions: Escape precedence, toolbar stability, per-book mode and synchronous immersive state');
+assert(css.includes('#jfReadSideValue{display:none!important}'),
+  'historical flow-only pixel value hidden when book margins are fixed');
+console.log('PASS v7.108 reader interactions: paper row retired, fixed margins visibly disabled, Escape precedence and per-book mode stable');
