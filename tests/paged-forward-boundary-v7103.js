@@ -25,6 +25,7 @@ function testReader(chapters=4,omitted=[]){
     jfDeskFlow:[{n:0}],jfDeskPages:[[{chapter:0}],[{chapter:0}]],jfDeskPageIndex:0,
     jfDeskAppendTasks:new Map(),
     jfDeskLastPageTurn:0,jfDeskBackfillBusy:false,
+    jfDeskCachedGeometry:null,
     jfDeskPagedGeometry:()=>({two:true}),
     jfDeskPaperOmittedChapter:n=>omitted.includes(n),
     jfDeskPagedRender:direction=>paints.push({index:ctx.jfDeskPageIndex,direction}),
