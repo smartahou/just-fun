@@ -3997,3 +3997,27 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background:transparent!important;
   box-shadow:none!important;
 }
+
+/* v7.119 · A deferred forward turn keeps the current printed spread visible.
+   Only the existing footer arrow receives a restrained busy affordance. */
+.jfReader.paged .jfReadFooter #jfReadNext.jf-next-waiting{
+  position:relative;
+  cursor:progress;
+}
+.jfReader.paged .jfReadFooter #jfReadNext.jf-next-waiting::after{
+  content:'';
+  position:absolute;
+  width:8px;height:8px;
+  right:1px;bottom:1px;
+  border:1px solid rgba(97,85,66,.22);
+  border-top-color:rgba(97,85,66,.76);
+  border-radius:50%;
+  animation:jfNextPageBusy .8s linear infinite;
+  pointer-events:none;
+}
+@keyframes jfNextPageBusy{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){
+  .jfReader.paged .jfReadFooter #jfReadNext.jf-next-waiting::after{
+    animation:none;border-color:rgba(97,85,66,.65);
+  }
+}

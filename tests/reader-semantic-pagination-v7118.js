@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'..');
 const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.118.0');
+assert.equal(pkg.version,'7.119.0');
 function segment(source,a,b){
   const i=source.indexOf(a),j=source.indexOf(b,i+a.length);
   assert(i>=0&&j>i,'Missing source boundary '+a);
@@ -72,7 +72,7 @@ const context={
   jfDeskBook:{id:'poetry-fixture'},jfDeskSession:1,
   jfDeskOutline:{format:'EPUB',chapters:[{},{}]},
   jfDeskPagesSig:'layout-A',jfDeskPages:[],jfDeskPaged:true,
-  jfDeskEnsureBookFonts:async()=>{},jfDeskMeasureHost:()=>({}),
+  jfDeskEnsureBookFonts:async()=>{},jfDeskMeasureHost:()=>({replaceChildren(){}}),
   jfDeskIdle:async()=>{},jfDeskWaitReadingIdle:async()=>true,
   jfDeskPaperOmittedChapter:()=>false,
   jfDeskFlowFetch:async()=>'<p>source</p>',

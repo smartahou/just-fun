@@ -11,7 +11,7 @@ const start=source.indexOf('async function jfDeskPagedLayout(keepPage,reason){')
 const end=source.indexOf('function jfDeskPageForAnchor(',start);
 assert(start>=0&&end>start);
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.118.0');
+assert.equal(pkg.version,'7.119.0');
 const calls=[];
 let rendered=0;
 const leaf=[
@@ -36,10 +36,12 @@ const ctx={
   jfDeskPaperFirstReadable:()=>0,
   jfDeskPagedGeometry:()=>({pageW:500,pageH:700,padX:20,padY:20,innerH:600,two:false}),
   jfDeskPrepareImages:async()=>{},
+  jfDeskPublishedSections:[],
   jfDeskMeasureHost:()=>({}),
   jfDeskLayoutSignature:()=> 'same',
   jfDeskBlocksFor:sec=>[{chapter:sec.n,node:{},key:sec.n+':0',offset:0}],
   jfDeskRecountBookPages:()=>{},
+  jfDeskTrimPagedWindow:()=>{},
   jfDeskMeasureBook:async()=>{},
   jfDeskCurrentAnchor:()=>null,
   jfDeskPagedRender:()=>{rendered++;},
@@ -58,7 +60,7 @@ const run=vm.runInNewContext(source.slice(start,end)+'\n jfDeskPagedLayout',ctx)
   assert.equal(ctx.jfDeskChapterPageCounts.size,0,
     'mid-book window cannot claim exact whole-book chapter page counts');
   assert.equal(rendered,1);
-  assert(source.includes("window.JFPageEngine.paginate(carry.concat(blocks),budget,host)"),
+  assert(source.includes('carry.concat(blocks.slice(at,at+6))'),
     'physical census is now continuous and carries the final leaf');
   assert(source.includes('page.some(block=>block.chapter===n)'),
     'append must recognize the chapter inside a mixed leaf');

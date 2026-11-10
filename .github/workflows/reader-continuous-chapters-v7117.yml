@@ -46,3 +46,18 @@ jobs:
           npm run test:print-ink
           node scripts/build.js
           node --check dist/douyin.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Chromium for real reader acceptance
+        run: |
+          python -m pip install -q playwright pillow
+          python -m playwright install chromium --with-deps
+          CHROME="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux64/chrome' | head -1)"
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /usr/bin/chromium
+      - name: Real Chromium - no blank leaves, no skipped poetry, bounded window
+        run: python tests/reader-page-performance-v7119.py
+      - name: Real Chromium - previous commentary and source character integrity
+        run: python tests/reader-flowing-commentary-visual-v7116.py
+

@@ -8,7 +8,7 @@ const page=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js
 const read=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.118.0');
+assert.equal(pkg.version,'7.119.0');
 for(const code of [
   'function commentaryNoteFragments(item)',
   "var para=document.createElement('div')",
@@ -32,7 +32,7 @@ assert(css.includes('> .jfPrintCommentaryNote')&&
        css.includes('.jfPrintCommentaryText'),'render and measurement use semantic flow styles');
 assert(css.includes('margin:0 .8em 0 0!important'),'one typographic gap, not fixed column');
 assert(css.includes('text-indent:-1.25em!important'),'hanging continuation indent');
-assert(read.includes("const jfDeskFolioCacheRevision='v7.118.0'"),
+assert(read.includes("const jfDeskFolioCacheRevision='v7.119.0'"),
   'page-count caches are invalidated');
 assert(read.includes("table.classList.add('jfPrintSourceCommentary')"),
   'only verified citations are transformed');

@@ -41,13 +41,13 @@ assert(engine.includes('fresh<=pageH-EPS&&together>pageH-EPS&&cur.length'),
   'editorial heading stays with a fitting next paragraph without giant blank leaves');
 assert(reader.includes("document.getElementById('jfPageView').appendChild(holder)"),
   'census and visible page use identical scoped CSS');
-assert(reader.includes('const measured=window.JFPageEngine.paginate(carry.concat(blocks),budget,host);'),
+assert(reader.includes('carry.concat(blocks.slice(at,at+6))'),
   'physical census carries chapter-end paper into the next chapter');
 assert(reader.includes('jfDeskVerifiedFolios=starts;')&&
        reader.includes('jfDeskExactPhysicalFolio(pageA0,jfDeskPageIndex)'),
   'full-book physical anchors, not isolated chapter counts, certify a folio');
 assert(reader.includes('const jfDeskFolioCacheRevision=')&&
-  reader.includes("const jfDeskFolioCacheRevision='v7.118.0'"),
+  reader.includes("const jfDeskFolioCacheRevision='v7.119.0'"),
   'old pagination layout cache is invalidated by algorithm change');
 assert(css.includes(".jfSheet[data-folio-exact='false']::before{content:none!important}"),
   'inaccurate physical page numbers remain hidden');
