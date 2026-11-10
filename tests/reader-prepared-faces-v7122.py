@@ -80,6 +80,8 @@ def main():
                   check(!!nextSlot,'next spread never prepared');
                   const node=nextSlot?.left.firstChild;
                   const pre=JSON.parse(JSON.stringify(jfDeskPaintDiagnostics()));
+                  const slotIdentity=nextSlot?.index;
+                  const capturedPages=jfDeskPages.slice(0,5);
                   const start=performance.now();
                   document.getElementById('jfReadNext').click();
                   await frame();
@@ -107,10 +109,18 @@ def main():
                   const p95=a=>{a.sort((x,y)=>x-y);return Math.round(
                     a[Math.ceil(a.length*.95)-1]*10)/10;};
                   return {assertions,empty,pre,after:jfDeskPaintDiagnostics(),
+                    captured:{slotIndex:slotIdentity,preparedNodePresent:!!node,
+                      activeSlot:jfDeskFacePool?.active,
+                      slotIndices:jfDeskFacePool?.slots.map(s=>s.index),
+                      samePoolSlot:jfDeskFacePool?.slots.includes(nextSlot),
+                      slotPageChanged:capturedPages.some((p,i)=>jfDeskPages[i]!==p),
+                      visibleIdNode:after.a===nextSlot?.left,
+                      actualTextNode:after.a?.firstChild===node,
+                      activeFaceIndex:jfDeskFacePool?.slots[jfDeskFacePool?.active]?.index},
                     firstTurnMs:Math.round(firstTurnMs*10)/10,
                     cachedVisualP95Ms:p95(samples),samples:samples.length};
                 }""")
-                assert not result['assertions'],'Face cache invariants: '+str(result['assertions'][:8])
+                assert not result['assertions'],'Face cache invariants: '+str(result['assertions'][:8])+' state='+str(result['captured'])
                 assert not result['empty'],'Empty leaf found: '+str(result['empty'])
                 assert result['after']['hit']-result['pre']['hit']>=15,(
                     'Not enough prepared text face reuse: '+str(result))
