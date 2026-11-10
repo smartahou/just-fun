@@ -70,8 +70,11 @@ assert(!theme.classes.has('jfPrefUnavailable'),'disabled appearance removed in f
 assert.equal(slider.disabled,false);
 assert(js.includes("if(jfDeskPaged){jfDeskSyncTypographyControls();return;}\n  jfDeskSetPref({theme:"),
   'synthetic click cannot alter stored theme in paper mode');
-assert(js.includes("jfDeskPaged=!oldMode;\n    jfReader.classList.toggle('paged',jfDeskPaged);\n    jfDeskSyncTypographyControls();"),
-  'mode switch updates night control immediately');
+const toggleStart=js.indexOf('jfDeskPaged=!oldMode;');
+const syncEnd=js.indexOf('jfDeskSyncTypographyControls();',toggleStart);
+assert(toggleStart>=0&&syncEnd>toggleStart&&
+  js.slice(toggleStart,syncEnd).includes("jfReader.classList.toggle('paged',jfDeskPaged)"),
+  'mode switch updates night control after cache disposal');
 assert(js.includes("jfDeskPaged=oldMode;\n      jfReader.classList.toggle('paged',oldMode);\n      jfDeskSyncTypographyControls();"),
   'failed mode switch restores night control');
 assert(css.includes('#jfReadTheme:disabled:hover')&&css.includes('opacity:.30!important'),
