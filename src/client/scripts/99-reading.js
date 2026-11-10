@@ -1750,9 +1750,10 @@ async function jfDeskPrepareImages(){
   }));
 }
 
-// Per-chapter page cache. Chapter boundaries are page boundaries in a printed
-// book, so each chapter can be paginated independently and the result reused.
-// A chapter is re-paginated only when it is new or the layout signature changed.
+// Page metadata indexed by chapter. In paper mode adjacent XHTML chapters
+// share a continuous physical leaf: these maps hold page ownership, not
+// independently paginated chapter results. Never reuse per-chapter page counts
+// as exact physical folios when a previous chapter can share the same leaf.
 const jfDeskChapterPages=new Map();
 let jfDeskPagesSig='';
 
@@ -1797,7 +1798,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.116.0';
+const jfDeskFolioCacheRevision='v7.117.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
@@ -2470,22 +2471,41 @@ async function jfDeskPagedLayout(keepPage,reason){
     jfDeskLoadFolioCounts();
   }
   const budget=Math.max(120,geo.innerH);
-  const pages=[];
+  // v7.117: a new EPUB XHTML section is not automatically a new PAPER leaf.
+  // Paginate the complete mounted window in document order; keeping chapter
+  // metadata on every block preserves TOC jumps, source offsets and progress.
   const mounted=new Set(jfDeskFlow.map(s=>s.n));
-  // Drop cached chapters that are no longer mounted (trimmed window).
-  for(const key of Array.from(jfDeskChapterPages.keys()))if(!mounted.has(key))jfDeskChapterPages.delete(key);
-
-  for(const sec of jfDeskFlow){
-    if(jfDeskPaperOmittedChapter(sec.n))continue;
-    let cached=jfDeskChapterPages.get(sec.n);
-    if(!cached){
-      const blocks=jfDeskBlocksFor(sec);
-      cached=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
-      jfDeskChapterPages.set(sec.n,cached);
+  const sections=jfDeskFlow.filter(sec=>!jfDeskPaperOmittedChapter(sec.n))
+    .slice().sort((a,b)=>a.n-b.n);
+  const allBlocks=[];
+  for(const sec of sections)allBlocks.push(...jfDeskBlocksFor(sec));
+  let pages=allBlocks.length&&window.JFPageEngine?
+    window.JFPageEngine.paginate(allBlocks,budget,host):[];
+  jfDeskChapterPages.clear();
+  // Assign each physical leaf to its first source chapter. A leaf can also
+  // contain the beginning of the next XHTML section: count it only ONCE.
+  // An unmounted prefix cannot yield an exact absolute folio.
+  const firstReadable=jfDeskPaperFirstReadable(0);
+  const prefixComplete=sections.length>0&&sections[0].n===firstReadable&&
+    sections.every((sec,i)=>i===0||sec.n===sections[i-1].n+1);
+  jfDeskChapterPageCounts.clear();
+  if(prefixComplete){
+    for(let n=0;n<=sections[sections.length-1].n;n++){
+      if(jfDeskPaperOmittedChapter(n))jfDeskChapterPageCounts.set(n,0);
+      else jfDeskChapterPageCounts.set(n,0);
     }
-    jfDeskChapterPageCounts.set(sec.n,cached.length);
-    for(const page of cached)pages.push(page);
   }
+  for(const page of pages){
+    const owner=page[0]?.chapter;
+    if(owner==null)continue;
+    if(!jfDeskChapterPages.has(owner))jfDeskChapterPages.set(owner,[]);
+    jfDeskChapterPages.get(owner).push(page);
+    if(prefixComplete)jfDeskChapterPageCounts.set(owner,
+      (jfDeskChapterPageCounts.get(owner)||0)+1);
+  }
+  // Page ownership changes when neighbouring chapters are mounted. The old
+  // single-chapter background census is therefore not comparable and must not
+  // overwrite these exact contiguous-prefix counts.
   // TXT has no mounted sections: structure the plain chapter text once and cache
   // it under the current chapter number.
   if(!jfDeskFlow.length && jfDeskOutline&&jfDeskOutline.format!=='EPUB'){
@@ -2509,11 +2529,8 @@ async function jfDeskPagedLayout(keepPage,reason){
   if(gen!==jfDeskPageGen)return;   // a newer layout already started
   jfDeskPages=pages;                // atomic swap: page turns never see a half-built list
   jfDeskRecountBookPages();
-  if(!jfDeskBookPages.exact&&!jfDeskCensusRunning){
-    // Measure the rest of the book in the background, off the critical path.
-    const visible=jfDeskPages[jfDeskPageIndex]?.[0]?.chapter??jfDeskChapter;
-    setTimeout(()=>jfDeskMeasureBook(geo),jfDeskPagesBefore(visible)==null?450:1200);
-  }
+  // Do not launch the legacy per-chapter census: it assumes hard chapter
+  // page breaks and would publish incorrect physical page numbers.
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -2538,7 +2555,7 @@ async function jfDeskPagedLayout(keepPage,reason){
       }
       if(found>=0)jfDeskPageIndex=found;
     }
-  }else if(!appended){
+  }else if(!appended||anchor){
     if(anchor){
       let found=-1;
       for(let i=0;i<jfDeskPages.length;i++){
@@ -2784,10 +2801,10 @@ function jfDeskPagedRender(direction){
   // Folio and running head: page numbers follow the book, the head follows the chapter.
   const leftSheet=left.parentElement, rightSheet=right.parentElement;
 
-  const title=(jfDeskOutline&&jfDeskOutline.chapters&&jfDeskOutline.chapters[jfDeskChapter])
-    ?jfDeskOutline.chapters[jfDeskChapter].title:'';
-  left.dataset.running=title;
-  right.dataset.running=pageB.length?title:'';
+  const runningTitle=page=>{const chapter=page?.[0]?.chapter??jfDeskChapter;
+    return jfDeskOutline?.chapters?.[chapter]?.title||'';};
+  left.dataset.running=runningTitle(pageA);
+  right.dataset.running=pageB.length?runningTitle(pageB):'';
   const sel=document.getElementById('jfReadChapters');
   if(sel)sel.value=String(jfDeskChapter);
   // Reading progress drives how much paper is stacked on each outer edge: the
@@ -2805,7 +2822,7 @@ function jfDeskPagedRender(direction){
   const pagesBefore=jfDeskPagesBefore(chapterOfPage);
   // The chapter prefix is exact or unknown. Unknown physical numbers MUST NOT
   // be extrapolated and painted as real folios (the old 90 -> 231 jump).
-  const exactNumber=pagesBefore!=null;
+  const exactNumber=pagesBefore!=null&&chapterPages.includes(pageA0);
   const leftPageNumber=exactNumber?pagesBefore+inChapter+1:null;
   const rightPageNumber=exactNumber&&pageB.length?leftPageNumber+1:null;
   const totalSheets=book.total>0?book.total:0;
@@ -3024,7 +3041,10 @@ function jfDeskPageTurn(delta){
     jfDeskBackfillBusy=true;
     jfDeskFlowPrepend(n).then(added=>{
       if(!added||!jfDeskPaged||jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
-      const at=jfDeskPages.indexOf(visible);
+      // The last leaf of a prepended chapter may merge with the former first
+      // leaf, so page object identity is not stable across pagination.
+      const first=visible?.[0];
+      const at=first?jfDeskPageForAnchor(jfDeskPages,first.chapter,first.offset||0,1):-1;
       if(at<0)return;
       const currentStep=(jfDeskPagedGeometry().two&&jfDeskPages.length>1)?2:1;
       // If the original first page became the RIGHT leaf of its spread, the
