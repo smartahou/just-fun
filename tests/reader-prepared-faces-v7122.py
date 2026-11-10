@@ -34,6 +34,12 @@ def main():
                 # Ensure the real forward prefetch has at least two prepared leaves.
                 page.evaluate("jfDeskPagedPrefetch()")
                 page.wait_for_function("()=>jfDeskPages.length>=4")
+                # A prepared DOM face is bound to an immutable physical leaf.
+                # First let asynchronous chapter append finish, otherwise the
+                # test captures a face for the obsolete final-leaf revision.
+                page.wait_for_function(
+                  "()=>!jfDeskPrefetchTask&&!jfDeskForwardInflightAppend()",
+                  timeout=40000)
                 page.evaluate("jfDeskWarmFaces()")
                 page.wait_for_function(
                   "()=>jfDeskFacePool?.slots.some(s=>s.index===jfDeskPageIndex+2)",
@@ -116,7 +122,13 @@ def main():
                       slotPageChanged:capturedPages.some((p,i)=>jfDeskPages[i]!==p),
                       visibleIdNode:after.a===nextSlot?.left,
                       actualTextNode:after.a?.firstChild===node,
-                      activeFaceIndex:jfDeskFacePool?.slots[jfDeskFacePool?.active]?.index},
+                      activeFaceIndex:jfDeskFacePool?.slots[jfDeskFacePool?.active]?.index,
+                      matchingActiveSlot:jfDeskFacePool?.slots[jfDeskFacePool?.active]===nextSlot,
+                      activeLeftHasId:jfDeskFacePool?.slots[jfDeskFacePool?.active]?.left.id,
+                      capturedLeftId:nextSlot?.left.id,
+                      idOwners:[...document.querySelectorAll('[id="jfSheetLeft"]')]
+                        .map(n=>({active:n.dataset.jfFaceActive,
+                          matchingNext:n===nextSlot?.left,connected:n.isConnected}))},
                     firstTurnMs:Math.round(firstTurnMs*10)/10,
                     cachedVisualP95Ms:p95(samples),samples:samples.length};
                 }""")
