@@ -61,8 +61,11 @@ assert(listenerStart>0&&listenerEnd>listenerStart,'side range handlers found');
 const listeners=js.slice(listenerStart,listenerEnd);
 assert(listeners.includes("if(jfDeskPaged){jfDeskSyncTypographyControls();return;}"),
   'synthetic events cannot change page margin prefs');
-assert(js.includes("jfDeskPaged=!oldMode;\n    jfReader.classList.toggle('paged',jfDeskPaged);\n    jfDeskSyncTypographyControls();"),
-  'mode toggle immediately refreshes enabled state');
+const toggleFrom=js.indexOf('jfDeskPaged=!oldMode;');
+const toggleTo=js.indexOf('jfDeskSyncTypographyControls();',toggleFrom);
+assert(toggleFrom>=0&&toggleTo>toggleFrom&&
+  js.slice(toggleFrom,toggleTo).includes("jfReader.classList.toggle('paged',jfDeskPaged)"),
+  'mode toggle immediately refreshes enabled state after releasing cached page faces');
 assert(js.includes("jfDeskPaged=oldMode;\n      jfReader.classList.toggle('paged',oldMode);\n      jfDeskSyncTypographyControls();"),
   'mode toggle rollback restores enabled state');
 assert(css.includes('.jfReadSideControl.jfPrefUnavailable'),'disabled control visibly muted');
