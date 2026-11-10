@@ -1,0 +1,39 @@
+name: Just Fun v7.117 continuous EPUB chapter pages
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/scripts/99-reading.js"
+      - "src/client/scripts/98d-page-engine.js"
+      - "tests/reader-continuous-chapters-v7117.js"
+      - "package.json"
+      - ".github/workflows/reader-continuous-chapters-v7117.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  continuous-chapters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Continuous chapter semantics and reading regressions
+        run: |
+          node --check src/client/scripts/99-reading.js
+          node --check src/client/scripts/98d-page-engine.js
+          node tests/reader-continuous-chapters-v7117.js
+          node tests/reader-flowing-commentary-v7116.js
+          node tests/reader-exact-folios-v7111.js
+          node tests/reading-progress-annotations-v7107.js
+          node tests/paged-forward-boundary-v7103.js
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify original EPUB print and build
+        run: |
+          npm run test:reading-print
+          node scripts/build.js
+          node --check dist/douyin.js
