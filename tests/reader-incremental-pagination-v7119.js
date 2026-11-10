@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.120.0');
+assert.equal(require('../package.json').version,'7.121.0');
 assert(source.includes('if(jfDeskPaged&&!jfDeskOutline?.nativePdf)return jfDeskPageTurn(delta);'),
   'footer arrows must turn physical pages, never restart chapter loading');
 const slice=(begin,end)=>{
@@ -78,7 +78,7 @@ async function appendTest(){
 function retainedHistoryTest(){
   assert(!source.includes('function jfDeskTrimPagedWindow('),
     'v7.119 destructive page-window trim must remain disabled until reversible');
-  assert(source.includes('if(!sameSpread)jfDeskPagedRender();'),
+  assert(source.includes("if(reason!=='prepend'&&!sameSpread)jfDeskPagedRender();"),
     'async prefetch must not unmount unchanged visible text');
 }
 function spreadTest(){

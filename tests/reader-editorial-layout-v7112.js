@@ -47,7 +47,7 @@ assert(reader.includes('jfDeskVerifiedFolios=starts;')&&
        reader.includes('jfDeskExactPhysicalFolio(pageA0,jfDeskPageIndex)'),
   'full-book physical anchors, not isolated chapter counts, certify a folio');
 assert(reader.includes('const jfDeskFolioCacheRevision=')&&
-  reader.includes("const jfDeskFolioCacheRevision='v7.120.0'"),
+  reader.includes("const jfDeskFolioCacheRevision='v7.121.0'"),
   'old pagination layout cache is invalidated by algorithm change');
 assert(css.includes(".jfSheet[data-folio-exact='false']::before{content:none!important}"),
   'inaccurate physical page numbers remain hidden');

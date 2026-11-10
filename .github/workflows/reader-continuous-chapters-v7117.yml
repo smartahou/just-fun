@@ -26,6 +26,7 @@ jobs:
           node tests/reader-semantic-pagination-v7118.js
           node tests/reader-incremental-pagination-v7119.js
           node tests/reader-backtracking-v7120.js
+          node tests/reader-rapid-turn-v7121.js
           node tests/reader-flowing-commentary-v7116.js
           node tests/reader-single-commentary-v7114.js
           node tests/reader-commentary-grid-v7113.js
@@ -62,6 +63,8 @@ jobs:
         run: python tests/reader-page-performance-v7119.py
       - name: Real Chromium - middle-book reverse and full roundtrip
         run: python tests/reader-backtracking-v7120.py
+      - name: Real Chromium - 110-chapter rapid reverse stress and same-frame burst
+        run: python tests/reader-rapid-turn-v7121.py
       - name: Real Chromium - previous commentary and source character integrity
         run: python tests/reader-flowing-commentary-visual-v7116.py
 

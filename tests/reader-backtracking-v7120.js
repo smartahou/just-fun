@@ -5,10 +5,10 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const src=fs.readFileSync(path.join(__dirname,'../src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.120.0');
+assert.equal(require('../package.json').version,'7.121.0');
 assert(!src.includes('function jfDeskTrimPagedWindow('),
   'destructive front-page eviction must remain disabled');
-assert(src.includes('if(!sameSpread)jfDeskPagedRender();'),
+assert(src.includes("if(reason!=='prepend'&&!sameSpread)jfDeskPagedRender();"),
   'prefetch does not reparent an unchanged sheet');
 assert(src.includes('return jfDeskQueueBackwardTurn();'),
   'back boundary must enter the real asynchronous backward queue');
@@ -43,6 +43,7 @@ function fixture(){
     jfDeskSpreadStamp:(index,step)=>ctx.jfDeskPages.slice(index,index+step)
       .flatMap(page=>(page||[]).map(b=>b.chapter+':'+b.offset)).join('|'),
     jfDeskPagedRender:direction=>paints.push({chapter:ctx.jfDeskPages[ctx.jfDeskPageIndex]?.[0]?.chapter,direction}),
+    jfDeskPaintTurn:direction=>paints.push({chapter:ctx.jfDeskPages[ctx.jfDeskPageIndex]?.[0]?.chapter,direction}),
     jfDeskPrefetchPreviousHtml:()=>{},
     jfDeskMessage:()=>{},
     jfDeskFlowPrepend(n){

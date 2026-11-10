@@ -43,7 +43,7 @@ assert(engine.includes("comment.className='jfPrintCommentaryText'"),
   'commentary is adjacent in the same text flow');
 assert(reader.includes("const printed=document.importNode(node,true);"),
   'original EPUB preserved; the printed clone is edited');
-assert(reader.includes("const jfDeskFolioCacheRevision='v7.120.0'"),
+assert(reader.includes("const jfDeskFolioCacheRevision='v7.121.0'"),
   'new pagination metrics cannot reuse previous book-page count');
 assert(engine.includes('function commentaryNoteFragments(item)'),
   'multi-row split algorithm untouched');

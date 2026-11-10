@@ -549,6 +549,7 @@ const JF_FLOW_MAX=12;          // keep a bounded live window in paper mode
 const JF_FLOW_AHEAD=4;         // prefetch four short EPUB sections before boundary
 
 function jfDeskFlowReset(){
+  clearTimeout(jfDeskCensusStartTimer);
   jfDeskFlow=[];jfDeskFlowBusy=false;
   jfDeskPublishedSections=[];
   jfDeskPrefetchTask=null;
@@ -1828,6 +1829,7 @@ const jfDeskChapterPageCounts=new Map();   // pages owned by each physical folio
 // v7.118: only full-book measured physical starts may certify exact folios.
 // The mounted XHTML window can begin inside a physical leaf: never infer its
 // page numbers from independently numbered chapters.
+let jfDeskCensusStartTimer=0;
 let jfDeskVerifiedFolios=[];
 let jfDeskMountedFromStart=false;
 function jfDeskPhysicalFolioKey(){
@@ -1906,7 +1908,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.120.0';
+const jfDeskFolioCacheRevision='v7.121.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
@@ -2616,13 +2618,20 @@ async function jfDeskPagedLayout(keepPage,reason){
   const signature=jfDeskLayoutSignature(geo);
   const sections=jfDeskFlow.filter(sec=>!jfDeskPaperOmittedChapter(sec.n))
     .slice().sort((a,b)=>a.n-b.n);
-  const incremental=reason==='append'&&signature===jfDeskPagesSig&&
-    jfDeskPages.length>0&&jfDeskPublishedSections.length>0&&
-    sections.length>jfDeskPublishedSections.length&&
+  const sameGeometry=signature===jfDeskPagesSig&&jfDeskPages.length>0&&
+    jfDeskPublishedSections.length>0;
+  const addCount=sections.length-jfDeskPublishedSections.length;
+  const incremental=reason==='append'&&sameGeometry&&addCount>0&&
     jfDeskPublishedSections.every((n,i)=>sections[i]?.n===n);
-  const additions=incremental?sections.slice(jfDeskPublishedSections.length):sections;
+  // Prepending previously performed a full N-chapter DOM pagination on EVERY
+  // reverse boundary. Page objects after the first leaf are immutable: only
+  // earlier content and that initial unfinished physical leaf can merge.
+  const incrementalPrepend=reason==='prepend'&&sameGeometry&&addCount>0&&
+    jfDeskPublishedSections.every((n,i)=>sections[addCount+i]?.n===n);
+  const additions=incremental?sections.slice(jfDeskPublishedSections.length):
+    incrementalPrepend?sections.slice(0,addCount):sections;
   // Repeatedly waiting for every old chapter's image caused 2.5s blank turns.
-  await jfDeskPrepareImages(incremental?additions.map(sec=>sec.el):null);
+  await jfDeskPrepareImages((incremental||incrementalPrepend)?additions.map(sec=>sec.el):null);
   if(gen!==jfDeskPageGen)return;
   const host=jfDeskMeasureHost(geo);
   const anchor=keepPage?jfDeskCurrentAnchor():null;
@@ -2647,6 +2656,16 @@ async function jfDeskPagedLayout(keepPage,reason){
     const suffix=window.JFPageEngine?
       window.JFPageEngine.paginate(tailBlocks,budget,host):[];
     pages=jfDeskPages.slice(0,-1).concat(suffix);
+  }else if(incrementalPrepend){
+    const seam=jfDeskPages[0]||[];
+    const blocks=[];
+    for(const section of additions)blocks.push(...jfDeskBlocksFor(section));
+    blocks.push(...seam);
+    const prefix=window.JFPageEngine?
+      window.JFPageEngine.paginate(blocks,budget,host):[];
+    // Do not remeasure or move every subsequent page. The seam is the only
+    // printed page affected by adding earlier source text.
+    pages=prefix.concat(jfDeskPages.slice(1));
   }else{
     const blocks=[];
     for(const section of sections)blocks.push(...jfDeskBlocksFor(section));
@@ -2707,8 +2726,16 @@ async function jfDeskPagedLayout(keepPage,reason){
   // This does not mutate the page window or current visual position.
   if(!jfDeskVerifiedFolios.length&&!jfDeskCensusRunning&&
      jfDeskOutline?.format==='EPUB'){
-    setTimeout(()=>{if(jfDeskPaged&&!jfDeskCensusRunning&&
-       !jfDeskVerifiedFolios.length)jfDeskMeasureBook(geo);},850);
+    // v7.121: folio counting is nonessential to reading. Do not start a new
+    // expensive main-thread census during rapid page-turn bursts or prefetch.
+    clearTimeout(jfDeskCensusStartTimer);
+    const waitBook=jfDeskBook?.id,waitSession=jfDeskSession;
+    jfDeskCensusStartTimer=setTimeout(()=>{
+      if(jfDeskPaged&&!jfDeskCensusRunning&&!jfDeskVerifiedFolios.length&&
+         jfDeskBook?.id===waitBook&&jfDeskSession===waitSession&&
+         Date.now()-jfDeskLastPageTurn>=9000)
+        jfDeskMeasureBook(jfDeskPagedGeometry());
+    },10500);
   }
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
@@ -2753,7 +2780,9 @@ async function jfDeskPagedLayout(keepPage,reason){
   const sameSpread=incremental&&jfDeskPageIndex===oldPageIndex&&
     jfDeskPages[oldPageIndex]===previousLeft&&
     (!twoPages||jfDeskPages[oldPageIndex+1]===previousRight);
-  if(!sameSpread)jfDeskPagedRender();
+  // Backfill prepares a new previous spread offscreen. The backwards
+  // navigation queue chooses the target before a single visible paint.
+  if(reason!=='prepend'&&!sameSpread)jfDeskPagedRender();
 }
 function jfDeskPageForAnchor(pages,chapter,offset,step=1){
   let found=-1,first=-1;
@@ -3191,6 +3220,25 @@ function jfDeskSpreadReady(index,step){
 // necessarily the end of the book. Save the requested turns, await the same
 // append task as prefetch and commit each turn exactly once after pagination.
 let jfDeskForwardPending=0,jfDeskForwardTask=null,jfDeskForwardGeneration=0;
+// v7.121 · A burst of dozens of physical turns must produce at most ONE
+// expensive printed DOM swap per animation frame. Page indices advance
+// synchronously so commands still count exactly; paint catches up atomically.
+let jfDeskPaintFrame=0,jfDeskPaintDirection=null;
+function jfDeskPaintTurn(direction){
+  jfDeskPaintDirection=direction;
+  if(typeof requestAnimationFrame!=='function'){
+    jfDeskPagedRender(direction);
+    return;
+  }
+  if(jfDeskPaintFrame)return;
+  const session=jfDeskSession,bookId=jfDeskBook?.id;
+  jfDeskPaintFrame=requestAnimationFrame(()=>{
+    jfDeskPaintFrame=0;
+    if(!jfDeskPaged||jfReader.hidden||jfDeskSession!==session||
+       jfDeskBook?.id!==bookId)return;
+    jfDeskPagedRender(jfDeskPaintDirection);
+  });
+}
 function jfDeskQueueForwardTurn(){
   jfDeskForwardPending=Math.min(8,jfDeskForwardPending+1);
   jfDeskForwardBusy(true);
@@ -3207,7 +3255,7 @@ function jfDeskQueueForwardTurn(){
         jfDeskForwardPending--;
         jfDeskPageIndex=aligned+step;
         jfDeskLastPageTurn=Date.now();
-        jfDeskPagedRender('next');
+        jfDeskPaintTurn('next');
         if(jfDeskPageIndex>=last-2)jfDeskPagedPrefetch();
         continue;
       }
@@ -3280,7 +3328,7 @@ function jfDeskQueueBackwardTurn(){
         jfDeskPageIndex-=step;
         jfDeskBackwardPending--;
         jfDeskLastPageTurn=Date.now();
-        jfDeskPagedRender('prev');
+        jfDeskPaintTurn('prev');
         continue;
       }
       let n=Math.min(...jfDeskFlow.map(sec=>sec.n))-1;
@@ -3309,7 +3357,7 @@ function jfDeskQueueBackwardTurn(){
         if(changed){
           jfDeskBackwardPending--;
           jfDeskLastPageTurn=Date.now();
-          jfDeskPagedRender('prev');
+          jfDeskPaintTurn('prev');
           jfDeskPrefetchPreviousHtml();
         }
         // Empty prior XHTML contributes zero leaves: keep searching, not stuck.
@@ -3355,7 +3403,7 @@ function jfDeskPageTurn(delta){
     return jfDeskQueueBackwardTurn();
   }
   jfDeskPageIndex=next;
-  jfDeskPagedRender(delta>0?'next':'prev');
+  jfDeskPaintTurn(delta>0?'next':'prev');
   if(delta>0)jfDeskPagedPrefetch();
   return true;
 }
