@@ -106,9 +106,8 @@
     if(window.JF_DEBUG_SPLIT)console.info('[split] avail',Math.round(avail),'lh',Math.round(lh),'need',Math.round(lh*MIN_LINES),'tag',el.tagName,'len',el.textContent.length);
     // Never split a block that owns an image: the clone would lose it.
     if(hasImage(el))return null;
-    // A note and its source must stay together when it fits one fresh leaf.
-    // A genuinely oversized annotation may split with original DOM Range
-    // offsets, while its continuation carries no duplicated source text.
+    // A short bibliography item is atomic. A genuinely oversized item may
+    // split at DOM Range boundaries, preserving every source character.
     if(el.classList?.contains('jfPrintCommentaryNote')&&
        measure(el,host)<=pageH+EPS)return null;
     if(avail<lh*MIN_LINES)return null;
@@ -163,7 +162,8 @@
   // tags that *specific* printed clone; the generic engine also respects H1-H6.
   function keepWithNext(el){
     return /^H[1-6]$/.test(el?.tagName||'') ||
-      !!el?.classList?.contains('jfPrintKeepWithNext');
+      !!el?.classList?.contains('jfPrintKeepWithNext')||
+      !!el?.classList?.contains('jfPrintPoetryLead');
   }
   // v7.116 · A bibliographic note is *one flowing piece of prose*, not a
   // two-column table. Turn each verified source/commentary row in a PRINTED
@@ -178,7 +178,15 @@
     var node=item.node,table=commentaryTable(node);
     if(!table||!table.rows?.length||table.rows.length>30)return null;
     // Other EPUB content, captions, and wrappers must remain untouched.
-    if(node!==table&&node.textContent!==table.textContent)return null;
+    // EPUB often wraps a <table> in an indented <div>. Literal wrapper
+    // newlines are source characters, but not semantic printed content.
+    // Allow ONLY whitespace-only padding, never prose siblings.
+    if(node!==table){
+      var outer=node.textContent||'',inner=table.textContent||'';
+      var at=outer.indexOf(inner);
+      if(at<0||!(/^[\s\u00a0\u3000]*$/).test(
+        outer.slice(0,at)+outer.slice(at+inner.length)))return null;
+    }
     if(table.querySelector('caption,thead,th,figure,img:not(.jfInlineGlyph),picture,svg'))return null;
     var rows=Array.from(table.rows);
     if(rows.some(function(row){
@@ -265,10 +273,23 @@
         // Keep a heading with the first meaningful content, not merely a
         // whole large TABLE. Looking ahead at its first *complete row* prevents
         // 【辑评】 from being stranded on a near-empty left sheet.
+        // Keep a poem title, optional author, and verse together when they
+        // fit on a clean leaf. Do not drag entire long commentaries with them.
+        var poetryKeep=Number(el.dataset?.jfPoetryKeep)||0;
+        if(poetryKeep>1&&queue.length>=poetryKeep-1&&cur.length){
+          var unit=[item].concat(queue.slice(0,poetryKeep-1));
+          if(columnHeight(unit,host)<=pageH-EPS&&
+             columnHeight(cur.concat(unit),host)>pageH-EPS){
+            flush();queue.unshift(item);continue;
+          }
+        }
         if(keepWithNext(el)&&queue.length){
           var next=queue[0];
           var together=columnHeight(candidate.concat([next]),host);
-          if(together>pageH-EPS&&cur.length){
+          // If the next paragraph is longer than a whole sheet, it must
+          // split normally; never push its heading plus a huge blank area.
+          var fresh=columnHeight([item,next],host);
+          if(fresh<=pageH-EPS&&together>pageH-EPS&&cur.length){
             // Reconsider the same heading on the next page, so even a title
             // appearing near the bottom never remains on the old page.
             flush();queue.unshift(item);continue;

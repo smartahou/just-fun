@@ -474,6 +474,7 @@ async function jfDeskOpenReader(bookId,chapter){
     // Discard page references from the previous book before measuring this one.
     ++jfDeskPageGen;++jfDeskCensusToken;
     jfDeskPages=[];jfDeskPageIndex=0;jfDeskPagesSig='';
+    jfDeskVerifiedFolios=[];jfDeskMountedFromStart=false;
     jfDeskChapterPages.clear();jfDeskChapterPageCounts.clear();
     if(jfDeskPaged){
       const view=document.getElementById('jfPageView');
@@ -1764,7 +1765,55 @@ let jfDeskPagesSig='';
 // from a book-wide model: per-chapter page counts, filled as chapters are
 // paginated, plus an explicit "exact" flag that stays false until every chapter
 // has been measured under the current layout signature.
-const jfDeskChapterPageCounts=new Map();   // chapter number -> pages in that chapter
+const jfDeskChapterPageCounts=new Map();   // pages owned by each physical folio's first chapter
+// v7.118: only full-book measured physical starts may certify exact folios.
+// The mounted XHTML window can begin inside a physical leaf: never infer its
+// page numbers from independently numbered chapters.
+let jfDeskVerifiedFolios=[];
+let jfDeskMountedFromStart=false;
+function jfDeskPhysicalFolioKey(){
+  return 'jf-reader-physical-v7118:'+String(jfDeskBook?.id||'');
+}
+function jfDeskLoadPhysicalFolios(){
+  try{
+    const data=JSON.parse(localStorage.getItem(jfDeskPhysicalFolioKey())||'null');
+    if(data?.version!==jfDeskFolioCacheRevision||data.layout!==jfDeskPagesSig||
+       data.chapters!==jfDeskOutline?.chapters?.length||!Array.isArray(data.starts)||
+       !data.starts.length||data.starts.length>100000||!jfDeskChapterPageCounts.size)return 0;
+    const count=Array.from(jfDeskChapterPageCounts.values()).reduce((a,b)=>a+b,0);
+    if(count!==data.starts.length||jfDeskChapterPageCounts.size!==data.chapters)return 0;
+    let previousChapter=-1,previousOffset=-1;
+    const starts=[];
+    for(const row of data.starts){
+      if(!Array.isArray(row)||row.length!==2||!Number.isSafeInteger(row[0])||
+         !Number.isSafeInteger(row[1])||row[0]<0||row[0]>=data.chapters||row[1]<0||
+         row[0]<previousChapter||(row[0]===previousChapter&&row[1]<previousOffset))
+        return 0;
+      starts.push({chapter:row[0],offset:row[1]});
+      previousChapter=row[0];previousOffset=row[1];
+    }
+    jfDeskVerifiedFolios=starts;
+    return starts.length;
+  }catch{return 0;}
+}
+function jfDeskSavePhysicalFolios(){
+  if(!jfDeskVerifiedFolios.length||!jfDeskBookPages.exact)return;
+  try{
+    localStorage.setItem(jfDeskPhysicalFolioKey(),JSON.stringify({
+      version:jfDeskFolioCacheRevision,layout:jfDeskPagesSig,
+      chapters:jfDeskOutline.chapters.length,
+      starts:jfDeskVerifiedFolios.map(x=>[x.chapter,x.offset])
+    }));
+  }catch{} // Book-length metadata is an optional cache.
+}
+function jfDeskExactPhysicalFolio(page,mountedIndex){
+  const first=page?.[0];
+  if(!first)return null;
+  if(jfDeskMountedFromStart)return mountedIndex+1;
+  const offset=first.offset||0;
+  const index=jfDeskVerifiedFolios.findIndex(x=>x.chapter===first.chapter&&x.offset===offset);
+  return index<0?null:index+1;
+}
 let jfDeskBookPages={total:0,exact:false,known:0,chapters:0};
 
 function jfDeskRecountBookPages(){
@@ -1798,7 +1847,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.117.0';
+const jfDeskFolioCacheRevision='v7.118.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
@@ -1888,95 +1937,81 @@ function jfDeskIdle(){
   });
 }
 
+// v7.118 · Full-book physical census with a carried final page. A new EPUB
+// chapter extends the unfinished leaf rather than forcing a new leaf. Commit
+// only completed leaves; the last leaf is revisited with the next chapter.
+// This uses the *same* DOM blocks/measurements as visible pagination.
 async function jfDeskMeasureBook(geo){
-  if(jfDeskCensusRunning)return;
-  if(!jfDeskBook||!jfDeskOutline)return;
-  const totalChapters=jfDeskOutline.chapters.length;
-  if(!totalChapters)return;
-  const token=++jfDeskCensusToken;
-  const bookId=jfDeskBook.id,session=jfDeskSession;
+  if(jfDeskCensusRunning||jfDeskVerifiedFolios.length||!jfDeskBook||
+     !jfDeskOutline||jfDeskOutline.format!=='EPUB')return;
+  const total=jfDeskOutline.chapters.length;
+  if(!total||!window.JFPageEngine)return;
+  const token=++jfDeskCensusToken,bookId=jfDeskBook.id,session=jfDeskSession;
+  const signature=jfDeskPagesSig;
   jfDeskCensusRunning=true;
   try{
     await jfDeskEnsureBookFonts();
-    if(jfDeskCensusToken!==token||jfDeskSession!==session)return;
-    const host=jfDeskMeasureHost(geo);
-    const budget=Math.max(120,geo.innerH);
-    // Count the missing prefix before spending time on later chapters. The
-    // current chapter is already measured by normal page layout. The prefix
-    // can become publishable well before the full book is counted.
-    const visible=jfDeskPages[jfDeskPageIndex]?.[0]?.chapter??jfDeskChapter;
-    const needed=Math.max(0,Math.min(totalChapters,visible));
-    const order=[
-      ...Array.from({length:needed},(_,i)=>i),
-      ...Array.from({length:totalChapters-needed},(_,i)=>i+needed)
-    ];
-    for(const n of order){
-      if(jfDeskCensusToken!==token)return;              // superseded
-      if(jfDeskSession!==session||jfDeskBook?.id!==bookId)return;
-      if(jfDeskPaperOmittedChapter(n)||jfDeskChapterPageCounts.has(n))continue;
-      const urgent=n<needed;
+    if(token!==jfDeskCensusToken||jfDeskSession!==session||
+       signature!==jfDeskLayoutSignature(geo))return;
+    const host=jfDeskMeasureHost(geo),budget=Math.max(120,geo.innerH);
+    const counts=new Map(Array.from({length:total},(_,n)=>[n,0]));
+    const starts=[];
+    let carry=[];
+    const publish=page=>{
+      if(!page?.length)return;
+      const first=page[0],owner=first.chapter;
+      if(!Number.isSafeInteger(owner)||owner<0||owner>=total)throw Error('Invalid folio owner');
+      starts.push({chapter:owner,offset:first.offset||0});
+      counts.set(owner,counts.get(owner)+1);
+    };
+    for(let n=0;n<total;n++){
+      if(token!==jfDeskCensusToken||jfDeskSession!==session||
+         jfDeskBook?.id!==bookId||signature!==jfDeskPagesSig)return;
+      if(jfDeskPaperOmittedChapter(n))continue;
       await jfDeskIdle();
-      // A short quiet interval is enough for the missing folio prefix.
-      // Later background work keeps the previous 2.2s reading-idle policy.
-      if(!await jfDeskWaitReadingIdle(token,urgent?650:2200))return;
-      let html=null;
-      try{html=await jfDeskFlowFetch(n);}catch(error){continue;}
-      if(!html)continue;
-      // Measure in a real, off-screen box: images must occupy their final height
-      // or the chapter paginates shorter than it will when actually mounted, and
-      // the book total becomes a different number every time it is recomputed.
+      if(!await jfDeskWaitReadingIdle(token,650))return;
+      let html;
+      try{html=await jfDeskFlowFetch(n);}catch(error){
+        console.warn('[JustFun] 物理页计数遇到章节读取失败',n,error);return;
+      }
       const holder=document.createElement('div');
       holder.className='jfSheetBody';
       holder.style.cssText='position:absolute;left:-99999px;top:0;width:'+geo.innerW+'px;padding:0;height:auto';
-      // The real printed sheets and probe are descendants of #jfPageView.
-      // Mount the census holder there too, or descendant-scoped CSS (including
-      // poetry tables, heading metrics and built-in fonts) is silently absent.
       document.getElementById('jfPageView').appendChild(holder);
       try{
-        // Same construction path as a mounted chapter, or the census would count
-        // a different DOM (sanitiser, caption merging) and report other page counts.
-        const section=jfDeskFlowSection(n,html);
+        const section=jfDeskFlowSection(n,html||'<p></p>');
         holder.appendChild(section);
         await jfDeskWaitImages(holder);
-        if(!await jfDeskWaitReadingIdle(token))return;
-        // Identical blocks to actual reading: caption merging can change
-        // the page count, so a simplified census must never lie about folios.
-        if(jfDeskCensusToken!==token||jfDeskSession!==session||
-           jfDeskBook?.id!==bookId||jfDeskPagesSig!==jfDeskLayoutSignature(geo))return;
+        if(token!==jfDeskCensusToken||jfDeskSession!==session||
+           jfDeskBook?.id!==bookId||signature!==jfDeskPagesSig)return;
         const blocks=jfDeskBlocksFor({n,el:section});
-        const measured=window.JFPageEngine?window.JFPageEngine.paginate(blocks,budget,host):[];
-        jfDeskChapterPageCounts.set(n,measured.length);
-      }finally{
-        holder.remove();
-      }
-      jfDeskRecountBookPages();
-      // Once the preceding chapters are known, publish the now-exact folio
-      // on the *same* page without initiating a reflow or changing the anchor.
-      const currentChapter=jfDeskPages[jfDeskPageIndex]?.[0]?.chapter??jfDeskChapter;
-      if(jfDeskPaged&&jfDeskStackState?.folio==='pending'&&
-         jfDeskPagesBefore(currentChapter)!=null&&
-         jfDeskCensusToken===token&&jfDeskSession===session){
-        jfDeskPagedRender();
-        jfDeskUpdateProgress();
-      }
+        const measured=window.JFPageEngine.paginate(carry.concat(blocks),budget,host);
+        // Only the final page can receive more content from the next chapter.
+        for(let i=0;i<measured.length-1;i++)publish(measured[i]);
+        carry=measured.length?measured[measured.length-1]:[];
+      }finally{holder.remove();}
     }
+    publish(carry);
+    if(token!==jfDeskCensusToken||jfDeskSession!==session||
+       jfDeskBook?.id!==bookId||signature!==jfDeskPagesSig)return;
+    // Atomic metadata publication. Background measurement NEVER replaces
+    // mounted page objects or moves the reader's current anchor.
+    jfDeskChapterPageCounts.clear();
+    for(const [chapter,count] of counts)jfDeskChapterPageCounts.set(chapter,count);
+    jfDeskVerifiedFolios=starts;
+    jfDeskRecountBookPages();
+    jfDeskSavePhysicalFolios();
+    if(jfDeskPaged&&jfDeskPages.length){
+      jfDeskPagedRender();jfDeskUpdateProgress();
+    }
+  }catch(error){
+    console.warn('[JustFun] 全书连续页码核算未完成，保留待定页码',error);
   }finally{
     jfDeskCensusRunning=false;
-    if(jfDeskCensusToken===token){
-      jfDeskRecountBookPages();
-      // The census ONLY changes page-count metadata, not any mounted page
-      // content or geometry. Publishing a full jfDeskPagedLayout here can
-      // relocate the current spread during reading. Refresh the exact folio
-      // and stack labels in place instead, retaining the same page objects.
-      if(jfDeskPaged&&jfDeskSession===session&&jfDeskBook?.id===bookId&&
-         jfDeskPagesSig===jfDeskLayoutSignature(geo)&&jfDeskPages.length){
-        jfDeskPagedRender();
-        jfDeskUpdateProgress();
-      }
-    }else if(jfDeskPaged && jfDeskBook && !jfDeskBookPages.exact){
-      // The old census was invalidated by a new font/viewport/book session.
-      // It must not block a fresh census at the current page geometry.
-      setTimeout(()=>{if(!jfDeskCensusRunning)jfDeskMeasureBook(jfDeskPagedGeometry());},950);
+    if(token!==jfDeskCensusToken&&jfDeskPaged&&jfDeskBook&&
+       !jfDeskVerifiedFolios.length){
+      setTimeout(()=>{if(!jfDeskCensusRunning&&jfDeskPaged)
+        jfDeskMeasureBook(jfDeskPagedGeometry());},950);
     }
   }
 }
@@ -2015,23 +2050,24 @@ function jfDeskIsStandalonePlate(node){
 function jfDeskIsSourceCommentaryTable(node){
   if(node?.tagName!=='TABLE')return false;
   const rows=Array.from(node.rows||node.querySelectorAll?.('tr')||[]);
-  if(rows.length<1||rows.length>20)return false;
-  let cited=0,longComments=0;
+  if(!rows.length||rows.length>30||
+     node.querySelector?.('caption,thead,th,figure,picture,svg,img:not(.jfInlineGlyph)'))return false;
+  let cited=0,substantial=0;
   for(const row of rows){
     const cells=Array.from(row.cells||row.querySelectorAll?.('td,th')||[]);
     if(cells.length!==2||cells.some(cell=>
       Number(cell.colSpan||1)!==1||Number(cell.rowSpan||1)!==1))return false;
-    const left=String(cells[0].textContent||'').replace(/\s+/g,'').trim();
-    const right=String(cells[1].textContent||'').replace(/\s+/g,'').trim();
-    if(!left||left.length>50||!right||right.length<8)return false;
-    if(/^《[^》]{2,36}》(?:[^《》]{0,8})?$/.test(left))cited++;
-    if(right.length>=18)longComments++;
+    const left=String(cells[0].textContent||'').replace(/[\s\u00a0\u3000]+/g,'').trim();
+    const right=String(cells[1].textContent||'').replace(/[\s\u00a0\u3000]+/g,'').trim();
+    // Brief but real glosses occur alongside long commentary in Tang-poetry
+    // anthologies; the old >=8 / >=18 thresholds rejected the ENTIRE table.
+    if(!left||left.length>72||!right||right.length<2)return false;
+    if(/^《[^》]{2,45}》(?:[^《》]{0,24})?$/.test(left))cited++;
+    if(right.length>=8)substantial++;
   }
-  // A single bibliographic note is still a source/commentary pair, even
-  // when its annotation is only a short sentence (e.g. 《唐诗三百首》).
-  // Keep the original conservative multi-row checks unchanged.
-  if(rows.length===1)return cited===1;
-  return cited>=Math.ceil(rows.length*.66)&&longComments>=Math.ceil(rows.length*.5);
+  // A bibliographic citation is a stronger signal than row length. Data tables
+  // and mixed-purpose grids must never be rewritten as printed commentary.
+  return cited===rows.length&&substantial>=1;
 }
 // v7.67 · Only physical-book publication metadata receives the imprint layout.
 // Detection is deliberately conservative: first chapters AND several bibliographic
@@ -2350,6 +2386,47 @@ function jfDeskIsEditorialHeading(node){
   return /^[【\[](?:辑评|评析|笺评|译注|赏析|题解|按语|注释)[】\]]$/.test(title);
 }
 
+// v7.118 · Poetry is a reading unit, even when the EPUB emits its title,
+// author and verse as separate sibling nodes. Only printed clones are tagged;
+// chapter source DOM and stored character offsets remain byte-for-byte intact.
+function jfDeskTagPoetryLeads(blocks){
+  const tidy=node=>String(node?.textContent||'').replace(/[\s\u00a0\u3000]/g,'').trim();
+  const plain=node=>node&&!node.querySelector?.('img,table,figure,svg,picture,video');
+  const verse=node=>{
+    if(!plain(node))return false;
+    const t=tidy(node);
+    return t.length>=8&&t.length<=160&&/[，。！？；]/.test(t)&&
+      !/^[【\[]/.test(t);
+  };
+  for(let i=0;i<blocks.length-1;i++){
+    const title=blocks[i].node,text=tidy(title);
+    if(!plain(title)||text.length<1||text.length>25||
+       /[，。！？；：\[\]【】]/.test(text))continue;
+    const heading=/^H[1-4]$/.test(title.tagName)||
+      /(?:^|[-_\s])(?:poem[-_]?title|poetry[-_]?title|title)(?:$|[-_\s])/i.test(String(title.className||''))||
+      (title.tagName==='P'&&text.length<=16);
+    if(!heading)continue;
+    let j=i+1;
+    const author=tidy(blocks[j]?.node);
+    if(author&&author.length<=12&&
+       !/[，。！？；：\[\]【】]/.test(author)&&
+       blocks[j+1]&&verse(blocks[j+1].node))j++;
+    if(!blocks[j]||!verse(blocks[j].node))continue;
+    // Preserve short verse blocks as one unit, including 4-line or 8-line
+    // poems encoded as multiple <p> elements, but stop at commentary labels.
+    let end=j+1;
+    while(end<blocks.length&&end-j<8){
+      const next=blocks[end].node;
+      const value=tidy(next);
+      if(!value||value.length>26||!verse(next))break;
+      end++;
+    }
+    title.classList.add('jfPrintPoetryLead');
+    title.dataset.jfPoetryKeep=String(end-i);
+    i=end-1;
+  }
+}
+
 function jfDeskBlocksFor(sec){
   // This runs after image decode in both normal paging and the book census.
   // The same inline-vs-plate classification is copied into measured blocks.
@@ -2434,6 +2511,7 @@ function jfDeskBlocksFor(sec){
       }
     }
   }
+  jfDeskTagPoetryLeads(blocks);
   return blocks;
 }
 
@@ -2463,12 +2541,14 @@ async function jfDeskPagedLayout(keepPage,reason){
   if(signature!==jfDeskPagesSig){
     // Invalidate a census still using the previous font/viewport geometry.
     jfDeskCensusToken++;
+    jfDeskVerifiedFolios=[];jfDeskMountedFromStart=false;
     jfDeskChapterPages.clear();
     // Counts are only correct under the matching physical page geometry,
     // font revision and book identity. Reload verified counts, never old DOM.
     jfDeskChapterPageCounts.clear();
     jfDeskPagesSig=signature;
     jfDeskLoadFolioCounts();
+    jfDeskLoadPhysicalFolios();
   }
   const budget=Math.max(120,geo.innerH);
   // v7.117: a new EPUB XHTML section is not automatically a new PAPER leaf.
@@ -2488,8 +2568,9 @@ async function jfDeskPagedLayout(keepPage,reason){
   const firstReadable=jfDeskPaperFirstReadable(0);
   const prefixComplete=sections.length>0&&sections[0].n===firstReadable&&
     sections.every((sec,i)=>i===0||Array.from({length:sec.n-sections[i-1].n-1},(_,k)=>sections[i-1].n+k+1).every(jfDeskPaperOmittedChapter));
-  jfDeskChapterPageCounts.clear();
-  if(prefixComplete){
+  jfDeskMountedFromStart=prefixComplete;
+  if(!jfDeskVerifiedFolios.length)jfDeskChapterPageCounts.clear();
+  if(prefixComplete&&!jfDeskVerifiedFolios.length){
     for(let n=0;n<=sections[sections.length-1].n;n++){
       if(jfDeskPaperOmittedChapter(n))jfDeskChapterPageCounts.set(n,0);
       else jfDeskChapterPageCounts.set(n,0);
@@ -2500,7 +2581,7 @@ async function jfDeskPagedLayout(keepPage,reason){
     if(owner==null)continue;
     if(!jfDeskChapterPages.has(owner))jfDeskChapterPages.set(owner,[]);
     jfDeskChapterPages.get(owner).push(page);
-    if(prefixComplete)jfDeskChapterPageCounts.set(owner,
+    if(prefixComplete&&!jfDeskVerifiedFolios.length)jfDeskChapterPageCounts.set(owner,
       (jfDeskChapterPageCounts.get(owner)||0)+1);
   }
   // Page ownership changes when neighbouring chapters are mounted. The old
@@ -2529,8 +2610,13 @@ async function jfDeskPagedLayout(keepPage,reason){
   if(gen!==jfDeskPageGen)return;   // a newer layout already started
   jfDeskPages=pages;                // atomic swap: page turns never see a half-built list
   jfDeskRecountBookPages();
-  // Do not launch the legacy per-chapter census: it assumes hard chapter
-  // page breaks and would publish incorrect physical page numbers.
+  // Calculate full physical folios offscreen using the SAME continuous flow.
+  // This does not mutate the page window or current visual position.
+  if(!jfDeskVerifiedFolios.length&&!jfDeskCensusRunning&&
+     jfDeskOutline?.format==='EPUB'){
+    setTimeout(()=>{if(jfDeskPaged&&!jfDeskCensusRunning&&
+       !jfDeskVerifiedFolios.length)jfDeskMeasureBook(geo);},850);
+  }
   // Decide single vs spread only after pagination: with one page a spread would
   // show an empty facing page.
   const twoPages=geo.two&&jfDeskPages.length>1;
@@ -2817,14 +2903,13 @@ function jfDeskPagedRender(direction){
   const book=jfDeskBookPages;
   const pageA0=jfDeskPages[jfDeskPageIndex]||[];
   const chapterOfPage=pageA0[0]?pageA0[0].chapter:jfDeskChapter;
-  const chapterPages=jfDeskChapterPages.get(chapterOfPage)||[];
-  const inChapter=Math.max(0,chapterPages.indexOf(pageA0));
-  const pagesBefore=jfDeskPagesBefore(chapterOfPage);
-  // The chapter prefix is exact or unknown. Unknown physical numbers MUST NOT
-  // be extrapolated and painted as real folios (the old 90 -> 231 jump).
-  const exactNumber=pagesBefore!=null&&chapterPages.includes(pageA0);
-  const leftPageNumber=exactNumber?pagesBefore+inChapter+1:null;
-  const rightPageNumber=exactNumber&&pageB.length?leftPageNumber+1:null;
+  // A page is exact if its text-start anchor matches the full-book physical
+  // census, or if the mounted window is a contiguous prefix of the book.
+  // A window that begins mid-leaf must NOT guess chapter-based page numbers.
+  const leftPageNumber=jfDeskExactPhysicalFolio(pageA0,jfDeskPageIndex);
+  const rightPageNumber=pageB.length?
+    jfDeskExactPhysicalFolio(pageB,jfDeskPageIndex+1):null;
+  const exactNumber=leftPageNumber!=null;
   const totalSheets=book.total>0?book.total:0;
   const readPages=exactNumber?Math.max(0,leftPageNumber-1):0;
   const unreadPages=book.exact&&rightPageNumber!=null?

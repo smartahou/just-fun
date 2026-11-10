@@ -39,7 +39,7 @@ assert.equal(model.progress(4,450),mid,'partial census cannot change percent');
 const saved=db.get(model.cacheKey());
 assert(saved,'verified page counts persisted');
 const savedData=JSON.parse(saved);
-assert.equal(savedData.version,'v7.117.0');
+assert.equal(savedData.version,'v7.118.0');
 assert.equal(savedData.layout,'book-1|font-400|1360x840');
 assert.equal(savedData.chapters,8);
 counts.clear();
@@ -66,8 +66,10 @@ counts.clear();
 assert.equal(model.load(),4,'corrupted cache entries are ignored');
 const folioStart=js.indexOf('function jfDeskPagedRender(direction){');
 const folio=js.slice(folioStart,js.indexOf('let jfDeskTurnTimer=0;',folioStart));
-assert(folio.includes("const leftPageNumber=exactNumber?pagesBefore+inChapter+1:null;"),
-  'unknown folio must be null, never a guessed number');
+assert(folio.includes('const leftPageNumber=jfDeskExactPhysicalFolio(pageA0,jfDeskPageIndex);'),
+  'physical folios must be resolved from exact starts, not per-chapter estimates');
+assert(js.includes('function jfDeskExactPhysicalFolio(page,mountedIndex)'),
+  'a mounted leaf without a certified global start cannot claim exact digits');
 assert(folio.includes("leftSheet.dataset.page=exactNumber?String(leftPageNumber):''"),
   'unmeasured leaf must have no printed digits');
 assert(folio.includes("rightSheet.dataset.page=rightPageNumber!=null?String(rightPageNumber):''"));

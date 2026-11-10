@@ -11,7 +11,7 @@ const start=source.indexOf('async function jfDeskPagedLayout(keepPage,reason){')
 const end=source.indexOf('function jfDeskPageForAnchor(',start);
 assert(start>=0&&end>start);
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.117.0');
+assert.equal(pkg.version,'7.118.0');
 const calls=[];
 let rendered=0;
 const leaf=[
@@ -26,6 +26,7 @@ const ctx={
   window:{JFPageEngine:{paginate(blocks){calls.push(blocks);return [leaf];}}},
   document:{getElementById:()=>view},
   jfDeskPaged:true,jfDeskPageGen:0,jfDeskPages:[],
+  jfDeskVerifiedFolios:[],jfDeskMountedFromStart:false,
   jfDeskFont:18,jfDeskPrefs:{family:'serif'},jfReadFamilyMap:{serif:'serif'},
   jfDeskPagesSig:'same',jfDeskChapter:2,jfDeskPageIndex:0,
   jfDeskFlow:[{n:2,el:{}},{n:3,el:{}}],
@@ -39,6 +40,7 @@ const ctx={
   jfDeskLayoutSignature:()=> 'same',
   jfDeskBlocksFor:sec=>[{chapter:sec.n,node:{},key:sec.n+':0',offset:0}],
   jfDeskRecountBookPages:()=>{},
+  jfDeskMeasureBook:async()=>{},
   jfDeskCurrentAnchor:()=>null,
   jfDeskPagedRender:()=>{rendered++;},
   jfDeskBook:{id:1},jfDeskOutline:{chapters:[{},{},{},{}]},
@@ -56,8 +58,8 @@ const run=vm.runInNewContext(source.slice(start,end)+'\n jfDeskPagedLayout',ctx)
   assert.equal(ctx.jfDeskChapterPageCounts.size,0,
     'mid-book window cannot claim exact whole-book chapter page counts');
   assert.equal(rendered,1);
-  assert(!source.slice(start,end).includes('setTimeout(()=>jfDeskMeasureBook'),
-    'legacy independent-chapter census must stay inactive');
+  assert(source.includes("window.JFPageEngine.paginate(carry.concat(blocks),budget,host)"),
+    'physical census is now continuous and carries the final leaf');
   assert(source.includes('page.some(block=>block.chapter===n)'),
     'append must recognize the chapter inside a mixed leaf');
   assert(source.includes('right.dataset.running=pageB.length?runningTitle(pageB)'),

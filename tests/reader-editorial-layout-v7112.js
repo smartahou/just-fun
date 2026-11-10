@@ -37,17 +37,17 @@ assert(engine.includes('if(para.textContent!==original.slice(offset,stop))return
   'each commentary paragraph preserves original characters exactly');
 assert(engine.includes('offset:(item.offset||0)+offset,sourceRow:true'),
   'each row remains anchored to original text offset');
-assert(engine.includes('if(together>pageH-EPS&&cur.length)'),
-  'short editorial heading is pushed with first full annotation');
+assert(engine.includes('fresh<=pageH-EPS&&together>pageH-EPS&&cur.length'),
+  'editorial heading stays with a fitting next paragraph without giant blank leaves');
 assert(reader.includes("document.getElementById('jfPageView').appendChild(holder)"),
   'census and visible page use identical scoped CSS');
-assert(reader.includes('urgent?650:2200'),
-  'exact preceding page counts receive earlier CPU idle priority');
-assert(reader.includes("jfDeskStackState?.folio==='pending'")&&
-       reader.includes('jfDeskPagesBefore(currentChapter)!=null'),
-  'exact folio can appear immediately, without waiting for whole book census');
+assert(reader.includes('const measured=window.JFPageEngine.paginate(carry.concat(blocks),budget,host);'),
+  'physical census carries chapter-end paper into the next chapter');
+assert(reader.includes('jfDeskVerifiedFolios=starts;')&&
+       reader.includes('jfDeskExactPhysicalFolio(pageA0,jfDeskPageIndex)'),
+  'full-book physical anchors, not isolated chapter counts, certify a folio');
 assert(reader.includes('const jfDeskFolioCacheRevision=')&&
-  reader.includes("const jfDeskFolioCacheRevision='v7.117.0'"),
+  reader.includes("const jfDeskFolioCacheRevision='v7.118.0'"),
   'old pagination layout cache is invalidated by algorithm change');
 assert(css.includes(".jfSheet[data-folio-exact='false']::before{content:none!important}"),
   'inaccurate physical page numbers remain hidden');
