@@ -144,7 +144,8 @@ def main():
                 # Re-layout (single page / two page) must tear down stale faces.
                 page.set_viewport_size({'width':850,'height':812})
                 page.wait_for_function("()=>jfDeskFacePool&&jfDeskPagedGeometry().two===false&&"+
-                    "jfDeskPagesSig===jfDeskFacePool.signature",timeout=40000)
+                    "jfDeskPagesSig===jfDeskFacePool.signature&&"+
+                    "jfDeskPagesSig===jfDeskLayoutSignature(jfDeskPagedGeometry())",timeout=40000)
                 single=page.evaluate("""()=>{
                   const els=document.querySelectorAll('.jfSheet > .jf-face-buffer');
                   return {count:els.length,active:document.getElementById('jfSheetLeft')?.textContent.length,
@@ -154,7 +155,8 @@ def main():
                     'Single-page resize leaked or missed faces: '+str(single))
                 page.set_viewport_size({'width':1386,'height':850})
                 page.wait_for_function("()=>jfDeskFacePool&&jfDeskPagedGeometry().two===true&&"+
-                    "jfDeskPagesSig===jfDeskFacePool.signature",timeout=40000)
+                    "jfDeskPagesSig===jfDeskFacePool.signature&&"+
+                    "jfDeskPagesSig===jfDeskLayoutSignature(jfDeskPagedGeometry())",timeout=40000)
                 assert not errors,'Chromium page errors: '+str(errors[:5])
                 print('PASS v7.122 Chromium pre-render cache: '+
                     json.dumps({'hit':result['after']['hit'],'miss':result['after']['miss'],
