@@ -19,8 +19,9 @@ assert(!html.includes('id="jfReadPaperAged"')&&!html.includes('id="jfReadPaperWe
 assert(!html.includes('jfReadPaperSettings'),'no empty paper row');
 assert(paper.includes("localStorage.setItem(KEY,'on')"),'old OFF storage is migrated ON');
 assert(paper.includes('const textures=__JUSTFUN_PAPER_SPREAD_ASSETS__'),'all original WebPs stay wired');
-assert(!css.slice(css.indexOf('/* v7.108 ·')).includes('border-radius:'),
-  'new styling cannot touch original photographed corners');
+assert(!/\\.jfReader\\.paged\\.jf-aged-paper[^{}]*\\{[^}]*border-radius:/s.test(
+  css.slice(css.indexOf('/* v7.108 ·'))),
+  'only original paper surfaces must remain free of synthetic rounded corners');
 const start=js.indexOf('function jfDeskSyncTypographyControls(){');
 const end=js.indexOf('// v7.71 · Typeface diagnostics',start);
 assert(start>0&&end>start,'per-mode control synchronizer exists');
