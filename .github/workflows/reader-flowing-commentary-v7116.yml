@@ -1,21 +1,5 @@
 name: Just Fun v7.116 flowing editorial annotations
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/client/scripts/98d-page-engine.js"
-      - "src/client/scripts/99-reading.js"
-      - "src/client/styles/41-reading.css"
-      - "tests/reader-flowing-commentary-v7116.js"
-      - "tests/reader-flowing-commentary-visual-v7116.py"
-      - "tests/reader-single-commentary-v7114.js"
-      - "tests/reader-editorial-layout-v7112.js"
-      - "tests/reader-exact-folios-v7111.js"
-      - "tests/reader-exact-folios-visual-v7111.py"
-      - "tests/reading-progress-annotations-v7107.js"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/reader-flowing-commentary-v7116.yml"
   workflow_dispatch:
 permissions:
   contents: read

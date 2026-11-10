@@ -1,17 +1,5 @@
 name: Just Fun old-paper integration validation
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "assets/paper/**"
-      - "assets/paper-spreads/**"
-      - "assets/paper-stacks/**"
-      - "src/client/**"
-      - "scripts/build.js"
-      - "build.manifest.json"
-      - "tests/paper-*"
-      - "tests/paged-correctness-v736.py"
-      - ".github/workflows/paper-v747-ci.yml"
   workflow_dispatch:
 permissions:
   contents: read

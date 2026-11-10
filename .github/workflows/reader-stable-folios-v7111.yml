@@ -1,17 +1,5 @@
 name: Just Fun v7.111 deterministic page folios and reading anchor
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/client/scripts/99-reading.js"
-      - "src/client/styles/41-reading.css"
-      - "tests/reader-exact-folios-v7111.js"
-      - "tests/reader-exact-folios-visual-v7111.py"
-      - "tests/reading-progress-annotations-v7107.js"
-      - "tests/book-font-v7110.js"
-      - "tests/book-font-visual-v7110.py"
-      - "package.json"
-      - ".github/workflows/reader-stable-folios-v7111.yml"
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,10 +1,5 @@
 name: Just Fun v7.104 restore authentic photographed leaves
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/restore-paper-source-v7104.py"
-      - ".github/workflows/reading-v7104.yml"
   workflow_dispatch:
 permissions:
   contents: write

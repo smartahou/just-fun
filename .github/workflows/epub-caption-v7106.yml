@@ -1,17 +1,5 @@
 name: Just Fun v7.106 photo caption and numeral font audit
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tests/reader-interactions-v766.js"
-      - "src/client/scripts/99-reading.js"
-      - "src/client/styles/41-reading.css"
-      - "tests/epub-caption-v7106.js"
-      - "tests/print-ink-v7105.js"
-      - "tests/imprint-typesetting-v767.js"
-      - "tests/epub-caption-visual-v7106.py"
-      - ".github/workflows/epub-caption-v7106.yml"
-      - "package.json"
   workflow_dispatch:
 permissions:
   contents: read

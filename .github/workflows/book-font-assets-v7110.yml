@@ -1,10 +1,5 @@
 name: Just Fun v7.110 pinned book fonts (one-time materialization)
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/build-book-fonts-v7110.py"
-      - ".github/workflows/book-font-assets-v7110.yml"
   workflow_dispatch:
 permissions:
   contents: write

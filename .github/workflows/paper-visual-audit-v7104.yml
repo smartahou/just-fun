@@ -1,10 +1,5 @@
 name: Just Fun v7.104 paper visual source audit
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/audit-paper-corners-v7104.py"
-      - ".github/workflows/paper-visual-audit-v7104.yml"
   workflow_dispatch:
 permissions:
   contents: read

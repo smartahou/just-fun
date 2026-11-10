@@ -1,18 +1,5 @@
 name: Just Fun v7.112 semantic editorial pagination and exact folio priority
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/client/scripts/98d-page-engine.js"
-      - "src/client/scripts/99-reading.js"
-      - "tests/reader-editorial-layout-v7112.js"
-      - "tests/reader-editorial-layout-visual-v7112.py"
-      - "tests/reader-exact-folios-v7111.js"
-      - "tests/reader-exact-folios-visual-v7111.py"
-      - "tests/reading-progress-annotations-v7107.js"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/reader-editorial-v7112.yml"
   workflow_dispatch:
 permissions:
   contents: read

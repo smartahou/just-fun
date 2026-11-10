@@ -1,10 +1,5 @@
 name: Refine actual Just Fun paper leaves v7.102
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/refine-paper-corners-v7102.py"
-      - ".github/workflows/paper-corners-v7102.yml"
   workflow_dispatch:
 permissions:
   contents: write

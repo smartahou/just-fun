@@ -1,14 +1,11 @@
-name: Just Fun v7.117 continuous EPUB chapter pages
+name: Just Fun main CI
 on:
   push:
     branches: [main]
-    paths:
-      - "src/client/scripts/99-reading.js"
-      - "src/client/scripts/98d-page-engine.js"
-      - "tests/reader-continuous-chapters-v7117.js"
-      - "package.json"
-      - ".github/workflows/reader-continuous-chapters-v7117.yml"
   workflow_dispatch:
+concurrency:
+  group: just-fun-main-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -27,6 +24,10 @@ jobs:
           node --check src/client/scripts/98d-page-engine.js
           node tests/reader-continuous-chapters-v7117.js
           node tests/reader-flowing-commentary-v7116.js
+          node tests/reader-single-commentary-v7114.js
+          node tests/reader-commentary-grid-v7113.js
+          node tests/reader-natural-commentary-v7115.js
+          node tests/reader-editorial-layout-v7112.js
           node tests/reader-exact-folios-v7111.js
           node tests/reading-progress-annotations-v7107.js
           node tests/paged-forward-boundary-v7103.js
@@ -35,5 +36,12 @@ jobs:
       - name: Verify original EPUB print and build
         run: |
           npm run test:reading-print
+          npm run test:epub-paper
+          npm run test:reading-controls
+          npm run test:reading-progress
+          npm run test:reader-toolbar
+          npm run test:book-font
+          npm run test:caption
+          npm run test:print-ink
           node scripts/build.js
           node --check dist/douyin.js

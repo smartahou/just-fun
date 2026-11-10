@@ -5,18 +5,18 @@
 
 ## 交付契约（所有者明确要求）
 
-**每个任务节点完成后直接 push 到 GitHub，不需要再询问。**
+**每个任务节点完成后直接 push 到 GitHub，不需要再询问。一次迭代原则上一笔原子提交、一次推送，不要逐文件提交。**
 
 1. 改真实模块化源码，不直接改 `dist/` 产物。
 2. 先跑专项，再跑相关回归；新增行为必须有可执行的回归用例。
 3. `node scripts/build.js` 必须通过，并记录 `sourceSha256`。
 4. 写 `GOVERNANCE-CHECKPOINT-vX.XX.md`：真实根因、修复、**实际执行过的**验证、未做的验证、影响面。
 5. 更新 `package.json` 版本号与 `README.md` 顶部的版本行。
-6. `git commit` → `git push origin main` → `git ls-remote origin refs/heads/main` 回查远端 HEAD。
+6. 将源码、测试、版本与 checkpoint 一并暂存；先完成可运行的测试和构建，再一次性 `git commit` → `git push origin main` → `git ls-remote origin refs/heads/main` 回查远端 HEAD。通过 GitHub API 操作时使用 create_tree + create_commit + update_ref，禁止逐文件 update_file 造成重复 Push。
 7. **禁止 force push。** 远端有新提交时先 fetch 并快进；冲突走分支，不覆盖历史。
 8. 拿不出执行证据的事情不要写进报告：没有跑过的测试写"未运行"，不要写"应通过"。
 
-变更记录习惯：一个版本可以有多张提交（特性、部署、文档），但同一版本号的 checkpoint 只写一份。
+变更记录习惯：一个版本原则上一笔提交；确实需要修复失败测试或处理并发冲突时才额外提交。主分支只由统一 CI 自动触发；历史专项 Actions 可手动 dispatch 复核，不能当作被删除的测试。
 
 ## 本机环境事实（踩过坑，别重踩)
 

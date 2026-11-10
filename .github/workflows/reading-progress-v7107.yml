@@ -1,16 +1,5 @@
 name: Just Fun v7.107 book progress and poetry annotations
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tests/reader-interactions-v766.js"
-      - "src/client/scripts/99-reading.js"
-      - "src/client/styles/41-reading.css"
-      - "tests/reading-progress-annotations-v7107.js"
-      - "tests/reading-progress-visual-v7107.py"
-      - "tests/imprint-typesetting-v767.js"
-      - "package.json"
-      - ".github/workflows/reading-progress-v7107.yml"
   workflow_dispatch:
 permissions:
   contents: read
