@@ -26,6 +26,7 @@ const ctx={
   window:{JFPageEngine:{paginate(blocks){calls.push(blocks);return [leaf];}}},
   document:{getElementById:()=>view},
   jfDeskPaged:true,jfDeskPageGen:0,jfDeskPages:[],
+  jfDeskFont:18,jfDeskPrefs:{family:'serif'},jfReadFamilyMap:{serif:'serif'},
   jfDeskPagesSig:'same',jfDeskChapter:2,jfDeskPageIndex:0,
   jfDeskFlow:[{n:2,el:{}},{n:3,el:{}}],
   jfDeskChapterPages:new Map(),jfDeskChapterPageCounts:new Map(),
