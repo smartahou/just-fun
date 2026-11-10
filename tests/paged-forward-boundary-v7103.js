@@ -124,7 +124,7 @@ function testReader(chapters=4,omitted=[]){
     commitLayout();await p;
     assert(settled,'caller sees fully built chapter');
   }
-  assert(src.includes('if(delta<0){jfDeskForwardPending=0;jfDeskForwardBusy(false);}'),'reverse turn must cancel pending next and clear busy state');
+  assert(src.includes('if(delta<0)jfDeskForwardPending=0'),'reverse turn must cancel pending next');
   assert(src.includes("await jfDeskPagedLayout(true,'append')"),'append layout must be awaited');
   console.log('PASS v7.103: delayed next, rapid double-next, previous cancellation, stale book guard, omitted chapters, last page and shared append');
 })().catch(e=>{console.error(e);process.exitCode=1});

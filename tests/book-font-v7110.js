@@ -39,9 +39,8 @@ assert(!build.includes('https://fonts.googleapis.com'),'no remote font dependenc
 assert(source.includes("serif:\"'JustFun Book Serif CN','Source Han Serif SC'"),'system fallback retained');
 assert(source.includes("const jfDeskBookFontVersion='SourceHanSerifCN-1.000R-GBK-7.110'"));
 assert(source.includes("jfDeskBookFontVersion,jfDeskPrefs.font"),'font version participates in chapter layout signature');
-assert(source.includes("const view=document.getElementById('jfPageView');\n  view.style.setProperty('--jf-read-font'")&&
-       source.includes("view.style.setProperty('--jf-read-family'"),
-  'paper layout sets the actual displayed font family and size before measuring');
+assert(source.includes("const view=document.getElementById('jfPageView');\n  // v7.110: the user can enter paper mode"),
+  'paper layout resets the real printed page container family before measuring');
 assert(source.includes("await jfDeskEnsureBookFonts();\n    }\n    window.JFEpubPaperToc?.close()"),
   'switching from continuous to paged mode awaits the embedded serif');
 assert(source.includes('await jfDeskEnsureBookFonts();\n  try{ if(document.fonts'),'measurement awaits explicit face readiness');

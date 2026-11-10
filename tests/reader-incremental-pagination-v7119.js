@@ -66,36 +66,20 @@ async function appendTest(){
   assert.equal(context.jfDeskPageIndex,2,
     'appending a mixed chapter may not relocate the current spread');
   assert.deepEqual(Array.from(context.jfDeskPublishedSections),[0,1,2]);
-  assert.deepEqual(publish,['trim','render']);
+  assert.deepEqual(publish,['render']);
+  context.jfDeskPageIndex=0;
+  context.jfDeskPages=oldPages.slice();
+  context.jfDeskPublishedSections=[0,1];
+  publish.length=0;
+  await layout(true,'append');
+  assert.equal(publish.length,0,'unaffected foreground spread never remounted by prefetch');
 }
 
-function trimTest(){
-  const pages=Array.from({length:30},(_,i)=>[{
-    chapter:Math.floor(i/2),offset:i%2?120:0,
-    key:Math.floor(i/2)+':'+i,node:{textContent:'chapter'}
-  }]);
-  const removed=[];
-  const flow=Array.from({length:15},(_,n)=>({n,
-    el:{remove(){removed.push(n);}}}));
-  const context={
-    jfDeskPaged:true,jfDeskFlow:flow,jfDeskPages:pages.slice(),
-    jfDeskPageIndex:26,jfDeskPublishedSections:flow.map(x=>x.n),
-    jfDeskChapterPages:new Map(),jfDeskChapterPageCounts:new Map(),
-    jfDeskVerifiedFolios:[],jfDeskMountedFromStart:false,
-    jfDeskPagedGeometry:()=>({two:true}),
-    jfDeskRecountBookPages:()=>{},
-    JF_FLOW_MAX:12,Map,Set,Array,Math
-  };
-  const trim=vm.runInNewContext(slice('function jfDeskTrimPagedWindow(){',
-    '// v7.119: append only the new chapter')+'\njfDeskTrimPagedWindow',context);
-  const visible=pages[26],cut=trim();
-  assert(cut>0&&cut%2===0,'only entire spreads may be evicted');
-  assert(context.jfDeskFlow.length<=12,'old mounted chapters reclaimed');
-  assert.equal(context.jfDeskPages[context.jfDeskPageIndex],visible,
-    'window trimming must keep the exact visible page object');
-  assert.deepEqual(removed,flow.slice(0,removed.length).map(x=>x.n),
-    'evict only a source prefix, never the currently visible chapter');
-  assert.equal(context.jfDeskPageIndex%2,0,'double-leaf parity retained');
+function retainedHistoryTest(){
+  assert(!source.includes('function jfDeskTrimPagedWindow('),
+    'v7.119 destructive page-window trim must remain disabled until reversible');
+  assert(source.includes('if(!sameSpread)jfDeskPagedRender();'),
+    'async prefetch must not unmount unchanged visible text');
 }
 function spreadTest(){
   const context={
@@ -152,6 +136,6 @@ async function censusTest(){
     'background groups may not fabricate extra physical pages');
 }
 (async()=>{
-  await appendTest();trimTest();spreadTest();await censusTest();
+  await appendTest();retainedHistoryTest();spreadTest();await censusTest();
   console.log('PASS v7.119: incremental append, stable parity, no blank spreads, sliced idle census');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -144,8 +144,8 @@ def main():
                 assert not result['blank'],'Premature blank spread: '+str(result['blank'][:5])
                 assert result['seen']==list(range(36)),(
                     'Skipped/repeated chapter titles during forward reading: '+str(result['seen']))
-                assert result['mounted']<=16,(
-                    'Live chapter window grew without safe trimming: '+str(result['mounted']))
+                assert result['mounted']>=35,(
+                    'Previously visited chapters must not be discarded: '+str(result['mounted']))
                 assert not errors,'Browser errors: '+str(errors)
                 assert not result['frameMs'] or pct(result['frameMs'],.95)<180,(
                     'Cached-turn Chromium P95 exceeded 180ms regression guard: '+str(result))

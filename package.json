@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.119.0",
+  "version": "7.120.0",
   "private": true,
   "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
@@ -27,7 +27,8 @@
     "test:reader-flowing-commentary": "node tests/reader-flowing-commentary-v7116.js",
     "test:reader-continuous-chapters": "node tests/reader-continuous-chapters-v7117.js",
     "test:reader-semantic": "node tests/reader-semantic-pagination-v7118.js",
-    "test:reader-incremental": "node tests/reader-incremental-pagination-v7119.js"
+    "test:reader-incremental": "node tests/reader-incremental-pagination-v7119.js",
+    "test:reader-backtracking": "node tests/reader-backtracking-v7120.js"
   },
   "license": "MIT",
   "dependencies": {
