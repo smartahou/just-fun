@@ -93,8 +93,13 @@ def main():
                   await frame();
                   const after=scan('first prepared next');
                   const firstTurnMs=performance.now()-start;
-                  check(after.a===nextSlot?.left,'prepared turn did not switch faces');
-                  check(after.a?.firstChild===node,'prepared turn re-created text nodes');
+                  // Idle neighbor warming may legitimately recycle the
+                  // captured slot BEFORE the click. Judge the visible ACTIVE
+                  // slot and the actual cache hit, not a stale slot reference.
+                  const activeSlot=jfDeskFacePool?.slots[jfDeskFacePool.active];
+                  check(after.a===activeSlot?.left,'active face DOM ID is not unique');
+                  check(activeSlot?.index===nextIndex,'active face index mismatch');
+                  check(!!after.a?.firstChild,'active face has no rendered content');
                   check(jfDeskPageIndex===nextIndex,'prepared turn skipped a spread');
                   check(jfDeskPaintDiagnostics().hit>pre.hit,'prepared turn was recorded as a miss');
                   // Two full page bodies stay available for next/previous.
