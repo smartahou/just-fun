@@ -5,7 +5,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.121.0');
+assert.equal(require('../package.json').version,'7.122.0');
 function part(a,b){
   const i=source.indexOf(a),j=source.indexOf(b,i+a.length);
   assert(i>=0&&j>i,'missing '+a);return source.slice(i,j);

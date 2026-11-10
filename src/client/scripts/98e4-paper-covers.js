@@ -51,8 +51,18 @@
     try{localStorage.setItem(STORE_KEY,JSON.stringify(map));}catch{}
     return selected;
   }
+  const lastPaint=new WeakMap();
   function apply(view,bookId,twoPages){
     if(!view)return null;
+    const activeReader=document.getElementById('jfReader');
+    const active=!!(bookId&&activeReader?.classList.contains('paged')&&
+      activeReader?.classList.contains('jf-aged-paper'));
+    const key=String(bookId||'')+'|'+(twoPages?'2':'1')+'|'+(active?'on':'off');
+    const previous=lastPaint.get(view);
+    // v7.122: avoid assigning a MULTI-HUNDRED-KB inline WebP URL to a CSS
+    // custom property on every physical turn. This was invalidating the entire
+    // book shell even when the photographic cover never changed.
+    if(previous?.key===key)return previous.result;
     const reader=document.getElementById('jfReader');
     const enabled=!!(bookId&&reader?.classList.contains('paged')&&reader?.classList.contains('jf-aged-paper'));
     view.classList.remove('jf-image-stacks');
@@ -62,6 +72,7 @@
     view.style.removeProperty('--jf-cover-shell-underlay');
     delete view.dataset.coverFinish;
     if(!enabled){
+      lastPaint.set(view,{key,result:null});
       view.style.removeProperty('--jf-cover-board-url');
       view.style.removeProperty('--jf-cover-board-color');
       delete view.dataset.coverStyle;
@@ -74,6 +85,7 @@
     view.dataset.coverStyle=String(i+1);
     view.dataset.coverVariant=String(i+1);
     view.dataset.coverMode=twoPages?'spread':'single';
+    lastPaint.set(view,{key,result:i+1});
     return i+1;
   }
   window.JFPaperCovers={apply,styleFor,count:covers.length,variantCount:covers.length};

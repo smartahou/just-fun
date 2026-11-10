@@ -4024,3 +4024,20 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
     animation:none;border-color:rgba(97,85,66,.65);
   }
 }
+
+/* v7.122 · Three bounded full-size text faces per photographed paper leaf.
+   Prepared faces have final text geometry, but only one accepts input/paints.
+   No extra book shells or alternate paper texture layers are introduced. */
+.jfReader.paged #jfPageView .jfSheet > .jfSheetBody.jf-face-buffer{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;height:100%!important;
+  contain:layout paint;
+  opacity:0;
+  pointer-events:none;
+  transition:none!important;
+}
+.jfReader.paged #jfPageView .jfSheet > .jfSheetBody.jf-face-buffer[data-jf-face-active="true"]{
+  opacity:1;
+  pointer-events:auto;
+}

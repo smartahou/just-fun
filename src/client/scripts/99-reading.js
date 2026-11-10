@@ -549,6 +549,8 @@ const JF_FLOW_MAX=12;          // keep a bounded live window in paper mode
 const JF_FLOW_AHEAD=4;         // prefetch four short EPUB sections before boundary
 
 function jfDeskFlowReset(){
+  jfDeskCachedGeometry=null;
+  jfDeskDropFaces();
   clearTimeout(jfDeskCensusStartTimer);
   jfDeskFlow=[];jfDeskFlowBusy=false;
   jfDeskPublishedSections=[];
@@ -1758,6 +1760,7 @@ let jfDeskPages=[],jfMeasureHost=null,jfCensusMeasureHost=null;
 // network-fetched sections. This guards the append-only fast path.
 let jfDeskPublishedSections=[];
 
+let jfDeskCachedGeometry=null;
 function jfDeskPagedGeometry(){
   const cw=jfReadCenter.clientWidth||800,ch=jfReadCenter.clientHeight||600;
   const two=cw>=1000;
@@ -1908,7 +1911,7 @@ function jfDeskPagesBefore(chapter){
 // Cache only verified page COUNTS, not rendered DOM, position or book content.
 // Book identity + layout signature include font, paper dimensions and renderer
 // revision; a stale/different font or viewport must never supply folios.
-const jfDeskFolioCacheRevision='v7.121.0';
+const jfDeskFolioCacheRevision='v7.122.0';
 function jfDeskFolioCacheKey(){
   return 'jf-reader-folios-v7111:'+String(jfDeskBook?.id||'');
 }
@@ -2608,6 +2611,7 @@ async function jfDeskPagedLayout(keepPage,reason){
   const previousLeft=jfDeskPages[oldPageIndex];
   const previousRight=jfDeskPages[oldPageIndex+1];
   const geo=jfDeskPagedGeometry();
+  jfDeskCachedGeometry=geo;
   const view=document.getElementById('jfPageView');
   view.style.setProperty('--jf-read-font',jfDeskFont+'px');
   view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
@@ -2636,6 +2640,7 @@ async function jfDeskPagedLayout(keepPage,reason){
   const host=jfDeskMeasureHost(geo);
   const anchor=keepPage?jfDeskCurrentAnchor():null;
   if(signature!==jfDeskPagesSig){
+    jfDeskDropFaces();
     jfDeskCensusToken++;
     jfDeskVerifiedFolios=[];jfDeskMountedFromStart=false;
     jfDeskChapterPages.clear();
@@ -2783,6 +2788,7 @@ async function jfDeskPagedLayout(keepPage,reason){
   // Backfill prepares a new previous spread offscreen. The backwards
   // navigation queue chooses the target before a single visible paint.
   if(reason!=='prepend'&&!sameSpread)jfDeskPagedRender();
+  else if(reason==='append'&&jfDeskPaged)jfDeskWarmFaces();
 }
 function jfDeskPageForAnchor(pages,chapter,offset,step=1){
   let found=-1,first=-1;
@@ -2966,12 +2972,163 @@ window.JFReaderGlyphAudit=()=>{
   return {version:'7.73',pictures,abnormalText,
     note:'If anomalous glyphs remain, inspect their source element and EPUB dimensions rather than guessing CSS.'};
 };
-function jfDeskPagedRender(direction){
-  window.JFEpubPaperToc?.sync();
-  const geo=jfDeskPagedGeometry();
-  const twoPages=geo.two&&jfDeskPages.length>1;
+// v7.122 · Three bounded, laid-out text-face pairs. A cached page turn
+// toggles the active face instead of reparenting an entire printed page.
+let jfDeskFacePool=null,jfDeskFaceTask=0,jfDeskFaceEpoch=0;
+const jfDeskFaceMetrics={hit:0,miss:0,prepares:0,turns:0,renderMs:[]};
+function jfDeskDropFaces(){
+  ++jfDeskFaceEpoch;
+  if(jfDeskFaceTask){
+    if(typeof cancelIdleCallback==='function')cancelIdleCallback(jfDeskFaceTask);
+    else clearTimeout(jfDeskFaceTask);
+    jfDeskFaceTask=0;
+  }
+  const pool=jfDeskFacePool;
+  if(!pool)return;
+  const active=pool.slots[pool.active];
+  for(const slot of pool.slots){
+    if(slot!==active){slot.left.remove();slot.right.remove();}
+    else for(const [node,id] of [[slot.left,'jfSheetLeft'],[slot.right,'jfSheetRight']]){
+      node.id=id;node.inert=false;node.removeAttribute('aria-hidden');
+      node.classList.remove('jf-face-buffer');
+      delete node.dataset.jfFaceActive;
+      node.replaceChildren();
+    }
+  }
+  jfDeskFacePool=null;
+}
+function jfDeskFaces(){
+  const old=jfDeskFacePool;
+  if(old&&(old.session!==jfDeskSession||old.book!==jfDeskBook?.id||
+     old.signature!==jfDeskPagesSig||!old.slots[old.active].left.isConnected))
+    jfDeskDropFaces();
+  if(jfDeskFacePool)return jfDeskFacePool;
   const left=document.getElementById('jfSheetLeft');
   const right=document.getElementById('jfSheetRight');
+  if(!left||!right)return null;
+  const pool={slots:[{left,right,index:-1,pageA:null,pageB:null}],active:0,
+    session:jfDeskSession,book:jfDeskBook?.id,signature:jfDeskPagesSig};
+  for(const node of [left,right]){
+    node.classList.add('jf-face-buffer');node.dataset.jfFaceActive='true';
+    node.inert=false;node.setAttribute('aria-hidden','false');
+  }
+  const make=node=>{
+    const copy=node.cloneNode(false);
+    copy.removeAttribute('id');
+    copy.classList.add('jf-face-buffer');
+    copy.dataset.jfFaceActive='false';
+    copy.inert=true;copy.setAttribute('aria-hidden','true');
+    node.parentElement.insertBefore(copy,node.nextSibling);
+    return copy;
+  };
+  for(let i=0;i<2;i++)pool.slots.push({left:make(left),right:make(right),
+    index:-1,pageA:null,pageB:null});
+  jfDeskFacePool=pool;
+  return pool;
+}
+function jfDeskFaceMatches(slot,index,two){
+  return slot.index===index&&slot.pageA===jfDeskPages[index]&&
+    slot.pageB===(two?jfDeskPages[index+1]:null);
+}
+function jfDeskPrepareFace(slot,index,two){
+  const pageA=jfDeskPages[index]||[];
+  const pageB=two?(jfDeskPages[index+1]||[]):[];
+  slot.left.replaceChildren(...pageA.map(x=>x.node.cloneNode(true)));
+  slot.right.replaceChildren(...pageB.map(x=>x.node.cloneNode(true)));
+  const heading=page=>jfDeskOutline?.chapters?.[page?.[0]?.chapter]?.title||'';
+  slot.left.dataset.running=heading(pageA);
+  slot.right.dataset.running=pageB.length?heading(pageB):'';
+  slot.index=index;slot.pageA=jfDeskPages[index];
+  slot.pageB=two?jfDeskPages[index+1]:null;
+  jfDeskFaceMetrics.prepares++;
+}
+function jfDeskShowFace(index,two){
+  const pool=jfDeskFaces();
+  if(!pool)return null;
+  let slot=pool.slots.find(x=>jfDeskFaceMatches(x,index,two));
+  if(slot)jfDeskFaceMetrics.hit++;
+  else{
+    jfDeskFaceMetrics.miss++;
+    slot=pool.slots.find((x,i)=>i!==pool.active&&x.index<0)||
+      pool.slots.filter((x,i)=>i!==pool.active)
+        .sort((a,b)=>Math.abs(b.index-index)-Math.abs(a.index-index))[0]||
+      pool.slots[pool.active];
+    jfDeskPrepareFace(slot,index,two);
+  }
+  if(slot!==pool.slots[pool.active]){
+    const old=pool.slots[pool.active];
+    for(const el of [old.left,old.right]){
+      el.removeAttribute('id');el.dataset.jfFaceActive='false';
+      el.inert=true;el.setAttribute('aria-hidden','true');
+    }
+    slot.left.id='jfSheetLeft';slot.right.id='jfSheetRight';
+    slot.left.dataset.jfFaceActive='true';
+    slot.right.dataset.jfFaceActive='true';
+    for(const el of [slot.left,slot.right]){
+      el.inert=false;el.setAttribute('aria-hidden','false');
+    }
+    pool.active=pool.slots.indexOf(slot);
+  }
+  return slot;
+}
+function jfDeskWarmFaces(){
+  if(!jfDeskPaged||jfReader.hidden||!jfDeskFacePool)return;
+  const epoch=++jfDeskFaceEpoch;
+  if(jfDeskFaceTask){
+    if(typeof cancelIdleCallback==='function')cancelIdleCallback(jfDeskFaceTask);
+    else clearTimeout(jfDeskFaceTask);
+    jfDeskFaceTask=0;
+  }
+  const session=jfDeskSession,book=jfDeskBook?.id,sig=jfDeskPagesSig;
+  const index=jfDeskPageIndex;
+  const two=jfDeskPagedGeometry().two&&jfDeskPages.length>1;
+  const step=two?2:1;
+  const candidates=[index+step,index-step].filter(n=>n>=0&&n<jfDeskPages.length);
+  const work=deadline=>{
+    jfDeskFaceTask=0;
+    if(epoch!==jfDeskFaceEpoch||jfDeskSession!==session||
+       jfDeskBook?.id!==book||jfDeskPagesSig!==sig||
+       jfDeskPageIndex!==index||jfReader.hidden)return;
+    if(deadline&&deadline.timeRemaining()<5){enqueue();return;}
+    const pool=jfDeskFacePool;
+    if(!pool)return;
+    window.JFPaperTextures?.warm(book,[{
+      left:jfDeskPages[index],
+      right:two?jfDeskPages[index+1]:null
+    }]).catch(()=>{});
+    for(const n of candidates){
+      if(pool.slots.some(x=>jfDeskFaceMatches(x,n,two)))continue;
+      const free=pool.slots.find((x,i)=>i!==pool.active&&!candidates.includes(x.index));
+      if(!free)continue;
+      jfDeskPrepareFace(free,n,two);
+      // Force typography/layout while idle, not during the later click.
+      free.left.getBoundingClientRect();
+      if(two)free.right.getBoundingClientRect();
+      window.JFPaperTextures?.warm(book,[{
+        left:jfDeskPages[n],right:two?jfDeskPages[n+1]:null
+      }]).catch(()=>{});
+      break; // one spread per idle task, never clone many sheets in one frame
+    }
+    if(candidates.some(n=>!pool.slots.some(x=>jfDeskFaceMatches(x,n,two))))enqueue();
+  };
+  function enqueue(){
+    jfDeskFaceTask=typeof requestIdleCallback==='function'?
+      requestIdleCallback(work):setTimeout(()=>work(null),65);
+  }
+  enqueue();
+}
+window.jfDeskPaintDiagnostics=()=>({
+  ...jfDeskFaceMetrics,active:jfDeskPageIndex,
+  prepared:jfDeskFacePool?.slots.map(x=>x.index)||[]
+});
+function jfDeskPagedRender(direction){
+  window.JFEpubPaperToc?.sync();
+  const geo=jfDeskCachedGeometry||jfDeskPagedGeometry();
+  const twoPages=geo.two&&jfDeskPages.length>1;
+  const renderStart=performance.now();
+  const face=jfDeskShowFace(jfDeskPageIndex,twoPages);
+  const left=face?.left||document.getElementById('jfSheetLeft');
+  const right=face?.right||document.getElementById('jfSheetRight');
   const pageA=jfDeskPages[jfDeskPageIndex]||[];
   const pageB=twoPages?(jfDeskPages[jfDeskPageIndex+1]||[]):[];
   // Pure photo pages receive an optical centre without altering page-engine
@@ -2984,15 +3141,13 @@ function jfDeskPagedRender(direction){
   if(window.JFPaperTextures){
     const paper=window.JFPaperTextures,bookId=jfDeskBook?.id;
     paper.applySpread(left.parentElement,right.parentElement,bookId,pageA,pageB,twoPages);
-    const step=twoPages?2:1;
-    const spreads=[-2,-1,0,1,2].map(i=>({
-      left:jfDeskPages[jfDeskPageIndex+i*step],
-      right:twoPages?jfDeskPages[jfDeskPageIndex+i*step+1]:null
-    }));
-    paper.warm(bookId,spreads).catch(()=>{});
+    // Warm decoded photographic neighbors in the idle face-preparation task,
+    // never perform ten expensive image-cache lookups in a page-turn frame.
   }
-  left.replaceChildren(...pageA.map(x=>x.node));
-  right.replaceChildren(...pageB.map(x=>x.node));
+  if(!face){
+    left.replaceChildren(...pageA.map(x=>x.node));
+    right.replaceChildren(...pageB.map(x=>x.node));
+  }
   window.JFEpubPaperToc?.renderNotes?.(left,right,jfDeskPaperNotes);
   const first=pageA[0]||pageB[0];
   if(first)jfDeskChapter=first.chapter;
@@ -3086,6 +3241,10 @@ function jfDeskPagedRender(direction){
     clearTimeout(jfDeskTurnTimer);
   }
   jfDeskUpdateProgress();
+  jfDeskFaceMetrics.turns++;
+  jfDeskFaceMetrics.renderMs.push(performance.now()-renderStart);
+  if(jfDeskFaceMetrics.renderMs.length>100)jfDeskFaceMetrics.renderMs.shift();
+  jfDeskWarmFaces();
 }
 let jfDeskTurnTimer=0;
 // Page counts behind each stack thickness; diagnostics only.
@@ -3387,7 +3546,7 @@ function jfDeskPageTurn(delta){
     jfDeskBackwardPending=0;jfDeskBackwardGeneration++;
     return false;
   }
-  const geo=jfDeskPagedGeometry();
+  const geo=jfDeskCachedGeometry||jfDeskPagedGeometry();
   const step=(geo.two&&jfDeskPages.length>1)?2:1;
   // The index must stay aligned to the spread grid, otherwise the last spread can
   // start on an odd page and repeat the page already shown beside it.
@@ -3415,6 +3574,7 @@ async function jfDeskPagedToggle(){
   const position=jfDeskCurrentPosition();
   const task=(async()=>{
     jfDeskPaged=!oldMode;
+    if(!jfDeskPaged){jfDeskCachedGeometry=null;jfDeskDropFaces();}
     jfReader.classList.toggle('paged',jfDeskPaged);
     jfDeskSyncTypographyControls();
     if(jfDeskPaged){

@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.121.0');
+assert.equal(require('../package.json').version,'7.122.0');
 assert(source.includes('if(jfDeskPaged&&!jfDeskOutline?.nativePdf)return jfDeskPageTurn(delta);'),
   'footer arrows must turn physical pages, never restart chapter loading');
 const slice=(begin,end)=>{
@@ -45,6 +45,7 @@ async function appendTest(){
     jfDeskRecountBookPages:()=>{},
     jfDeskTrimPagedWindow:()=>{publish.push('trim');},
     jfDeskPagedRender:()=>{publish.push('render');},
+    jfDeskWarmFaces:()=>{},
     window:{JFPageEngine:{paginate(items){
       measure.push(items.map(x=>x.chapter));
       return [[items[0]],[items[items.length-1]]];
