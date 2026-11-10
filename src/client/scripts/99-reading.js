@@ -615,7 +615,7 @@ function jfDeskFlowAppend(n){
       // A concurrent resize/census can supersede the first generation.
       // Ensure the new readable chapter actually appears in the page list.
       if(jfDeskPaged&&jfDeskSession===session&&jfDeskBook?.id===bookId&&
-         !jfDeskPages.some(page=>page[0]?.chapter===n)){
+         !jfDeskPages.some(page=>page.some(block=>block.chapter===n))){
         await jfDeskPagedLayout(true,'append');
       }
     }
@@ -2487,7 +2487,7 @@ async function jfDeskPagedLayout(keepPage,reason){
   // An unmounted prefix cannot yield an exact absolute folio.
   const firstReadable=jfDeskPaperFirstReadable(0);
   const prefixComplete=sections.length>0&&sections[0].n===firstReadable&&
-    sections.every((sec,i)=>i===0||sec.n===sections[i-1].n+1);
+    sections.every((sec,i)=>i===0||Array.from({length:sec.n-sections[i-1].n-1},(_,k)=>sections[i-1].n+k+1).every(jfDeskPaperOmittedChapter));
   jfDeskChapterPageCounts.clear();
   if(prefixComplete){
     for(let n=0;n<=sections[sections.length-1].n;n++){
