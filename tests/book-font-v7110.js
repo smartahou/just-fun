@@ -45,8 +45,8 @@ assert(source.includes("await jfDeskEnsureBookFonts();\n    }\n    window.JFEpub
   'switching from continuous to paged mode awaits the embedded serif');
 assert(source.includes('await jfDeskEnsureBookFonts();\n  try{ if(document.fonts'),'measurement awaits explicit face readiness');
 assert(source.includes("if(!outline.nativePdf){\n      await jfDeskEnsureBookFonts();"),'first opening awaits fonts');
-assert(source.includes('await jfDeskEnsureBookFonts();\n    if(jfDeskCensusToken!==token'),
-  'background census awaits same font before page count');
+assert(source.includes('await jfDeskEnsureBookFonts();\n    if(token!==jfDeskCensusToken'),
+  'continuous physical census awaits the same font before counting');
 assert(source.includes("document.fonts.load('400 18px \"JustFun Book Serif CN\"'"));
 assert(source.includes("document.fonts.load('600 18px \"JustFun Book Serif CN\"'"));
 
