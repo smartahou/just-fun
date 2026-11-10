@@ -9,7 +9,7 @@ from isolated import ROOT,launch,stop
 
 create_epub=runpy.run_path(str(ROOT/'tests/reader-page-performance-v7119.py'))['create_epub']
 def main():
-    with tempfile.TemporaryDirectory(prefix='jf-reader-face-v7122-') as temp:
+    with tempfile.TemporaryDirectory(prefix='jf-architecture-test-reader-face-v7122-') as temp:
         tmp=pathlib.Path(temp);library=tmp/'library';library.mkdir()
         create_epub(library/'face-test.epub',chapters=48)
         proc=log=None
