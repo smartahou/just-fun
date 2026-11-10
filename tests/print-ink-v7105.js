@@ -23,7 +23,9 @@ const banned=/\b(?:font-family|font-size|font-weight|font-variant|font-style|lin
 assert(!banned.test(patch),'ink-only patch must not alter page geometry, overlays, or images');
 assert(!patch.includes('!important'),'ink must not override reader preferences');
 assert(!patch.includes('url('),'never replace photographic paper');
-assert(js.includes("jfMeasureHost.className='jfPageMeasure jfSheetBody'"),'measure uses same body class');
+assert(js.includes("host.className='jfPageMeasure jfSheetBody'")&&
+       js.includes("jfDeskMeasureHost(geo,'census')"),
+  'foreground and background print probes have the same scoped CSS');
 assert(js.includes("view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]"),'font choice preserved');
 assert(!patch.includes('.jfReadText{'),'continuous reader remains unchanged');
 assert.equal(manifest.version,'3.0-approved','v7.104 original 16 photos remain approved');
