@@ -377,36 +377,97 @@ function jfReadingHtmlToText(html){
     .replace(/<[^>]*>/g,'')
   ).replace(/\r/g,'').replace(/[\t ]+/g,' ').replace(/\n[ \t]+/g,'\n').replace(/\n{4,}/g,'\n\n\n').trim();
 }
+// EPUB files can be image-heavy. Index only the ZIP directory and read an
+// individual entry when requested; never retain an entire book-sized Buffer.
+// The Buffer input remains supported for existing in-memory tests and covers.
+const JF_EPUB_ZIP_DIRECTORY_MAX=16*1024*1024;
+const JF_EPUB_ZIP_ENTRY_MAX=64*1024*1024;
 function jfReaderZipIndex(buffer){
-  // Safe bounded read of EPUB ZIP's central directory. Never unpack to disk.
+  const memory=Buffer.isBuffer(buffer);
+  const file=memory?null:buffer?.file;
+  const total=memory?buffer.length:buffer?.size;
+  if(!Number.isSafeInteger(total)||total<22||(!memory&&(!file||typeof file!=='string')))
+    throw jfReaderError(422,'EPUB ZIP 文件无效');
+  function slice(at,length){
+    if(!Number.isSafeInteger(at)||!Number.isSafeInteger(length)||at<0||length<0||
+       at+length>total||length>JF_EPUB_ZIP_ENTRY_MAX)
+      throw jfReaderError(422,'EPUB 数据越界');
+    if(memory)return buffer.subarray(at,at+length);
+    const out=Buffer.allocUnsafe(length);
+    let fd;
+    try{
+      fd=fs.openSync(file,'r');
+      let done=0;
+      while(done<length){
+        const n=fs.readSync(fd,out,done,length-done,at+done);
+        if(n<=0)throw jfReaderError(409,'EPUB 文件在读取时发生变化，请刷新书架');
+        done+=n;
+      }
+    }catch(error){
+      if(error?.status)throw error;
+      throw jfReaderError(409,'EPUB 文件读取失败，请刷新书架');
+    }finally{
+      if(fd!==undefined)fs.closeSync(fd);
+    }
+    return out;
+  }
+  const tailStart=Math.max(0,total-65557);
+  const tail=slice(tailStart,total-tailStart);
   let end=-1;
-  for(let i=buffer.length-22;i>=Math.max(0,buffer.length-65557);i--){if(buffer.readUInt32LE(i)===0x06054b50){end=i;break;}}
-  if(end<0||end+22>buffer.length)throw jfReaderError(422,'EPUB ZIP 目录无效');
-  const count=buffer.readUInt16LE(end+10),size=buffer.readUInt32LE(end+12),offset=buffer.readUInt32LE(end+16);
-  if(count>3000||count===65535||offset===0xffffffff||size>buffer.length||offset+size>buffer.length)throw jfReaderError(422,'EPUB 条目数或目录大小超限');
-  const entries=new Map();let cursor=offset;
+  for(let i=tail.length-22;i>=0;i--){
+    if(tail.readUInt32LE(i)===0x06054b50&&
+       i+22+tail.readUInt16LE(i+20)<=tail.length){end=i;break;}
+  }
+  if(end<0)throw jfReaderError(422,'EPUB ZIP 目录无效');
+  const count=tail.readUInt16LE(end+10);
+  const size=tail.readUInt32LE(end+12),offset=tail.readUInt32LE(end+16);
+  if(tail.readUInt16LE(end+4)!==0||tail.readUInt16LE(end+6)!==0||
+     count!==tail.readUInt16LE(end+8)||count>3000||count===65535||
+     offset===0xffffffff||size===0xffffffff||size>JF_EPUB_ZIP_DIRECTORY_MAX||
+     offset+size>tailStart+end)
+    throw jfReaderError(422,'EPUB ZIP 条目数或目录大小超限');
+  const central=slice(offset,size);
+  const entries=new Map();let cursor=0;
   for(let i=0;i<count;i++){
-    if(cursor+46>buffer.length||buffer.readUInt32LE(cursor)!==0x02014b50)throw jfReaderError(422,'EPUB 索引损坏');
-    const flags=buffer.readUInt16LE(cursor+8),method=buffer.readUInt16LE(cursor+10),packed=buffer.readUInt32LE(cursor+20),unpacked=buffer.readUInt32LE(cursor+24);
-    const nameLen=buffer.readUInt16LE(cursor+28),extraLen=buffer.readUInt16LE(cursor+30),commentLen=buffer.readUInt16LE(cursor+32);
-    const local=buffer.readUInt32LE(cursor+42);
-    if(cursor+46+nameLen+extraLen+commentLen>buffer.length)throw jfReaderError(422,'EPUB ZIP 名称越界');
-    const name=buffer.toString('utf8',cursor+46,cursor+46+nameLen);
-    if(flags&1||![0,8].includes(method)||unpacked>12*1024*1024||packed>40*1024*1024)
+    if(cursor+46>central.length||central.readUInt32LE(cursor)!==0x02014b50)
+      throw jfReaderError(422,'EPUB 索引损坏');
+    const flags=central.readUInt16LE(cursor+8),method=central.readUInt16LE(cursor+10);
+    const packed=central.readUInt32LE(cursor+20),unpacked=central.readUInt32LE(cursor+24);
+    const nameLen=central.readUInt16LE(cursor+28),extraLen=central.readUInt16LE(cursor+30);
+    const commentLen=central.readUInt16LE(cursor+32),local=central.readUInt32LE(cursor+42);
+    if(cursor+46+nameLen+extraLen+commentLen>central.length)
+      throw jfReaderError(422,'EPUB ZIP 名称越界');
+    const name=central.toString('utf8',cursor+46,cursor+46+nameLen);
+    const maxUnpacked=/\.(?:jpe?g|png|gif|webp|avif|bmp)$/i.test(name)?
+      JF_EPUB_ZIP_ENTRY_MAX:12*1024*1024;
+    if(flags&1||![0,8].includes(method)||packed>JF_EPUB_ZIP_ENTRY_MAX||
+       unpacked>maxUnpacked||local===0xffffffff)
       throw jfReaderError(422,'EPUB 包含不支持的压缩项目');
-    if(name.startsWith('/')||name.includes('\\')||name.split('/').includes('..'))throw jfReaderError(422,'EPUB 路径无效');
-    entries.set(name,{method,packed,unpacked,local});cursor+=46+nameLen+extraLen+commentLen;
+    if(!name||name.startsWith('/')||name.includes('\\')||
+       name.split('/').includes('..')||entries.has(name))
+      throw jfReaderError(422,'EPUB 路径无效或重复');
+    entries.set(name,{method,packed,unpacked,local,maxUnpacked});
+    cursor+=46+nameLen+extraLen+commentLen;
   }
   function read(name){
-    const entry=entries.get(name);if(!entry)throw jfReaderError(422,'EPUB 缺失内容：'+name.slice(0,80));
-    const l=entry.local;
-    if(l+30>buffer.length||buffer.readUInt32LE(l)!==0x04034b50)throw jfReaderError(422,'EPUB 数据块错误');
-    const begin=l+30+buffer.readUInt16LE(l+26)+buffer.readUInt16LE(l+28);
-    if(begin+entry.packed>buffer.length)throw jfReaderError(422,'EPUB 数据越界');
-    const raw=buffer.subarray(begin,begin+entry.packed);
-    const result=entry.method===8?jfReaderZlib.inflateRawSync(raw,{maxOutputLength:12*1024*1024}):raw;
-    if(result.length!==entry.unpacked)throw jfReaderError(422,'EPUB 解压长度错误');
-    return result;
+    const entry=entries.get(name);
+    if(!entry)throw jfReaderError(422,'EPUB 缺失内容：'+String(name).slice(0,80));
+    const local=slice(entry.local,30);
+    if(local.readUInt32LE(0)!==0x04034b50)
+      throw jfReaderError(422,'EPUB 数据块错误');
+    const begin=entry.local+30+local.readUInt16LE(26)+local.readUInt16LE(28);
+    const raw=slice(begin,entry.packed);
+    let data;
+    try{
+      data=entry.method===8?jfReaderZlib.inflateRawSync(raw,{
+        maxOutputLength:entry.maxUnpacked
+      }):raw;
+    }catch{
+      throw jfReaderError(422,'EPUB 压缩内容损坏或解压超限');
+    }
+    if(data.length!==entry.unpacked)
+      throw jfReaderError(422,'EPUB 解压长度错误');
+    return data;
   }
   return {entries,read};
 }
@@ -796,9 +857,8 @@ function jfReadingEpubChapterHtml(xhtml,{dir,bookId,zip}){
 async function jfReadingOutline(id){
   const {info,file,stat}=await jfBookFindById(id);
   if(info.ext==='PDF')return {ok:true,book:info,format:'PDF',chapters:[{title:'PDF 文档'}],nativePdf:true};
-  if(stat.size>40*1024*1024)throw jfReaderError(413,'此书超过当前离线阅读器大小上限（40MB）');
   if(info.ext==='EPUB'){
-    const epub=jfReadingEpub(await fs.promises.readFile(file));
+    const epub=jfReadingEpubFromFile(file,stat);
     return {ok:true,book:info,format:'EPUB',chapters:epub.chapters.map(c=>({title:c.title,...(c.paperOmit?{paperOmit:c.paperOmit}:{})})),toc:epub.tocEntries};
   }
   if(stat.size>12*1024*1024)throw jfReaderError(413,'文本书籍超过当前 12MB 阅读限制');
@@ -822,8 +882,7 @@ async function jfReadingChapter(id,index){
   if(info.ext==='PDF')throw jfReaderError(400,'PDF 使用浏览器内置阅读器');
   let text,total,html,paperHtml,notes;
   if(info.ext==='EPUB'){
-    if(stat.size>40*1024*1024)throw jfReaderError(413,'EPUB 文件超出 40MB');
-    const epub=jfReadingEpub(await fs.promises.readFile(file));
+    const epub=jfReadingEpubFromFile(file,stat);
     total=epub.chapters.length;
     if(index>=total)throw jfReaderError(404,'章节不存在');
     const entry=epub.chapters[index];
@@ -845,7 +904,22 @@ async function jfReadingChapter(id,index){
 }
 // Serve one in-archive image. The entry name must exist in the EPUB index and
 // have an image extension; the archive is re-read only when the book file changes.
+// Store only the compact index/OPF chapter metadata, never compressed archive
+// bytes. The file identity checked by jfBookFindById invalidates stale entries.
 const jfEpubAssetCache=new Map();
+function jfReadingEpubFromFile(file,stat){
+  const cached=jfEpubAssetCache.get(file);
+  if(cached&&cached.mtime===stat.mtimeMs&&cached.size===stat.size){
+    jfEpubAssetCache.delete(file);jfEpubAssetCache.set(file,cached);
+    return cached.epub;
+  }
+  const epub=jfReadingEpub({file,size:stat.size});
+  jfEpubAssetCache.delete(file);
+  jfEpubAssetCache.set(file,{mtime:stat.mtimeMs,size:stat.size,epub});
+  while(jfEpubAssetCache.size>2)
+    jfEpubAssetCache.delete(jfEpubAssetCache.keys().next().value);
+  return epub;
+}
 async function jfReadingEpubAsset(res,id,src){
   const {file,stat,info}=await jfBookFindById(id);
   if(info.ext!=='EPUB')throw jfReaderError(415,'只有 EPUB 包含书内资源');
@@ -853,14 +927,9 @@ async function jfReadingEpubAsset(res,id,src){
   const entry=String(src||'');
   const mime=JF_EPUB_MIME[posix.extname(entry).toLowerCase()];
   if(!mime)throw jfReaderError(404,'书内资源类型不支持');
-  let cached=jfEpubAssetCache.get(id);
-  if(!cached||cached.mtime!==stat.mtimeMs||cached.size!==stat.size){
-    cached={mtime:stat.mtimeMs,size:stat.size,epub:jfReadingEpub(await fs.promises.readFile(file))};
-    if(jfEpubAssetCache.size>=2)jfEpubAssetCache.delete(jfEpubAssetCache.keys().next().value);
-    jfEpubAssetCache.set(id,cached);
-  }
-  if(!cached.epub.zip.entries.has(entry))throw jfReaderError(404,'书内资源不存在');
-  const data=cached.epub.zip.read(entry);
+  const epub=jfReadingEpubFromFile(file,stat);
+  if(!epub.zip.entries.has(entry))throw jfReaderError(404,'书内资源不存在');
+  const data=epub.zip.read(entry);
   const headers={'Content-Type':mime,'Content-Length':data.length,'Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff'};
   if(mime==='image/svg+xml')headers['Content-Security-Policy']="default-src 'none'; style-src 'unsafe-inline'";
   res.writeHead(200,headers);
