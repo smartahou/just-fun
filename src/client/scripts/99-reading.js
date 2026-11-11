@@ -961,8 +961,10 @@ function jfDeskCurrentPosition(){
       const offset=Number.isSafeInteger(first.offset)?first.offset:0;
       const source=jfDeskFlow.find(x=>x.n===chapter)?.el;
       const length=Math.max(1,source?.textContent?.length||1);
-      return {chapter,ratio:Math.max(0,Math.min(1,offset/length)),
-        offset,anchorY:null,scroll:null,mode:'paged'};
+      const ratio=first.comic?
+        first.comicIndex/Math.max(1,first.comicTotal):
+        Math.max(0,Math.min(1,offset/length));
+      return {chapter,ratio,offset,anchorY:null,scroll:null,mode:'paged'};
     }
   }
   let chapter=jfDeskChapter,ratio=0,offset=null,anchorY=null;
@@ -1799,7 +1801,17 @@ async function jfDeskPrepareImages(roots=null){
   await jfDeskEnsureBookFonts();
   try{ if(document.fonts&&document.fonts.ready)await document.fonts.ready; }catch{}
   const targets=roots||[jfReadText];
-  const imgs=targets.flatMap(root=>Array.from(root.querySelectorAll?.('img')||[]));
+  // v7.126: scanned image chapters require no DOM height measurement.
+  // Load only the opening two pictures; the tiny decoded-image cache warms
+  // adjacent physical leaves later. Avoid waiting on 30+ illustrations.
+  const imgs=targets.flatMap(root=>{
+    const all=Array.from(root.querySelectorAll?.('img')||[]);
+    if(jfDeskPaged&&window.JFComicPages?.candidate({el:root})){
+      for(const img of all.slice(2))img.loading='lazy';
+      return all.slice(0,2);
+    }
+    return all;
+  });
   if(!imgs.length)return;
   await Promise.all(imgs.map(img=>{
     if(img.complete&&img.naturalWidth>0)return null;
@@ -1953,8 +1965,11 @@ function jfDeskStableReadingProgress(chapter,offset){
   const chapters=Math.max(1,(jfDeskOutline?.chapters?.length||1)-first);
   const source=jfDeskFlow.find(sec=>sec.n===chapter)?.el;
   const length=Math.max(1,source?.textContent?.length||1);
-  const ratio=source&&Number.isSafeInteger(offset)?
-    Math.max(0,Math.min(1,offset/length)):0;
+  const current=jfDeskPages[jfDeskPageIndex]?.[0];
+  const ratio=current?.comic&&current.chapter===chapter?
+    current.comicIndex/Math.max(1,current.comicTotal):
+    source&&Number.isSafeInteger(offset)?
+      Math.max(0,Math.min(1,offset/length)):0;
   return Math.max(0,Math.min(1,(chapter-first+ratio)/chapters));
 }
 
@@ -2509,6 +2524,12 @@ function jfDeskTagPoetryLeads(blocks){
 }
 
 function jfDeskBlocksFor(sec){
+  // Scanned comics are discrete physical leaves, not paragraphs to measure,
+  // split or flatten. Reject ambiguous EPUB markup and retain the old engine.
+  if(jfDeskPaged&&window.JFComicPages){
+    const comic=window.JFComicPages.fromSection(sec);
+    if(comic)return comic;
+  }
   // This runs after image decode in both normal paging and the book census.
   // The same inline-vs-plate classification is copied into measured blocks.
   jfDeskMarkInlineGlyphs(sec.el);
@@ -2972,6 +2993,20 @@ window.JFReaderGlyphAudit=()=>{
   return {version:'7.73',pictures,abnormalText,
     note:'If anomalous glyphs remain, inspect their source element and EPUB dimensions rather than guessing CSS.'};
 };
+// Comic enhancement is local to the reader. The paper shell remains unchanged
+// and toggling it never re-paginates or modifies original EPUB pixels.
+let jfDeskComicEnhanced=true;
+try{jfDeskComicEnhanced=localStorage.getItem('jf-comic-enhanced')!=='0';}catch{}
+jfReader.classList.toggle('jf-comic-enhanced',jfDeskComicEnhanced);
+document.getElementById('jfReadComicEnhance')?.addEventListener('click',()=>{
+  jfDeskComicEnhanced=!jfDeskComicEnhanced;
+  jfReader.classList.toggle('jf-comic-enhanced',jfDeskComicEnhanced);
+  const control=document.getElementById('jfReadComicEnhance');
+  control?.setAttribute('aria-pressed',String(jfDeskComicEnhanced));
+  if(control)control.title=jfDeskComicEnhanced?'漫画显示优化：开':'漫画显示优化：关';
+  try{localStorage.setItem('jf-comic-enhanced',jfDeskComicEnhanced?'1':'0');}catch{}
+  if(jfDeskPaged)jfDeskPagedRender();
+});
 // v7.122 · Three bounded, laid-out text-face pairs. A cached page turn
 // toggles the active face instead of reparenting an entire printed page.
 let jfDeskFacePool=null,jfDeskFaceTask=0,jfDeskFaceEpoch=0;
@@ -3096,6 +3131,8 @@ function jfDeskWarmFaces(){
       left:jfDeskPages[index],
       right:two?jfDeskPages[index+1]:null
     }]).catch(()=>{});
+    window.JFComicPages?.warm(
+      jfDeskPages.slice(index,index+step*3),session+'#'+book);
     for(const n of candidates){
       if(pool.slots.some(x=>jfDeskFaceMatches(x,n,two)))continue;
       const free=pool.slots.find((x,i)=>i!==pool.active&&!candidates.includes(x.index));
@@ -3131,12 +3168,18 @@ function jfDeskPagedRender(direction){
   const right=face?.right||document.getElementById('jfSheetRight');
   const pageA=jfDeskPages[jfDeskPageIndex]||[];
   const pageB=twoPages?(jfDeskPages[jfDeskPageIndex+1]||[]):[];
+  // Scanner pages bypass photographic knock-out and occupy nearly the whole
+  // physical sheet. Only the active leaf changes its paper geometry.
+  const comicA=pageA.length===1&&!!pageA[0].comic;
+  const comicB=pageB.length===1&&!!pageB[0].comic;
+  left.parentElement.classList.toggle('jf-comic-leaf',comicA);
+  right.parentElement.classList.toggle('jf-comic-leaf',comicB);
   // Pure photo pages receive an optical centre without altering page-engine
   // measurements; a chapter ending with one photo no longer hugs the top.
-  left.parentElement.classList.toggle('jf-plate-only',jfDeskIsPlateOnlyPage(pageA));
-  right.parentElement.classList.toggle('jf-plate-only',jfDeskIsPlateOnlyPage(pageB));
-  left.parentElement.classList.toggle('jf-plate-gallery',jfDeskIsPlateGalleryPage(pageA));
-  right.parentElement.classList.toggle('jf-plate-gallery',jfDeskIsPlateGalleryPage(pageB));
+  left.parentElement.classList.toggle('jf-plate-only',!comicA&&jfDeskIsPlateOnlyPage(pageA));
+  right.parentElement.classList.toggle('jf-plate-only',!comicB&&jfDeskIsPlateOnlyPage(pageB));
+  left.parentElement.classList.toggle('jf-plate-gallery',!comicA&&jfDeskIsPlateGalleryPage(pageA));
+  right.parentElement.classList.toggle('jf-plate-gallery',!comicB&&jfDeskIsPlateGalleryPage(pageB));
   // One deterministic texture group per real two-page spread, not guessed parity.
   if(window.JFPaperTextures){
     const paper=window.JFPaperTextures,bookId=jfDeskBook?.id;
@@ -3152,9 +3195,20 @@ function jfDeskPagedRender(direction){
   const first=pageA[0]||pageB[0];
   if(first)jfDeskChapter=first.chapter;
   window.JFEpubPaperToc?.sync();
-  // Key out the cream backing of scanned plates before the eye sees it.
-  jfDeskKnockOutPlates(left);
-  jfDeskKnockOutPlates(right);
+  // Never rasterize, recolor or re-encode black-and-white comic scans.
+  // The legacy per-pixel canvas pass was particularly expensive on large JPGs.
+  if(comicA)window.JFComicPages?.decorate(left,jfDeskSession+'#'+jfDeskBook?.id,
+    jfDeskComicEnhanced);
+  else jfDeskKnockOutPlates(left);
+  if(comicB)window.JFComicPages?.decorate(right,jfDeskSession+'#'+jfDeskBook?.id,
+    jfDeskComicEnhanced);
+  else jfDeskKnockOutPlates(right);
+  const comicVisible=comicA||comicB;
+  const comicControl=document.getElementById('jfReadComicEnhance');
+  if(comicControl){
+    comicControl.hidden=!comicVisible;
+    comicControl.setAttribute('aria-pressed',String(jfDeskComicEnhanced));
+  }
   // Folio and running head: page numbers follow the book, the head follows the chapter.
   const leftSheet=left.parentElement, rightSheet=right.parentElement;
 
