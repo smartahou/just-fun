@@ -329,7 +329,8 @@
     }
     var batchBlocked=false;
     function flush(){
-      if(cur.length){pages.push(cur);cur=[];used=0;batchBlocked=false;}
+      if(cur.length){pages.push(cur);cur=[];used=0;}
+      batchBlocked=false;
     }
     function fits(h){return used+h<=pageH-EPS;}
     function asPageItem(item){
@@ -470,6 +471,7 @@
 
       // Nothing fits on an empty page: it must be an unsplittable block.
       pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,oversized:true}]);
+      batchBlocked=false;
     }
     flush();
     counters.pages=pages.length;
