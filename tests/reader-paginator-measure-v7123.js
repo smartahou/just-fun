@@ -6,7 +6,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const text=fs.readFileSync(path.join(__dirname,'../src/client/scripts/98d-page-engine.js'),'utf8');
-assert.equal(require('../package.json').version,'7.123.0');
+assert.equal(require('../package.json').version,'7.124.0');
 class Node {
   constructor(textContent,tagName='P'){
     this.textContent=textContent;this.tagName=tagName;
@@ -47,7 +47,20 @@ assert(metrics.singleMeasurements<=7,
   'fit blocks must not each trigger an isolated DOM measurement');
 assert(metrics.reusedColumnNodes>150,
   'assembled probe must reuse existing page prefix nodes');
-assert(metrics.clonedColumnNodes<90,
-  'paragraph clones must grow linearly, not quadratically per page');
+assert(metrics.clonedColumnNodes<120,
+  'batch probes must remain near-linear rather than quadratic');
+assert(metrics.columnMeasurements<=40,'batching should reduce 60 individual height reads');
+assert.equal(metrics.batchAcceptedBlocks,60,'all normal paragraphs should batch');
+assert(metrics.batchProbes>0&&metrics.batchOverflows>0,'page boundaries should be measured, not guessed');
 assert.equal(metrics.pages,6);
-console.log('PASS v7.123 measured pagination: '+JSON.stringify(metrics));
+// A title near a leaf end must still travel with the next paragraph.
+const mixed=Array.from({length:40},(_,i)=>({
+  chapter:Math.floor(i/9),key:'mixed-'+i,offset:i,
+  node:new Node('条目'+i,i%9===8?'H3':'P')
+}));
+const mixedLeaves=ctx.window.JFPageEngine.paginate(mixed,100,new Host());
+assert.equal(mixedLeaves.flat().map(x=>x.node.textContent).join(''),
+  mixed.map(x=>x.node.textContent).join(''),'mixed source characters conserved');
+assert(mixedLeaves.slice(0,-1).every(p=>p.at(-1).node.tagName!=='H3'),
+  'heading must not be stranded at the bottom of a leaf');
+console.log('PASS v7.124 batched measured pagination: '+JSON.stringify(metrics));
