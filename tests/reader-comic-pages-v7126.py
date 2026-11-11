@@ -75,6 +75,10 @@ def main():
                   for(let n=1;n<4;n++)await jfDeskFlowAppend(n);
                 }""")
                 page.wait_for_function("()=>jfDeskPages.length===4")
+                page.wait_for_function("""()=>{
+                  const img=document.querySelector('#jfSheetLeft img[data-jf-comic-image]');
+                  return img?.complete&&img.naturalWidth===800;
+                }""")
                 report = page.evaluate("""()=>{
                   const all=jfDeskPages;
                   const left=document.getElementById('jfSheetLeft');
