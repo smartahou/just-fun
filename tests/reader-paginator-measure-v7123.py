@@ -100,7 +100,9 @@ def main():
                             chars:[original.length,warmLegacy.text.length,
                               measuredNew.text.length]}));
                       const stats=measuredNew.diagnostics;
-                      if(!stats||stats.reusedColumnNodes<=blocks.length||
+                      if(!stats||stats.batchAcceptedBlocks<=blocks.length/4||
+                         stats.batchProbes<=0||
+                         stats.reusedColumnNodes<=blocks.length||
                          stats.singleMeasurements>=blocks.length*0.5||
                          stats.clonedColumnNodes>=blocks.length*7)
                         throw Error('Measured-prefix reuse absent: '+
@@ -122,7 +124,7 @@ def main():
                 assert not errors,'Chrome JavaScript errors: '+str(errors[:5])
                 assert len(report['reports'])==2,report
                 assert report['sourceCharacters']>10000,report
-                print('PASS v7.123 Chromium measured paginator parity & reuse: '+
+                print('PASS v7.124 Chromium batch pagination parity & reuse: '+
                       json.dumps(report,ensure_ascii=False),flush=True)
                 browser.close()
         finally:
