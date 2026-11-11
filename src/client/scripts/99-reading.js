@@ -2067,10 +2067,13 @@ async function jfDeskMeasureBook(geo){
       try{
         const section=jfDeskFlowSection(n,html||'<p></p>');
         holder.appendChild(section);
-        await jfDeskWaitImages(holder);
+        // Full-book folio counting only needs one leaf per scanned manga page.
+        // Never eagerly fetch/decode hundreds of scans merely to count them.
+        const comicBlocks=window.JFComicPages?.fromSection({n,el:section});
+        if(!comicBlocks)await jfDeskWaitImages(holder);
         if(token!==jfDeskCensusToken||jfDeskSession!==session||
            jfDeskBook?.id!==bookId||signature!==jfDeskPagesSig)return;
-        const blocks=jfDeskBlocksFor({n,el:section});
+        const blocks=comicBlocks||jfDeskBlocksFor({n,el:section});
         // Yield between small groups of blocks, not merely between chapters.
         // A big XHTML chapter must never monopolize the reader's main thread.
         for(let at=0;at<blocks.length;at+=6){
