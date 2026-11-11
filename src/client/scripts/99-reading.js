@@ -2968,6 +2968,23 @@ function jfDeskIsPlateGalleryPage(page){
   }
   return pictures===2;
 }
+// A chapter built from individual manga panels must NOT become one panel
+// per physical leaf. But its already-composed page should still retain the
+// original line art; never put several large images through Canvas knock-out.
+function jfDeskIsGraphicScanPage(page){
+  if(!Array.isArray(page)||!page.length)return false;
+  let pictures=0,letters=0;
+  for(const block of page){
+    const node=block?.node;
+    if(!node||node.querySelector?.('img.jfInlineGlyph'))return false;
+    const imgs=node.tagName==='IMG'?[node]:Array.from(node.querySelectorAll?.('img')||[]);
+    if(imgs.some(img=>img.classList?.contains('jfInlineGlyph')))return false;
+    pictures+=imgs.length;
+    letters+=String(node.textContent||'').replace(/[\\s\\u00a0\\u3000]/g,'').length;
+    if(letters>Math.max(90,pictures*35))return false;
+  }
+  return pictures>=2&&letters<=Math.max(90,pictures*35);
+}
 // v7.73 · Read-only diagnosis when the EPUB doesn't match our conservative
 // classifiers. It describes the actual visible DOM without private book HTML.
 window.JFReaderGlyphAudit=()=>{
@@ -2993,6 +3010,19 @@ window.JFReaderGlyphAudit=()=>{
   return {version:'7.73',pictures,abnormalText,
     note:'If anomalous glyphs remain, inspect their source element and EPUB dimensions rather than guessing CSS.'};
 };
+window.JFComicDiagnostics=()=>({
+  version:'7.126',bookId:jfDeskBook?.id||null,
+  active:jfDeskPageIndex,
+  leaves:jfDeskPages.length,
+  comicLeaves:jfDeskPages.filter(p=>p.length===1&&p[0]?.comic).length,
+  visibleSides:Array.from(document.querySelectorAll('#jfPageView .jfSheet'))
+    .filter(el=>!el.hidden).map(el=>({
+      side:el.dataset.side,
+      comic:el.classList.contains('jf-comic-leaf'),
+      gallery:el.classList.contains('jf-comic-gallery')
+    })),
+  decoded:window.JFComicPages?.stats()
+});
 // Comic enhancement is local to the reader. The paper shell remains unchanged
 // and toggling it never re-paginates or modifies original EPUB pixels.
 let jfDeskComicEnhanced=true;
@@ -3172,8 +3202,12 @@ function jfDeskPagedRender(direction){
   // physical sheet. Only the active leaf changes its paper geometry.
   const comicA=pageA.length===1&&!!pageA[0].comic;
   const comicB=pageB.length===1&&!!pageB[0].comic;
+  const galleryA=!comicA&&jfDeskIsGraphicScanPage(pageA);
+  const galleryB=!comicB&&jfDeskIsGraphicScanPage(pageB);
   left.parentElement.classList.toggle('jf-comic-leaf',comicA);
   right.parentElement.classList.toggle('jf-comic-leaf',comicB);
+  left.parentElement.classList.toggle('jf-comic-gallery',galleryA);
+  right.parentElement.classList.toggle('jf-comic-gallery',galleryB);
   // Pure photo pages receive an optical centre without altering page-engine
   // measurements; a chapter ending with one photo no longer hugs the top.
   left.parentElement.classList.toggle('jf-plate-only',!comicA&&jfDeskIsPlateOnlyPage(pageA));
@@ -3199,11 +3233,11 @@ function jfDeskPagedRender(direction){
   // The legacy per-pixel canvas pass was particularly expensive on large JPGs.
   if(comicA)window.JFComicPages?.decorate(left,jfDeskSession+'#'+jfDeskBook?.id,
     jfDeskComicEnhanced);
-  else jfDeskKnockOutPlates(left);
+  else if(!galleryA)jfDeskKnockOutPlates(left);
   if(comicB)window.JFComicPages?.decorate(right,jfDeskSession+'#'+jfDeskBook?.id,
     jfDeskComicEnhanced);
-  else jfDeskKnockOutPlates(right);
-  const comicVisible=comicA||comicB;
+  else if(!galleryB)jfDeskKnockOutPlates(right);
+  const comicVisible=comicA||comicB||galleryA||galleryB;
   const comicControl=document.getElementById('jfReadComicEnhance');
   if(comicControl){
     comicControl.hidden=!comicVisible;
