@@ -49,7 +49,8 @@ class Element {
   }
 }
 function image(i,px=1000){
-  const el=new Element('IMG','',px);el.attrs.src='/api/reading/epub-asset?id=abcd&src=page'+i+'.jpg';
+  const el=new Element('IMG','',px);el.naturalHeight=Math.round(px*1.45);
+  el.attrs.src='/api/reading/epub-asset?id=abcd&src=page'+i+'.jpg';
   return el;
 }
 function sec(...children){const el=new Element('SECTION');children.forEach(x=>el.appendChild(x));return {n:3,el};}
@@ -72,6 +73,11 @@ const text=sec(new Element('P','这是一大段普通小说正文，'.repeat(30)
 assert.equal(api.fromSection(text),null,'illustrated prose must not become manga');
 const glyph=sec(image(0,32));
 assert.equal(api.fromSection(glyph),null,'small glyph must not become manga');
+// A gallery of 800x300 horizontal comic panels is not three scanned pages.
+const panel=sec(image(7));
+panel.el.children[0].naturalWidth=800;
+panel.el.children[0].naturalHeight=300;
+assert.equal(api.fromSection(panel),null,'comic panel must not be a full-page scan');
 const complex=new Element('DIV');
 for(let i=0;i<3;i++)complex.appendChild(image(i));
 assert.equal(api.fromSection(sec(complex)),null,'collage markup uses original paginator');
