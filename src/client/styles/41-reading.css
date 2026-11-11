@@ -4115,6 +4115,18 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   transform:scale(var(--jf-comic-zoom,1));
   filter:contrast(1.055) brightness(1.012);
 }
+/* Panel montages keep their original measured flow and spatial grouping.
+   Only skip the expensive per-pixel photographic transparency conversion. */
+.jfReader.paged #jfPageView .jfSheet.jf-comic-gallery .jfSheetBody img{
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+  filter:none;
+}
+.jfReader.paged.jf-comic-enhanced #jfPageView .jfSheet.jf-comic-gallery .jfSheetBody img{
+  filter:contrast(1.035) brightness(1.006);
+}
 .jfReader .jfReaderTools #jfReadComicEnhance[hidden]{display:none!important}
 .jfReader .jfReaderTools #jfReadComicEnhance[aria-pressed=true]{
   color:var(--jf-accent,inherit);
