@@ -70,6 +70,8 @@ jobs:
           /usr/bin/chromium --version
       - name: Large EPUB - disk-backed archive, chapters, cover and inline assets
         run: python tests/epub-large-file-v7125.py
+      - name: Real Chromium - image-only manga leaves, original pixels and quick turns
+        run: python tests/reader-comic-pages-v7126.py
       - name: Real Chromium - no blank leaves, no skipped poetry, bounded window
         run: python tests/reader-page-performance-v7119.py
       - name: Real Chromium - middle-book reverse and full roundtrip
