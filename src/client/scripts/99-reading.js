@@ -2980,7 +2980,7 @@ function jfDeskIsGraphicScanPage(page){
     const imgs=node.tagName==='IMG'?[node]:Array.from(node.querySelectorAll?.('img')||[]);
     if(imgs.some(img=>img.classList?.contains('jfInlineGlyph')))return false;
     pictures+=imgs.length;
-    letters+=String(node.textContent||'').replace(/[\\s\\u00a0\\u3000]/g,'').length;
+    letters+=String(node.textContent||'').replace(/[\s\u00a0\u3000]/g,'').length;
     if(letters>Math.max(90,pictures*35))return false;
   }
   return pictures>=2&&letters<=Math.max(90,pictures*35);
