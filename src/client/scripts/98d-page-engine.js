@@ -293,6 +293,16 @@
     return notes.map(function(n){return n.node.textContent;}).join('')===original?notes:null;
   }
 
+  // v7.124: normal adjacent paragraphs can be tested as one *real*
+  // assembled column. Keep heading, poetry, image and split decisions on
+  // the existing exact per-block path; no additive height estimates.
+  function batchableProse(item){
+    var el=item&&item.node;
+    return !!el&&el.tagName==='P'&&!keepWithNext(el)&&
+      !(Number(el.dataset?.jfPoetryKeep)>1)&&!hasImage(el)&&
+      !el.querySelector?.('table,pre,blockquote');
+  }
+
   function paginate(blocks,pageH,host){
     // Always reset the measured prefix between pagination sessions and when
     // the viewport or font metrics change. No speculative height is reused.
@@ -300,6 +310,7 @@
     var previous=activeStats;
     var counters={blocks:blocks.length,singleMeasurements:0,
       columnMeasurements:0,clonedColumnNodes:0,reusedColumnNodes:0,
+      batchProbes:0,batchAcceptedBlocks:0,batchOverflows:0,
       pages:0,elapsedMs:0};
     activeStats=counters;
     var clock=(typeof performance!=='undefined'&&performance.now)?
@@ -316,10 +327,55 @@
       if(notes)queue.push.apply(queue,notes);
       else queue.push(sourceItem);
     }
-    function flush(){if(cur.length){pages.push(cur);cur=[];used=0;}}
+    var batchBlocked=false;
+    function flush(){
+      if(cur.length){pages.push(cur);cur=[];used=0;batchBlocked=false;}
+    }
     function fits(h){return used+h<=pageH-EPS;}
+    function asPageItem(item){
+      return {chapter:item.chapter,node:item.node,key:item.key,offset:item.offset};
+    }
 
     while(queue.length){
+      // A full-batch height read replaces up to twelve forced style/layout
+      // flushes. If it crosses the page boundary, binary-search the largest
+      // fitting prefix, then let the original exact splitter handle the tail.
+      // Never batch an editorial keep-with-next, image or special figure.
+      if(!batchBlocked&&batchableProse(queue[0])){
+        var batch=[queue[0]];
+        for(var b=1;b<12&&b<queue.length&&batchableProse(queue[b]);b++)
+          batch.push(queue[b]);
+        if(batch.length>=3){
+          var fullHeight=columnHeight(cur.concat(batch),host);
+          counters.batchProbes++;
+          var accepted=0,acceptedHeight=used;
+          if(fullHeight<=pageH){
+            accepted=batch.length;
+            acceptedHeight=fullHeight;
+          }else{
+            counters.batchOverflows++;
+            // Monotone assembled prose height; check the same actual column
+            // layout at each binary-search midpoint, never sum block heights.
+            var low=0,high=batch.length;
+            while(low+1<high){
+              var mid=(low+high)>>1;
+              var probed=columnHeight(cur.concat(batch.slice(0,mid)),host);
+              counters.batchProbes++;
+              if(probed<=pageH){low=mid;acceptedHeight=probed;}
+              else high=mid;
+            }
+            accepted=low;
+            batchBlocked=true;
+          }
+          if(accepted){
+            for(var c=0;c<accepted;c++)cur.push(asPageItem(batch[c]));
+            queue.splice(0,accepted);
+            counters.batchAcceptedBlocks+=accepted;
+            used=acceptedHeight;
+            continue;
+          }
+        }
+      }
       var item=queue.shift();
       var el=item.node;
 
