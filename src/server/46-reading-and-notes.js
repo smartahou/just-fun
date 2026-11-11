@@ -623,7 +623,18 @@ function jfReadingEpub(buf){
     const empty=images===0&&!text;
     const hinted=/^(?:封面|cover|front[\s_-]?cover)$/i.test(chapter.title.trim())||
       /(?:^|\/)(?:cover|front[-_]?cover|封面)[-_0-9]*\.x?html?$/i.test(chapter.file);
-    const singleCoverImage=images===1&&text.length<=16&&!coverFound;
+    // A continuous sequence of unlabelled image-only EPUB chapters is
+    // likely a comic, not a cover followed by prose. Keep its first page.
+    let followingScan=false;
+    if(images===1&&text.length<=16&&n+1<chapters.length){
+      try{
+        const next=jfReadingTextDecode(zip.read(chapters[n+1].file));
+        const bodyNext=next.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1]||next;
+        const nextText=jfReadingHtmlToText(bodyNext).replace(/\s+/g,'').trim();
+        followingScan=(bodyNext.match(/<img\b/gi)||[]).length===1&&nextText.length<=16;
+      }catch{}
+    }
+    const singleCoverImage=images===1&&text.length<=16&&!coverFound&&!followingScan;
     if(empty){chapter.paperOmit='blank';continue;}
     if(!coverFound&&(hinted||singleCoverImage)){
       chapter.paperOmit='cover';coverFound=true;continue;
