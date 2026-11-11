@@ -4044,3 +4044,78 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   opacity:1;
   pointer-events:auto;
 }
+
+
+/* ===== v7.126 · image-led comic sheets =====================================
+   Only verified comic leaves gain a larger, centered physical canvas.
+   The paper photographs and hardcover remain intact OUTSIDE the image.
+   Text EPUBs, imprints and illustrations keep their established typography. */
+.jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfSheetBody{
+  padding:clamp(10px,2.4vh,22px) clamp(11px,2.5vw,30px)!important;
+  text-align:center!important;
+  text-shadow:none!important;
+  line-height:1!important;
+  display:block!important;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage{
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  box-sizing:border-box;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:stretch;
+  gap:0;
+  contain:layout paint;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage > *{
+  box-sizing:border-box;
+  min-width:0;
+  margin:0!important;
+  padding:0!important;
+  text-indent:0!important;
+  text-align:center!important;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage > :has(img[data-jf-comic-image]){
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage img[data-jf-comic-image]{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  min-width:0;
+  min-height:0;
+  flex:1 1 auto;
+  object-fit:contain!important;
+  object-position:center center;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  -webkit-mask-image:none!important;
+  mask-image:none!important;
+  image-rendering:auto;
+  transform-origin:center;
+  transform:scale(1);
+  filter:none;
+}
+.jfReader.paged.jf-comic-enhanced #jfPageView .jfSheet.jf-comic-leaf .jfComicPage img[data-jf-comic-image]{
+  transform:scale(var(--jf-comic-zoom,1));
+  filter:contrast(1.055) brightness(1.012);
+}
+.jfReader .jfReaderTools #jfReadComicEnhance[hidden]{display:none!important}
+.jfReader .jfReaderTools #jfReadComicEnhance[aria-pressed=true]{
+  color:var(--jf-accent,inherit);
+}
