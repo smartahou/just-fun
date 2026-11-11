@@ -163,6 +163,17 @@
   // line to be clipped. Measure the assembled column near the boundary only.
   function columnHeight(cur,host){
     if(activeStats)activeStats.columnMeasurements++;
+    // Older deterministic composition fixtures provide only replaceChildren()
+    // and scrollHeight, not the full Element mutation API. Keep the exact old
+    // assembled measurement for those hosts. Real DOM uses the incremental
+    // branch below.
+    if(!host.childNodes||!host.appendChild||!host.removeChild){
+      var frag=document.createDocumentFragment();
+      for(var fallback=0;fallback<cur.length;fallback++)
+        frag.appendChild(cur[fallback].node.cloneNode(true));
+      host.replaceChildren(frag);
+      return host.scrollHeight;
+    }
     var state=columnCache.get(host);
     // A figure scaler or outside caller may have mutated the probe. Trust the
     // cache only when its actual child nodes are still connected and aligned.
@@ -291,7 +302,9 @@
       columnMeasurements:0,clonedColumnNodes:0,reusedColumnNodes:0,
       pages:0,elapsedMs:0};
     activeStats=counters;
-    var started=performance.now();
+    var clock=(typeof performance!=='undefined'&&performance.now)?
+      function(){return performance.now();}:function(){return Date.now();};
+    var started=clock();
     var lh=lineHeight(host);
     var pages=[],cur=[],used=0;
     var queue=[];
@@ -404,7 +417,7 @@
     }
     flush();
     counters.pages=pages.length;
-    counters.elapsedMs=performance.now()-started;
+    counters.elapsedMs=clock()-started;
     lastStats=counters;
     activeStats=previous;
     // Clear the last assembled leaf to avoid keeping clones of an entire
