@@ -28,8 +28,20 @@
          /^data:/i.test(img.getAttribute('src')||''))return false;
       const w=img.naturalWidth||Number(img.dataset.jfSourceWidth)||0;
       const h=img.naturalHeight||Number(img.dataset.jfSourceHeight)||0;
-      // A known small picture is an icon, not an entire manga leaf.
-      if(w&&h&&(w<240||h<240))return false;
+      if(w&&h){
+        const ratio=w/h;
+        // Many image-heavy EPUBs contain individual comic PANELS, not page
+        // scans. Never turn a panel gallery into dozens of fake full pages.
+        // A regular page is portrait; a wide, high-resolution double spread
+        // is the only accepted landscape exception.
+        const leaf=(w>=420&&h>=620&&ratio>=.47&&ratio<=.98)||
+          (w>=1050&&h>=580&&ratio>=1.3&&ratio<=2.4);
+        if(!leaf)return false;
+      }else if(imgs.length>1){
+        // Multiple unknown-size images must be measured by the original
+        // renderer until their dimensions become known.
+        return false;
+      }
     }
     // A single root node with many small embedded assets might be a fixed
     // layout collage, not independent scans. Keep the original paginator.
