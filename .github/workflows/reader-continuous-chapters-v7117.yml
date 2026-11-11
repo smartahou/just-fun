@@ -29,6 +29,7 @@ jobs:
           node tests/reader-rapid-turn-v7121.js
           node tests/reader-prepared-faces-v7122.js
           node tests/reader-paginator-measure-v7123.js
+          node tests/reader-comic-pages-v7126.js
           node tests/reader-flowing-commentary-v7116.js
           node tests/reader-single-commentary-v7114.js
           node tests/reader-commentary-grid-v7113.js
