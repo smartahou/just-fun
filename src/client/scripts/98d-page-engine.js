@@ -338,6 +338,13 @@
     }
 
     while(queue.length){
+      // Manga art is already a physical leaf. Never measure its DOM, split
+      // the scan, or join it with prose from the following EPUB chapter.
+      if(queue[0]?.comic){
+        flush();
+        pages.push([queue.shift()]);
+        continue;
+      }
       // A full-batch height read replaces up to twelve forced style/layout
       // flushes. If it crosses the page boundary, binary-search the largest
       // fitting prefix, then let the original exact splitter handle the tail.
