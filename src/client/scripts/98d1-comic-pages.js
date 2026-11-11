@@ -9,7 +9,10 @@
   function reset(session){
     if(session!==lastSession){lastSession=session;warmImages.clear();trimRatios.clear();}
   }
-  function imagesOf(node){return Array.from(node?.querySelectorAll?.('img')||[]);}
+  function imagesOf(node){
+    const nested=Array.from(node?.querySelectorAll?.('img')||[]);
+    return node?.tagName==='IMG'?[node,...nested]:nested;
+  }
   function compactText(node){
     return (node?.textContent||'').replace(/[\s\u00a0\u3000]+/g,'').trim();
   }
