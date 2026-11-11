@@ -86,7 +86,7 @@ def main():
                 assert exact['cache'],exact
                 saved=json.loads(exact['cache'])
                 assert saved['layout']==exact['signature'],saved
-                assert saved['version']=='v7.122.0',saved
+                assert saved['version']=='v7.123.0',saved
                 assert len(saved['counts'])>=3,saved
 
                 # Reopening must retain both the selected book mode and cache.

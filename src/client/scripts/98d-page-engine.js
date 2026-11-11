@@ -16,6 +16,14 @@
   var MAX_PROBE=48;       // binary-search budget per split
   var EPS=0.5;
 
+  // v7.123: keep a live assembled-column probe rather than destroying and
+  // deep-cloning its whole prefix for every candidate. This is per-host and
+  // uses actual DOM layout, not additive height estimates (which ignore
+  // collapsing margins / first-child print styles).
+  var columnCache=new WeakMap();
+  var activeStats=null,lastStats=null;
+  function stats(){return activeStats;}
+
   function textNodes(root){
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),out=[],n,acc=0;
     while((n=w.nextNode())){out.push({node:n,start:acc,len:n.nodeValue.length});acc+=n.nodeValue.length;}
@@ -52,6 +60,10 @@
     return wrapper;
   }
   function measure(el,host){
+    // Single-block probes overwrite the assembly host, so its cached prefix
+    // is no longer valid. Most fitting blocks never need this probe at all.
+    columnCache.delete(host);
+    if(activeStats)activeStats.singleMeasurements++;
     host.replaceChildren(el.cloneNode(true));
     var first=host.firstElementChild;
     if(!first)return 0;
@@ -150,9 +162,34 @@
   // siblings, so summing single-block heights over-estimates and causes the last
   // line to be clipped. Measure the assembled column near the boundary only.
   function columnHeight(cur,host){
-    var frag=document.createDocumentFragment();
-    for(var i=0;i<cur.length;i++)frag.appendChild(cur[i].node.cloneNode(true));
-    host.replaceChildren(frag);
+    if(activeStats)activeStats.columnMeasurements++;
+    var state=columnCache.get(host);
+    // A figure scaler or outside caller may have mutated the probe. Trust the
+    // cache only when its actual child nodes are still connected and aligned.
+    if(!state||host.childNodes.length!==state.clones.length||
+       (state.clones.length&&
+         (host.firstChild!==state.clones[0]||
+          host.lastChild!==state.clones[state.clones.length-1]))){
+      state={sources:[],clones:[]};
+      host.replaceChildren();
+      columnCache.set(host,state);
+    }
+    var common=0,limit=Math.min(cur.length,state.sources.length);
+    while(common<limit&&cur[common].node===state.sources[common])common++;
+    if(activeStats)activeStats.reusedColumnNodes+=common;
+    while(state.clones.length>common){
+      host.removeChild(state.clones.pop());
+      state.sources.pop();
+    }
+    // Common case: one new paragraph. Only that new subtree enters the DOM,
+    // rather than re-styling and re-cloning all prior paragraphs on the leaf.
+    for(var i=common;i<cur.length;i++){
+      var clone=cur[i].node.cloneNode(true);
+      host.appendChild(clone);
+      state.sources.push(cur[i].node);
+      state.clones.push(clone);
+      if(activeStats)activeStats.clonedColumnNodes++;
+    }
     return host.scrollHeight;
   }
 
@@ -246,6 +283,15 @@
   }
 
   function paginate(blocks,pageH,host){
+    // Always reset the measured prefix between pagination sessions and when
+    // the viewport or font metrics change. No speculative height is reused.
+    columnCache.delete(host);
+    var previous=activeStats;
+    var counters={blocks:blocks.length,singleMeasurements:0,
+      columnMeasurements:0,clonedColumnNodes:0,reusedColumnNodes:0,
+      pages:0,elapsedMs:0};
+    activeStats=counters;
+    var started=performance.now();
     var lh=lineHeight(host);
     var pages=[],cur=[],used=0;
     var queue=[];
@@ -263,8 +309,10 @@
     while(queue.length){
       var item=queue.shift();
       var el=item.node;
-      var h=measure(el,host);
 
+      // A fitting paragraph is fully measured by the assembled column below.
+      // The old eager measure() did an additional full DOM replacement and
+      // forced style/layout recalculation for EVERY paragraph, even when it fit.
       // Always decide on the assembled column: summing single-block heights is
       // wrong under margin collapsing, and a wrong decision overflows the page.
       var candidate=cur.concat([{chapter:item.chapter,node:el,key:item.key}]);
@@ -300,6 +348,9 @@
         continue;
       }
 
+      // Only overflowing blocks need an isolated height (e.g. huge figures
+      // and split/widow decisions). Do not pay this cost for normal prose.
+      var h=measure(el,host);
       if(hasImage(el)&&h>pageH){
         var scaled=fitFigure(el,pageH,host);
         if(scaled){
@@ -352,6 +403,14 @@
       pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,oversized:true}]);
     }
     flush();
+    counters.pages=pages.length;
+    counters.elapsedMs=performance.now()-started;
+    lastStats=counters;
+    activeStats=previous;
+    // Clear the last assembled leaf to avoid keeping clones of an entire
+    // chapter alive after pagination. Page contents are held separately.
+    columnCache.delete(host);
+    host.replaceChildren();
     return pages;
   }
 
@@ -365,5 +424,7 @@
     return sum/pageH;
   }
 
-  window.JFPageEngine={paginate:paginate,measure:measure,lineHeight:lineHeight,pageFill:pageFill};
+  window.JFPageEngine={paginate:paginate,measure:measure,
+    lineHeight:lineHeight,pageFill:pageFill,
+    diagnostics:function(){return lastStats?Object.assign({},lastStats):null;}};
 })();

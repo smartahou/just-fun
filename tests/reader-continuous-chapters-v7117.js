@@ -11,7 +11,7 @@ const start=source.indexOf('async function jfDeskPagedLayout(keepPage,reason){')
 const end=source.indexOf('function jfDeskPageForAnchor(',start);
 assert(start>=0&&end>start);
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.122.0');
+assert.equal(pkg.version,'7.123.0');
 const calls=[];
 let rendered=0;
 const leaf=[

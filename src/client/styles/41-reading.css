@@ -1284,6 +1284,9 @@ body:has(.jfReader.paper) .jfDeskNotes .jfDeskNoteCanvas .jfNoteTextChunk{
 .jfPageMeasure{
   position:absolute!important;left:-10000px;top:0;visibility:hidden;pointer-events:none;
   box-sizing:border-box;overflow:hidden;
+  /* v7.123: force styles/layout inside the offscreen pagination probe only.
+     No size containment: scrollHeight must still measure all printed lines. */
+  contain:layout style;
 }
 
 /* v7.33: sheets are real elements now; the old painted pseudo-pages must go. */

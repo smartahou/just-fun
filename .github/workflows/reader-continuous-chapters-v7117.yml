@@ -28,6 +28,7 @@ jobs:
           node tests/reader-backtracking-v7120.js
           node tests/reader-rapid-turn-v7121.js
           node tests/reader-prepared-faces-v7122.js
+          node tests/reader-paginator-measure-v7123.js
           node tests/reader-flowing-commentary-v7116.js
           node tests/reader-single-commentary-v7114.js
           node tests/reader-commentary-grid-v7113.js
@@ -68,6 +69,8 @@ jobs:
         run: python tests/reader-rapid-turn-v7121.py
       - name: Real Chromium - pre-rendered physical-page faces and resize
         run: python tests/reader-prepared-faces-v7122.py
+      - name: Real Chromium - paginator exact baseline parity and measured DOM reuse
+        run: python tests/reader-paginator-measure-v7123.py
       - name: Real Chromium - previous commentary and source character integrity
         run: python tests/reader-flowing-commentary-visual-v7116.py
 

@@ -5,7 +5,7 @@
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const src=fs.readFileSync(path.join(__dirname,'../src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.122.0');
+assert.equal(require('../package.json').version,'7.123.0');
 const a=src.indexOf('// v7.122 · Three bounded'),b=src.indexOf('function jfDeskPagedRender(direction){',a);
 assert(a>0&&b>a,'missing face-pool implementation');
 const faceCode=src.slice(a,b);

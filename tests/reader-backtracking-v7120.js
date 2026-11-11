@@ -5,7 +5,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const src=fs.readFileSync(path.join(__dirname,'../src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.122.0');
+assert.equal(require('../package.json').version,'7.123.0');
 assert(!src.includes('function jfDeskTrimPagedWindow('),
   'destructive front-page eviction must remain disabled');
 assert(src.includes("if(reason!=='prepend'&&!sameSpread)jfDeskPagedRender();"),

@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.122.0 / Current version: v7.122.0** · 持续迭代 / Actively evolving
+**当前版本：v7.123.0 / Current version: v7.123.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.123 · 分页引擎测量复用**：用户 Chrome Trace 实证显示 2,211 次 columnHeight 样式计算约 9.11 秒，1,300 次 measure 样式计算约 5.30 秒。分页时先尝试真实组合高度，仅溢出时测量单块；在隐藏测量宿主复用前缀 DOM，只增删差异节点，并对测量宿主设置 layout/style containment。保留 DOM Range 分割、寡行孤行、图注、源 offset、EPUB 原文。增加 v7.122 冻结算法的 Chrome 同几何逐页断点和字符守恒对照、实际耗时统计。**此版不引入新的书页图层或素材。**
 
 **v7.122 · 三双页显示缓冲与减重渲染**：旧书纸书模式只挂载上一、当前、下一双页的已准备文字显示层；命中缓存时仅切换显示层，不再移动或重建整页文字。阅读空闲时准备相邻双页并异步解码纸张，书壳不再每页重新赋值内联 WebP 大图。几何、字号与书籍会话变更时清理旧显示层；原始 EPUB 字符、分页节点和阅读锚点保持独立。新增真实 Chromium 显示层、单/双页与快速往返测试。仍须实书验收。
 
