@@ -6,7 +6,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const text=fs.readFileSync(path.join(__dirname,'../src/client/scripts/98d-page-engine.js'),'utf8');
-assert.equal(require('../package.json').version,'7.125.0');
+assert.equal(require('../package.json').version,'7.126.0');
 class Node {
   constructor(textContent,tagName='P'){
     this.textContent=textContent;this.tagName=tagName;
