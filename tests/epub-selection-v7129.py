@@ -174,7 +174,9 @@ def main():
                   'jfEpubSelectionMenu').hidden &&
                   document.querySelector('#jfEpubSelectionMenu '
                     +'[data-action=mark]').textContent==='取消标记'""")
-                assert page.evaluate("getSelection().toString()") == FIRST
+                # Saved underline actions target the durable FULL mark, not a
+                # synthetic native selection of only its first visible piece.
+                assert page.evaluate("getSelection().toString()") == ''
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""()=>!jfDeskWorkspace.marks.some(m=>
                   m.text==='纸书选区测试甲乙丙丁')""")
