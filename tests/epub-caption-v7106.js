@@ -49,5 +49,9 @@ assert(source.includes('document.importNode(node,true)'), 'source image paragrap
 assert(source.includes("const caption=document.createElement('figcaption')"), 'caption is a measured node');
 assert(css.includes('figure.jfPrintPlateWithCaption > figcaption'),'new explicit caption CSS');
 assert(css.includes('figure.jfPrintPlateWithCaption > :is(p,div)'),'image alignment is scoped to exact plate');
-assert(!css.slice(css.indexOf('/* v7.106 ·')).includes('font-size:'),'no new metrics');
+const captionStart=css.indexOf('/* v7.106 ·');
+const nextStyle=css.indexOf('/* v7.107 ·',captionStart);
+assert(captionStart>=0&&nextStyle>captionStart,'v7.106 caption CSS is isolated');
+assert(!css.slice(captionStart,nextStyle).includes('font-size:'),
+  'caption styles may not change measured font metrics');
 console.log('PASS v7.106 explicit picture captions, safe classifier, cloned atomic figure, original offset, no global text changes');
