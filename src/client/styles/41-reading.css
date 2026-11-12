@@ -4159,6 +4159,13 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   -webkit-text-fill-color:currentColor!important;
   text-shadow:none!important;
 }
+/* The browser's ::selection inherited value can be white even on old paper;
+   pin the original dark ink only in physical paper mode, never dark flow. */
+.jfReader.paged:not(.jfPdfMode) #jfPageView .jfSheetBody::selection,
+.jfReader.paged:not(.jfPdfMode) #jfPageView .jfSheetBody *::selection{
+  color:#302b23!important;
+  -webkit-text-fill-color:#302b23!important;
+}
 /* No old selection overlay: only the native browser range and real CSS marks. */
 .jfReader #jfEpubSelectionOverlay{display:none!important}
 .jfReader .jfEpubSelectionMenu{
