@@ -1,8 +1,8 @@
 /*
- * v7.129.1 · Exact-source annotation on reflowed EPUB paper.
+ * v7.129.2 · Underlined source-accurate annotations on EPUB paper.
  *
- * One visual selection layer only: native ::selection while dragging, durable
- * CSS Highlights after saving. Never touch page-engine DOM or source text.
+ * Temporary and saved marks share CSS Custom Highlight underlines; native
+ * selected text has no background. Never change page-engine or source DOM.
  */
 (function(){
 'use strict';
@@ -23,6 +23,7 @@ for(const [action,label] of [['cancel','取消'],['mark','标记'],['note','加�
 reader.append(menu);
 const markKeys=['blue','mint','amber','rose','violet'];
 const markKey=color=>'jf-epub-mark-'+color;
+const transientKey='jf-epub-selection';
 let active=null,raf=0,refreshFrame=0;
 let painted=[]; // {mark,range}: same exact ranges as the visible highlights.
 const eligible=()=>!reader.hidden&&!!jfDeskBook&&!jfDeskOutline?.nativePdf&&!jfDeskRestoring;
@@ -114,8 +115,10 @@ function reference(){
 }
 function removeHighlights(){
   painted=[];
-  if(globalThis.CSS?.highlights)
+  if(globalThis.CSS?.highlights){
+    CSS.highlights.delete(transientKey);
     for(const color of markKeys)CSS.highlights.delete(markKey(color));
+  }
 }
 function findSaved(ref){
   const matches=(jfDeskWorkspace?.marks||[]).filter(m=>
@@ -145,8 +148,11 @@ function show(){
     return;
   }
   active=snap;
-  // Do not blend an already painted mark with a newly selected passage.
+  // Show one precise temporary underline, not a filled browser selection.
+  // Keep the real browser Selection for keyboard and iPad drag handles.
   removeHighlights();
+  if(globalThis.CSS?.highlights&&typeof Highlight!=='undefined')
+    CSS.highlights.set(transientKey,new Highlight(snap.range.cloneRange()));
   const same=findSaved(snap.ref);
   const btn=menu.querySelector('[data-action=mark]');
   btn.textContent=same?'取消标记':'标记';

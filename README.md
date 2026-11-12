@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.129.1 / Current version: v7.129.1** · 持续迭代 / Actively evolving
+**当前版本：v7.129.2 / Current version: v7.129.2** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.129.2 · 旧书细划线标记**：取消 EPUB/TXT 选中及已存标记的整行色块，统一为贴合文字的细下划线（正在选青灰、已保存茶褐），不遮挡正文或旧纸纹理；使用兼容 Safari/iPad 的 CSS Highlight 文字装饰属性，不更改分页、标记定位、笔记数据或现有操作条。
 
 **v7.129.1 · EPUB 选区精确修复**：移除导致白字发灰的双层选区叠加，使用原生文字选区与旧纸暖灰选色；提交标记前核对原章节文本、回放时逐块验证源文字完全一致，避免标错句子；旧版本位置漂移的文字标记按唯一原文在当前页安全恢复，不更改个人书签存储。选中标记时暂停已存高亮以避免重叠，点击既有标记可打开取消标记／加入笔记操作条；不改变分页引擎与旧纸纹理。
 

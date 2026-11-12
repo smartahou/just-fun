@@ -34,8 +34,15 @@ assert(source.includes("const offset=blockOffset(block)") &&
 assert(source.includes("event.preventDefault();event.stopImmediatePropagation();"),
   'tapping saved ink shows actions rather than turning the page');
 assert(css.includes('::highlight(jf-epub-mark-amber)') &&
+  css.includes('::highlight(jf-epub-selection)') &&
   css.includes('#jfPageView .jfSheetBody *::selection') &&
-  css.includes('-webkit-text-fill-color:#28251d'),
-  'native paper selection keeps original glyphs dark and readable');
+  css.includes('background-color:transparent!important') &&
+  css.includes('text-decoration-line:underline') &&
+  !css.slice(css.indexOf('/* v7.129.2 ·')).includes('background:rgba('),
+  'EPUB transient and saved marks must be underlines, never filled blocks');
+assert(source.includes("CSS.highlights.set(transientKey,new Highlight(snap.range.cloneRange()))"),
+  'selected glyphs get one fine temporary underline');
+assert(source.includes('CSS.highlights.delete(transientKey)'),
+  'temporary underline disappears on cancel, save, or page turn');
 assert(!source.includes('innerHTML'),'selection module must not rewrite source HTML');
-console.log('PASS v7.129.1 EPUB selection: native readable ink, verified anchors, precise durable highlights, clickable saved marks');
+console.log('PASS v7.129.2 EPUB selection: temporary and saved underlines, exact text anchors, no filled blocks');

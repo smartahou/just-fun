@@ -109,13 +109,18 @@ def main():
                     visible:!menu.hidden,ref,selected:sel.toString(),
                     sourceText:source?.slice(ref?.anchorStart,
                       ref?.anchorStart+ref?.text.length),
-                    color:getComputedStyle(r.startContainer.parentElement,'::selection').color};
+                    color:getComputedStyle(r.startContainer.parentElement,'::selection').color,
+                    nativeBackground:getComputedStyle(r.startContainer.parentElement,'::selection').backgroundColor,
+                    temporaryCount:CSS.highlights.get('jf-epub-selection')?.size||0,
+                    underline:getComputedStyle(r.startContainer.parentElement,'::highlight(jf-epub-selection)').textDecorationLine};
                 }""")
                 assert not visual['overlay'] and visual['visible'], visual
                 assert visual['ref']['text'] == FIRST, visual
                 assert visual['sourceText'] == FIRST, visual
                 assert visual['selected'] == FIRST, visual
                 assert '255, 255, 255' not in visual['color'], visual
+                assert visual['nativeBackground'] in ('rgba(0, 0, 0, 0)', 'transparent'), visual
+                assert visual['temporaryCount'] == 1 and visual['underline'] == 'underline', visual
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='纸书选区测试甲乙丙丁')""")
@@ -124,10 +129,12 @@ def main():
                   ranges:CSS.highlights.get('jf-epub-mark-amber')?.size||0,
                   painted:[...(CSS.highlights.get('jf-epub-mark-amber')||[])]
                     .map(r=>r.toString()).join(''),
+                  underline:getComputedStyle(document.querySelector('#jfSheetLeft p'),
+                    '::highlight(jf-epub-mark-amber)').textDecorationLine,
                   pageCount:jfDeskPages.length
                 })""")
                 assert marked['marks'] == 1 and marked['ranges'] >= 1, marked
-                assert marked['painted'] == FIRST, marked
+                assert marked['painted'] == FIRST and marked['underline'] == 'underline', marked
                 assert marked['pageCount'] == baseline, marked
                 # Mouse-clicking an existing annotation must offer its actions,
                 # instead of triggering the half-sheet page-turn handler.
@@ -188,9 +195,8 @@ def main():
                 assert split_paint == THIRD, split_paint
                 assert page.evaluate('jfDeskPages.length') == baseline
                 assert not errors, errors
-                print('PASS v7.129.1 Chromium EPUB: legible native selection, exact '
-                      'source text, saved mark click/removal, split-page '
-                      'precision and existing note workflow', flush=True)
+                print('PASS v7.129.2 Chromium EPUB: fine underlined selection and marks, '
+                      'exact source text, click/removal, split pages and notes', flush=True)
                 browser.close()
         finally:
             if proc is not None:

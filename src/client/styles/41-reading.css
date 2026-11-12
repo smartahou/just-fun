@@ -4148,15 +4148,15 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   }
 }
 
-/* v7.129.1 · One legible native selection layer. Never draw translucent
-   positioned rectangles over the ink, nor turn selected glyphs white. */
+/* v7.129.2 · Only fine underlines, no selection or saved-mark fill.
+   Individual decoration properties are compatible with iPad Safari. */
 .jfReader:not(.jfPdfMode) #jfReadText::selection,
 .jfReader:not(.jfPdfMode) #jfReadText *::selection,
 .jfReader.paged:not(.jfPdfMode) #jfPageView .jfSheetBody::selection,
 .jfReader.paged:not(.jfPdfMode) #jfPageView .jfSheetBody *::selection{
-  background-color:rgba(167,135,78,.36)!important;
-  color:#28251d!important;
-  -webkit-text-fill-color:#28251d!important;
+  background-color:transparent!important;
+  color:inherit!important;
+  -webkit-text-fill-color:currentColor!important;
   text-shadow:none!important;
 }
 /* No old selection overlay: only the native browser range and real CSS marks. */
@@ -4183,12 +4183,34 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background:rgba(214,229,210,.17);outline:0;
 }
 .jfReader .jfEpubSelectionMenu [data-action=note]{color:#d4e9d7}
-/* Archival highlighter ink: retained text remains dark and legible. */
-.jfReader ::highlight(jf-epub-mark-amber){background:rgba(184,154,93,.31);color:inherit}
-.jfReader ::highlight(jf-epub-mark-blue){background:rgba(111,151,171,.24);color:inherit}
-.jfReader ::highlight(jf-epub-mark-mint){background:rgba(112,159,132,.25);color:inherit}
-.jfReader ::highlight(jf-epub-mark-rose){background:rgba(184,124,129,.22);color:inherit}
-.jfReader ::highlight(jf-epub-mark-violet){background:rgba(151,136,181,.23);color:inherit}
+/* User selection and archived marks use source-accurate underlines only.
+   Never put translucent rectangles over old paper or ink. */
+.jfReader ::highlight(jf-epub-selection){
+  background-color:transparent;
+  color:inherit;
+  text-decoration-line:underline;
+  text-decoration-style:solid;
+  text-decoration-color:#60776c;
+  text-decoration-thickness:2px;
+  text-underline-offset:3px;
+}
+.jfReader ::highlight(jf-epub-mark-amber),
+.jfReader ::highlight(jf-epub-mark-blue),
+.jfReader ::highlight(jf-epub-mark-mint),
+.jfReader ::highlight(jf-epub-mark-rose),
+.jfReader ::highlight(jf-epub-mark-violet){
+  background-color:transparent;
+  color:inherit;
+  text-decoration-line:underline;
+  text-decoration-style:solid;
+  text-decoration-thickness:1.5px;
+  text-underline-offset:3px;
+}
+.jfReader ::highlight(jf-epub-mark-amber){text-decoration-color:#947349}
+.jfReader ::highlight(jf-epub-mark-blue){text-decoration-color:#668b9c}
+.jfReader ::highlight(jf-epub-mark-mint){text-decoration-color:#698c72}
+.jfReader ::highlight(jf-epub-mark-rose){text-decoration-color:#ad7c7b}
+.jfReader ::highlight(jf-epub-mark-violet){text-decoration-color:#8474a1}
 @media(max-width:620px){
   .jfReader .jfEpubSelectionMenu{font-size:12px}
   .jfReader .jfEpubSelectionMenu button{min-height:40px;padding:10px 12px}
