@@ -7,7 +7,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const comic=fs.readFileSync(path.join(root,'src/client/scripts/98d1-comic-pages.js'),'utf8');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
-assert.equal(require('../package.json').version,'7.126.0');
+assert.equal(require('../package.json').version,'7.127.0');
 class Element {
   constructor(tag='DIV',text='',natural=0){
     this.tagName=tag.toUpperCase();
@@ -106,4 +106,16 @@ api.warm(leaves,'bookA');
 assert.equal(api.stats().warmed,3);
 api.reset('bookB');
 assert.equal(api.stats().warmed,0,'switching books frees decoded-image references');
+// CSS must keep the original photographic old-paper surface and image ratio.
+const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
+const manga=css.slice(css.indexOf('/* ===== v7.127 ·'));
+assert(manga.includes('mix-blend-mode:multiply!important;'),
+  'comic whites must blend with the existing old-paper background');
+assert(manga.includes('object-fit:contain!important'),
+  'full manga artwork is always fitted without deformation');
+assert(manga.includes('scale(var(--jf-comic-zoom,1))!important'),
+  'blank-edge zoom is uniformly applied on both axes');
+assert(!manga.includes('object-fit:cover!important'),
+  'never crop panel artwork just to fill the view');
+console.log('PASS v7.127 comic printed-paper and bounded aspect-safe crop');
 console.log('PASS v7.126 comic reader: source, split boundaries, zero layout probes and bounded image cache');

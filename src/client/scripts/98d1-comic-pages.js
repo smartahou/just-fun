@@ -3,7 +3,7 @@
 // change source XHTML, call the prose paginator, or rasterize full-size scans.
 (function(){
   'use strict';
-  const TRIM_SAMPLE=128,TRIM_MAX=5,DECODE_CACHE=4;
+  const DECODE_CACHE=4;
   const warmImages=new Map(),trimRatios=new Map();
   let lastSession='';
   function reset(session){
@@ -125,40 +125,63 @@
         warmImages.delete(warmImages.keys().next().value);
     }
   }
-  // Tiny idle-only border probe. A strip is trimmed only when almost every
-  // sampled pixel is genuinely paper-white; never cut dark manga artwork.
-  function edgeZoom(img){
-    if(!img?.naturalWidth||!img.naturalHeight)return 1;
+  // Sample only a 160x160 preview, never encode or alter an EPUB bitmap.
+  // Four independent near-white margins can be removed symmetrically in
+  // image coordinates without cutting a panel or changing its aspect ratio.
+  const TRIM_BORDER=160,TRIM_LIMIT=15;
+  function edgeMargins(img){
+    const empty={left:0,right:0,top:0,bottom:0};
+    if(!img?.naturalWidth||!img.naturalHeight)return empty;
     const canvas=document.createElement('canvas');
-    canvas.width=TRIM_SAMPLE;canvas.height=TRIM_SAMPLE;
+    canvas.width=canvas.height=TRIM_BORDER;
     const ctx=canvas.getContext('2d',{willReadFrequently:true});
-    if(!ctx)return 1;
-    ctx.drawImage(img,0,0,TRIM_SAMPLE,TRIM_SAMPLE);
-    const d=ctx.getImageData(0,0,TRIM_SAMPLE,TRIM_SAMPLE).data;
-    const pale=(x,y)=>{
-      const i=(y*TRIM_SAMPLE+x)*4;
-      const r=d[i],g=d[i+1],b=d[i+2];
-      return d[i+3]>=248&&r>=246&&g>=246&&b>=246&&
-        Math.max(r,g,b)-Math.min(r,g,b)<8;
-    };
-    function extent(side){
-      let out=0;
-      for(let p=0;p<TRIM_MAX;p++){
-        let clear=0;
-        for(let k=0;k<TRIM_SAMPLE;k++){
-          const x=side==='left'?p:side==='right'?TRIM_SAMPLE-1-p:k;
-          const y=side==='top'?p:side==='bottom'?TRIM_SAMPLE-1-p:k;
-          if(pale(x,y))clear++;
-        }
-        if(clear/TRIM_SAMPLE<.985)break;
-        out++;
-      }
-      return out;
+    if(!ctx)return empty;
+    ctx.drawImage(img,0,0,TRIM_BORDER,TRIM_BORDER);
+    const pixels=ctx.getImageData(0,0,TRIM_BORDER,TRIM_BORDER).data;
+    function pale(x,y){
+      const k=(y*TRIM_BORDER+x)*4;
+      const r=pixels[k],g=pixels[k+1],b=pixels[k+2];
+      return pixels[k+3]>=250&&r>=246&&g>=246&&b>=246&&
+        Math.max(r,g,b)-Math.min(r,g,b)<7;
     }
-    const sides=['left','right','top','bottom'].map(extent);
-    const min=Math.min(...sides);
-    // Symmetric only: no guessed framing, and at most ~3% total zoom.
-    return min>=2?Math.min(1.035,1+min/TRIM_SAMPLE):1;
+    function scan(edge){
+      let count=0;
+      for(let pos=0;pos<TRIM_LIMIT;pos++){
+        let white=0;
+        for(let i=0;i<TRIM_BORDER;i++){
+          const x=edge==='left'?pos:edge==='right'?TRIM_BORDER-1-pos:i;
+          const y=edge==='top'?pos:edge==='bottom'?TRIM_BORDER-1-pos:i;
+          if(pale(x,y))white++;
+        }
+        // No crop when a scanned page has any meaningful edge artwork.
+        if(white/TRIM_BORDER<.99)break;
+        count++;
+      }
+      // Reserve one sample column on each qualifying edge as a safety margin.
+      return count>=3?(count-1)/TRIM_BORDER:0;
+    }
+    const margins={left:scan('left'),right:scan('right'),
+      top:scan('top'),bottom:scan('bottom')};
+    // Completely blank previews, decorative borders and giant white
+    // margins are intentionally left untouched.
+    if(Object.values(margins).every(v=>v>=.08))return empty;
+    return margins;
+  }
+  function placement(m,img){
+    const w=img.clientWidth,h=img.clientHeight;
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    if(!(w>0&&h>0&&iw>0&&ih>0))return null;
+    const base=Math.min(w/iw,h/ih);
+    const cropW=iw*(1-m.left-m.right);
+    const cropH=ih*(1-m.top-m.bottom);
+    const zoom=Math.min(1.2,Math.min(w/cropW,h/cropH)/base);
+    // Uniform zoom keeps the source aspect ratio; shift centres the
+    // remaining artwork when its left and right white borders differ.
+    return {
+      zoom,
+      dx:(m.right-m.left)*iw*base*zoom/2,
+      dy:(m.bottom-m.top)*ih*base*zoom/2
+    };
   }
   function decorate(root,session,enabled=true){
     reset(session);
@@ -166,29 +189,28 @@
     const imgs=Array.from(root.querySelectorAll('img[data-jf-comic-image]'));
     for(const img of imgs){
       const url=img.getAttribute('src')||'';
-      img.style.setProperty('--jf-comic-zoom',
-        enabled?String(trimRatios.get(url)||1):'1');
-      if(!enabled||!url||trimRatios.has(url)||img.dataset.jfComicTrimQueued)return;
-      img.dataset.jfComicTrimQueued='1';
-      const stamp=lastSession;
-      const task=()=>{
-        if(stamp!==lastSession||!img.isConnected)return;
-        if(!img.complete||!img.naturalWidth){
-          img.addEventListener('load',()=>{delete img.dataset.jfComicTrimQueued;decorate(root,session,enabled);},{once:true});
-          return;
-        }
+      const owner=img.closest?.('.jfComicPage');
+      const single=owner?.querySelectorAll('img[data-jf-comic-image]').length===1;
+      // Multi-image printed pages must retain their authored grouping.
+      let values=null;
+      if(enabled&&single&&img.complete&&img.naturalWidth){
         try{
-          const zoom=edgeZoom(img);
-          trimRatios.set(url,zoom);
-          // Already-mounted faces receive the same stable crop strength.
-          for(const current of document.querySelectorAll('.jfComicPage img[data-jf-comic-image]')){
-            if(current.getAttribute('src')===url)
-              current.style.setProperty('--jf-comic-zoom',String(zoom));
-          }
-        }catch{trimRatios.set(url,1);}
-      };
-      if(typeof requestIdleCallback==='function')requestIdleCallback(task);
-      else setTimeout(task,120);
+          let margins=trimRatios.get(url);
+          if(!margins){margins=edgeMargins(img);trimRatios.set(url,margins);}
+          values=placement(margins,img);
+        }catch{}
+      }
+      img.style.setProperty('--jf-comic-zoom',String(values?.zoom||1));
+      img.style.setProperty('--jf-comic-shift-x',(values?.dx||0)+'px');
+      img.style.setProperty('--jf-comic-shift-y',(values?.dy||0)+'px');
+      if(enabled&&single&&url&&(!img.complete||!img.naturalWidth)&&
+         img.dataset.jfComicTrimQueued!=='1'){
+        img.dataset.jfComicTrimQueued='1';
+        img.addEventListener('load',()=>{
+          delete img.dataset.jfComicTrimQueued;
+          if(lastSession===session&&img.isConnected)decorate(root,session,enabled);
+        },{once:true});
+      }
     }
   }
   window.JFComicPages={candidate,fromSection,warm,decorate,reset,

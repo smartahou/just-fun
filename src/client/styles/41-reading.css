@@ -4046,86 +4046,77 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 }
 
 
-/* ===== v7.126 · image-led comic sheets =====================================
-   Only verified comic leaves gain a larger, centered physical canvas.
-   The paper photographs and hardcover remain intact OUTSIDE the image.
-   Text EPUBs, imprints and illustrations keep their established typography. */
+/* ===== v7.127 · scanned manga printed into original old paper =============
+   Preserve all approved paper / spine / cover textures. The photo is ink on
+   that paper, NOT an opaque white card, and NEVER an aspect-distorted bitmap.
+   Normal prose/image books keep their original pagination and image rules. */
 .jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfSheetBody{
-  padding:clamp(10px,2.4vh,22px) clamp(11px,2.5vw,30px)!important;
+  padding:8px 12px!important;
   text-align:center!important;
   text-shadow:none!important;
   line-height:1!important;
   display:block!important;
+  background-color:transparent!important;
 }
 .jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage{
-  width:100%!important;
-  height:100%!important;
-  margin:0!important;
-  padding:0!important;
-  box-sizing:border-box;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:stretch;
-  gap:0;
-  contain:layout paint;
+  width:100%!important;height:100%!important;
+  margin:0!important;padding:0!important;
+  box-sizing:border-box;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;
+  align-items:stretch;gap:0;
+  background-color:transparent!important;
 }
 .jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage > *{
-  box-sizing:border-box;
-  min-width:0;
-  margin:0!important;
-  padding:0!important;
-  text-indent:0!important;
-  text-align:center!important;
+  box-sizing:border-box;min-width:0;
+  margin:0!important;padding:0!important;
+  text-indent:0!important;text-align:center!important;
+  background-color:transparent!important;
 }
 .jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage > :has(img[data-jf-comic-image]){
-  flex:1 1 auto;
-  min-height:0;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  overflow:hidden;
+  flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;justify-content:center;
+  align-items:center;overflow:hidden;
+}
+.jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage > img[data-jf-comic-image]{
+  flex:1 1 auto;min-height:0;align-self:stretch;
 }
 .jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfComicPage img[data-jf-comic-image]{
   display:block!important;
-  width:100%!important;
-  height:100%!important;
-  max-width:100%!important;
-  max-height:100%!important;
-  min-width:0;
-  min-height:0;
-  flex:1 1 auto;
-  object-fit:contain!important;
-  object-position:center center;
-  margin:0!important;
-  padding:0!important;
-  border:0!important;
+  width:100%!important;height:100%!important;
+  max-width:100%!important;max-height:100%!important;
+  min-width:0;min-height:0;flex:1 1 auto;
+  object-fit:contain!important;object-position:center center;
+  margin:0!important;padding:0!important;border:0!important;
   opacity:1!important;
-  mix-blend-mode:normal!important;
-  -webkit-mask-image:none!important;
-  mask-image:none!important;
+  -webkit-mask-image:none!important;mask-image:none!important;
   image-rendering:auto;
-  transform-origin:center;
-  transform:scale(1);
-  filter:none;
+  background-color:transparent!important;
+  transform-origin:center center;
+  /* Image is scaled uniformly and translated only inside existing leaf. */
+  transform:translate(var(--jf-comic-shift-x,0px),var(--jf-comic-shift-y,0px))
+    scale(var(--jf-comic-zoom,1))!important;
+  filter:none!important;
 }
-.jfReader.paged.jf-comic-enhanced #jfPageView .jfSheet.jf-comic-leaf .jfComicPage img[data-jf-comic-image]{
-  transform:scale(var(--jf-comic-zoom,1));
-  filter:contrast(1.055) brightness(1.012);
+/* Blend the CONTENT SURFACE with the approved paper image underneath, not
+   the JPG against a white isolated wrapper. White pixels disappear into old
+   paper, while black speech balloons and fine lines remain sharp. */
+.jfReader.paged.jf-aged-paper #jfPageView
+  .jfSheet:is(.jf-comic-leaf,.jf-comic-gallery) .jfSheetBody{
+  mix-blend-mode:multiply!important;
+  background-color:transparent!important;
 }
-/* Panel montages keep their original measured flow and spatial grouping.
-   Only skip the expensive per-pixel photographic transparency conversion. */
-.jfReader.paged #jfPageView .jfSheet.jf-comic-gallery .jfSheetBody img{
+.jfReader.paged #jfPageView .jfSheet.jf-comic-gallery .jfSheetBody > :is(p,figure,div,picture){
+  background-color:transparent!important;
+}
+.jfReader.paged #jfPageView .jfSheet:is(.jf-comic-leaf,.jf-comic-gallery) .jfSheetBody img{
   mix-blend-mode:normal!important;
   opacity:1!important;
-  -webkit-mask-image:none!important;
-  mask-image:none!important;
-  filter:none;
+  -webkit-mask-image:none!important;mask-image:none!important;
 }
-.jfReader.paged.jf-comic-enhanced #jfPageView .jfSheet.jf-comic-gallery .jfSheetBody img{
-  filter:contrast(1.035) brightness(1.006);
+.jfReader.paged.jf-comic-enhanced #jfPageView
+  .jfSheet:is(.jf-comic-leaf,.jf-comic-gallery) .jfSheetBody img{
+  /* Very light backing lift only; original pixels remain untouched. */
+  filter:brightness(1.045) contrast(1.025)!important;
 }
 .jfReader .jfReaderTools #jfReadComicEnhance[hidden]{display:none!important}
 .jfReader .jfReaderTools #jfReadComicEnhance[aria-pressed=true]{

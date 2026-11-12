@@ -79,6 +79,8 @@ def main():
                   const img=document.querySelector('#jfSheetLeft img[data-jf-comic-image]');
                   return img?.complete&&img.naturalWidth===800;
                 }""")
+                # Verify old-paper rendering regardless of saved local theme.
+                page.evaluate("document.getElementById('jfReader').classList.add('jf-aged-paper')")
                 report = page.evaluate("""()=>{
                   const all=jfDeskPages;
                   const left=document.getElementById('jfSheetLeft');
@@ -90,6 +92,7 @@ def main():
                     scannedText:all.map(p=>p[0].node.textContent).join(''),
                     width:img?.naturalWidth||0, objectFit:cs?.objectFit,
                     comicCss:sheet?.classList.contains('jf-comic-leaf'),
+                    blendedPaper:sheet?getComputedStyle(left).mixBlendMode:null,
                     originalSrc:img?.getAttribute('src')?.startsWith('/api/reading/epub-asset?'),
                     knockout:img?.dataset.jfPlate||null,
                     diagnostics:JFComicDiagnostics()
@@ -99,6 +102,8 @@ def main():
                 assert report['scannedText'] == '', report
                 assert report['width'] == 800 and report['objectFit'] == 'contain', report
                 assert report['comicCss'] and report['originalSrc'], report
+                # The print surface keeps the original paper beneath the scans.
+                assert report['blendedPaper'] == 'multiply', report
                 assert report['knockout'] is None, report
                 page.evaluate('()=>jfDeskPageTurn(1)')
                 page.wait_for_function("()=>jfDeskPageIndex===2")
