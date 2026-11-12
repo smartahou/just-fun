@@ -62,6 +62,32 @@ def choose(page, word):
         "()=>!document.getElementById('jfEpubSelectionMenu')?.hidden")
 
 
+def choose_across_paragraphs(page):
+    outcome = page.evaluate("""()=>{
+      const nodes=[...document.querySelectorAll('#jfSheetLeft p, #jfSheetRight p')];
+      const first=nodes.find(p=>p.textContent.includes('纸书选区测试甲乙丙丁'));
+      const second=nodes.find(p=>p.textContent.includes('此段用于检验注释之后'));
+      if(!first||!second)return {ok:false,reason:'paragraphs missing'};
+      const start=[...first.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&
+        n.textContent.includes('纸书选区测试甲乙丙丁'));
+      const end=[...second.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&
+        n.textContent.includes('此段用于检验注释之后'));
+      if(!start||!end)return {ok:false,reason:'text nodes missing'};
+      const range=document.createRange();
+      range.setStart(start,start.textContent.indexOf('纸书选区测试甲乙丙丁'));
+      range.setEnd(end,end.textContent.indexOf('此段用于检验注释之后')+
+        '此段用于检验注释之后'.length);
+      const sel=getSelection();sel.removeAllRanges();sel.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+      return {ok:true,selected:sel.toString(),startTag:range.startContainer.parentElement.tagName,
+        endTag:range.endContainer.parentElement.tagName};
+    }""")
+    assert outcome['ok'] and outcome['startTag'] == 'P' and outcome['endTag'] == 'P', outcome
+    page.wait_for_function(
+        "()=>!document.getElementById('jfEpubSelectionMenu').hidden")
+    return outcome
+
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -153,6 +179,68 @@ def main():
                 page.wait_for_function("""()=>!jfDeskWorkspace.marks.some(m=>
                   m.text==='纸书选区测试甲乙丙丁')""")
                 assert page.evaluate('jfDeskPages.length') == baseline
+                # A real Selection spans two independently printed paragraph
+                # blocks. The saved mark must consist of exactly those glyphs,
+                # without the browser's visual paragraph separators.
+                cross_selected = choose_across_paragraphs(page)
+                cross = page.evaluate("""()=>{
+                  const ref=JFEpubSelection.reference()?.ref;
+                  const source=jfDeskFlow.find(s=>s.n===ref?.chapter)?.el.textContent;
+                  return {ref,original:source?.slice(ref.anchorStart,
+                    ref.anchorStart+ref.text.length),
+                    ranges:[...(CSS.highlights.get('jf-epub-selection')||[])]
+                      .map(r=>r.toString())};
+                }""")
+                assert cross['ref'] and cross['ref']['text'] == cross['original'], cross
+                assert '纸书选区测试甲乙丙丁' in cross['ref']['text'], cross
+                assert '此段用于检验注释之后' in cross['ref']['text'], cross
+                assert len(cross['ranges']) >= 2, cross
+                assert ''.join(cross['ranges']) == cross['ref']['text'], cross
+                page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+                page.wait_for_function("""(selected)=>jfDeskWorkspace.marks.some(m=>
+                  m.text===selected)""", arg=cross['ref']['text'])
+                cross_mark = page.evaluate("""(selected)=>{
+                  const m=jfDeskWorkspace.marks.find(m=>m.text===selected);
+                  return {mark:m,ranges:[...(CSS.highlights.get('jf-epub-mark-amber')||[])]
+                    .map(r=>r.toString())};
+                }""", cross['ref']['text'])
+                assert cross_mark['mark']['anchorStart'] == cross['ref']['anchorStart'], cross_mark
+                assert ''.join(cross_mark['ranges']) == cross['ref']['text'], cross_mark
+                assert len(cross_mark['ranges']) >= 2, cross_mark
+                # Tap the second (not first) line of the same saved mark:
+                # the menu must still target the WHOLE cross-paragraph mark.
+                pos = page.evaluate("""()=>{
+                  const spans=[...CSS.highlights.get('jf-epub-mark-amber')];
+                  const r=spans[spans.length-1].getClientRects()[0];
+                  return {x:r.left+r.width/2,y:r.top+r.height/2};
+                }""")
+                page.mouse.click(pos['x'],pos['y'])
+                page.wait_for_function("""()=>!document.getElementById(
+                  'jfEpubSelectionMenu').hidden&&document.querySelector(
+                  '#jfEpubSelectionMenu [data-action=mark]').textContent==='取消标记'""")
+                page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+                page.wait_for_function("""(selected)=>!jfDeskWorkspace.marks.some(m=>
+                  m.text===selected)""", arg=cross['ref']['text'])
+                assert page.evaluate('jfDeskPages.length') == baseline
+                # Cross-paragraph excerpt must remain a real note, while the
+                # associated highlight is anchored to the exact source span.
+                choose_across_paragraphs(page)
+                page.locator('#jfEpubSelectionMenu [data-action="note"]').click()
+                page.locator('#jfPdfQuoteChooser').wait_for(state='visible')
+                page.locator('#jfPdfQuoteOptions button[data-note-id="new"]').click()
+                page.locator('#jfPdfQuoteNewTitle').fill('跨自然段原文笔记')
+                page.locator('#jfPdfQuoteCommit').click()
+                page.wait_for_function("""()=>jfDeskWorkspace.notes.some(n=>
+                  n.title==='跨自然段原文笔记')""")
+                cross_note = page.evaluate("""(selected)=>{
+                  const n=jfDeskWorkspace.notes.find(x=>x.title==='跨自然段原文笔记');
+                  const mark=jfDeskWorkspace.marks.find(x=>x.text===selected);
+                  return {quote:n?.quotes[0]?.text,mark};
+                }""", cross['ref']['text'])
+                assert '纸书选区测试甲乙丙丁' in cross_note['quote'], cross_note
+                assert '此段用于检验注释之后' in cross_note['quote'], cross_note
+                assert cross_note['mark']['anchorStart'] == cross['ref']['anchorStart'], cross_note
+                assert page.evaluate('jfDeskPages.length') == baseline
                 choose(page, SECOND)
                 page.locator('#jfEpubSelectionMenu [data-action="note"]').click()
                 page.locator('#jfPdfQuoteChooser').wait_for(state='visible')
@@ -195,8 +283,9 @@ def main():
                 assert split_paint == THIRD, split_paint
                 assert page.evaluate('jfDeskPages.length') == baseline
                 assert not errors, errors
-                print('PASS v7.129.2 Chromium EPUB: fine underlined selection and marks, '
-                      'exact source text, click/removal, split pages and notes', flush=True)
+                print('PASS v7.129.3 Chromium EPUB: cross-paragraph selection, source-' 
+                      'accurate segmented underlines, saved mark click/removal, '
+                      'split pagination and note workflow', flush=True)
                 browser.close()
         finally:
             if proc is not None:

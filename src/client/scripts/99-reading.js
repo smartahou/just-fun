@@ -1418,7 +1418,10 @@ async function jfDeskQuoteCommit(){
     if(quotes.length>40)throw Error('目标笔记摘录已达上限');
     let mark=null;
     if(quote.type==='image'&&Array.isArray(quote.area)&&!quote.pages?.length)mark={bookId:quote.bookId,chapter:quote.chapter,type:'area',area:quote.area,...(quote.segments?{segments:quote.segments}:{})};
-    else if(quote.text&&Number.isSafeInteger(quote.anchorStart))mark={type:'text',text:quote.text.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(quote.text.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:'amber'})};
+    else if(quote.text&&Number.isSafeInteger(quote.anchorStart)){
+      const sourceText=typeof quote.sourceText==='string'&&quote.sourceText?quote.sourceText:quote.text;
+      mark={type:'text',text:sourceText.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(sourceText.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:'amber'})};
+    }
     // Persist the new note, destination, and source highlight in one encrypted transaction.
     await jfDeskMutate({action:'note',note:{...note,quotes,blocks},...(mark?{alsoMark:mark}:{})});
     jfDeskQuoteLast=note.id;jfDeskQuoteDismiss();

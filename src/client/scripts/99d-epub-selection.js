@@ -1,8 +1,9 @@
 /*
- * v7.129.2 · Underlined source-accurate annotations on EPUB paper.
+ * v7.129.3 · Source-contiguous multi-paragraph selection.
  *
- * Temporary and saved marks share CSS Custom Highlight underlines; native
- * selected text has no background. Never change page-engine or source DOM.
+ * Selection endpoints are resolved to ORIGINAL chapter text positions, not
+ * the browser's paragraph-separated Range.toString(). CSS Highlight ranges
+ * are generated per printed block; no layout or source nodes are rewritten.
  */
 (function(){
 'use strict';
@@ -65,8 +66,13 @@ function blockOffset(block){
   const lo=Math.max(0,block.offset-320),hi=Math.min(source.length,
     block.offset+text.length+320);
   const region=source.slice(lo,hi),first=region.indexOf(text);
-  if(first<0||region.indexOf(text,first+1)>=0)return null;
-  return lo+first;
+  if(first>=0&&region.indexOf(text,first+1)<0)return lo+first;
+  // In long prettified EPUB chapters, whitespace nodes between paragraphs
+  // accumulate beyond the nominal page-engine offset. Only use an exact,
+  // chapter-wide UNIQUE match; repeated prose must never guess an anchor.
+  const found=source.indexOf(text);
+  if(found<0||source.indexOf(text,found+1)>=0)return null;
+  return found;
 }
 function point(node,offset){
   const block=owner(node);if(!block)return null;
@@ -78,19 +84,6 @@ function point(node,offset){
     return {chapter:block.chapter,at:base+prefix.toString().length};
   }catch{return null;}
 }
-// Verify a selected string against the chapter's immutable source before
-// persisting. An ambiguous or altered quote is not a safe mark.
-function anchored(text,chapter,estimate){
-  const source=sourceFor(chapter);
-  if(typeof source!=='string')return null;
-  if(source.slice(estimate,estimate+text.length)===text)return estimate;
-  const start=Math.max(0,estimate-512);
-  const region=source.slice(start,Math.min(source.length,
-    estimate+text.length+512));
-  const first=region.indexOf(text);
-  if(first<0||region.indexOf(text,first+1)>=0)return null;
-  return start+first;
-}
 function reference(){
   if(!eligible())return null;
   const sel=selection();
@@ -98,18 +91,27 @@ function reference(){
   const range=sel.getRangeAt(0);
   const start=point(range.startContainer,range.startOffset);
   const end=point(range.endContainer,range.endOffset);
-  if(!start||!end||start.chapter!==end.chapter)return null;
-  const raw=range.toString();
-  const text=raw.trim();
+  if(!start||!end||start.chapter!==end.chapter||end.at<=start.at)return null;
+  const source=sourceFor(start.chapter);
+  if(typeof source!=='string')return null;
+  // Browser selection includes visual paragraph separators. The EPUB source
+  // chapter has no such separators between <p> elements. Only source span
+  // offsets are stable for durable marks and for rebuilding the same glyphs.
+  const selectedSource=source.slice(start.at,end.at);
+  const text=selectedSource.trim();
   if(!text||text.length>5000)return null;
-  const lead=raw.length-raw.trimStart().length;
-  const tail=raw.length-raw.trimEnd().length;
-  if(end.at-tail<start.at+lead)return null;
-  const anchorStart=anchored(text,start.chapter,start.at+lead);
-  if(anchorStart===null)return null;
+  const anchorStart=start.at+selectedSource.length-selectedSource.trimStart().length;
+  const anchorEnd=anchorStart+text.length;
+  if(source.slice(anchorStart,anchorEnd)!==text)return null;
+  const raw=range.toString().trim();
+  // Reject accidental selection of page UI/chapter decoration. Whitespace
+  // between paragraphs is layout, not source text; compare visible characters.
+  const normal=s=>s.replace(/[\s\u00a0\u200b]+/g,'');
+  if(normal(raw)!==normal(text))return null;
   const rects=Array.from(range.getClientRects()).filter(r=>r.width>1&&r.height>1);
   if(!rects.length)return null;
   return {range:range.cloneRange(),rects,
+    quoteText:raw, // Preserve natural paragraph breaks in the note body.
     ref:{bookId:jfDeskBook.id,chapter:start.chapter,anchorStart,text},
     session:jfDeskSession};
 }
@@ -143,16 +145,22 @@ function show(){
   if(!eligible()){active=null;menu.hidden=true;removeHighlights();return;}
   const snap=reference();
   if(!snap){
+    // A tap on a saved underline opens its menu without a text selection.
+    if(active?.savedMark&&!hasSelection())return;
     active=null;menu.hidden=true;
     if(!hasSelection())refresh();else removeHighlights();
     return;
   }
   active=snap;
-  // Show one precise temporary underline, not a filled browser selection.
-  // Keep the real browser Selection for keyboard and iPad drag handles.
+  // Highlight only the real glyph spans, never the synthetic DOM between
+  // adjacent <p> blocks or between two visible paper leaves.
   removeHighlights();
-  if(globalThis.CSS?.highlights&&typeof Highlight!=='undefined')
-    CSS.highlights.set(transientKey,new Highlight(snap.range.cloneRange()));
+  if(globalThis.CSS?.highlights&&typeof Highlight!=='undefined'){
+    const ranges=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
+      snap.ref.anchorStart+snap.ref.text.length,visibleBlocks());
+    if(ranges.length)
+      CSS.highlights.set(transientKey,new Highlight(...ranges));
+  }
   const same=findSaved(snap.ref);
   const btn=menu.querySelector('[data-action=mark]');
   btn.textContent=same?'取消标记':'标记';
@@ -211,6 +219,27 @@ function visibleBlocks(){
     sections.map(el=>({el,chapter:Number(el.dataset.chapter),offset:0})):
     [{el:jfReadText,chapter:jfDeskChapter,offset:0}];
 }
+// The highlight renderer consumes the same source coordinates as the note
+// anchor. Each visible block gets its own exact range; no underline through
+// paragraph margins, the spine, footer, or inactive prepared faces.
+function rangesFor(chapter,from,to,blocks){
+  const source=sourceFor(chapter);
+  if(typeof source!=='string'||to<=from)return [];
+  const ranges=[];
+  for(const block of blocks){
+    if(block.chapter!==chapter)continue;
+    const offset=block.offsetVerified??blockOffset(block);
+    if(offset===null)continue;
+    const len=block.el.textContent.length;
+    const a=Math.max(from,offset),b=Math.min(to,offset+len);
+    if(a>=b)continue;
+    const expected=source.slice(a,b);
+    if(block.el.textContent.slice(a-offset,b-offset)!==expected)continue;
+    const r=findRange(block.el,a-offset,b-offset);
+    if(r?.toString()===expected)ranges.push(r);
+  }
+  return ranges;
+}
 function markAnchor(mark){
   const source=sourceFor(mark.chapter),text=mark.text;
   if(typeof source!=='string'||!text)return null;
@@ -227,37 +256,21 @@ function markAnchor(mark){
 function refresh(){
   removeHighlights();
   if(!eligible()||hasSelection()||!globalThis.CSS?.highlights)return;
-  const blocks=visibleBlocks();
-  const byChapter=new Map();
-  for(const block of blocks){
-    const offset=blockOffset(block);
-    if(offset===null)continue;
-    if(!byChapter.has(block.chapter))byChapter.set(block.chapter,[]);
-    byChapter.get(block.chapter).push({...block,offset});
-  }
-  if(!byChapter.size)return;
+  const blocks=visibleBlocks().map(block=>({
+    ...block,offsetVerified:blockOffset(block)
+  }));
   const groups=new Map(markKeys.map(color=>[color,[]]));
+  const visibleChapters=new Set(blocks.map(b=>b.chapter));
   const marks=(jfDeskWorkspace?.marks||[]).filter(m=>
     m.type==='text'&&m.bookId===jfDeskBook.id&&
-    Number.isSafeInteger(m.anchorStart)&&m.text&&byChapter.has(m.chapter));
+    Number.isSafeInteger(m.anchorStart)&&m.text&&visibleChapters.has(m.chapter));
   for(const mark of marks){
     const from=markAnchor(mark);
     if(from===null)continue;
-    const source=sourceFor(mark.chapter);
-    const end=from+mark.text.length;
-    for(const block of byChapter.get(mark.chapter)){
-      const len=block.el.textContent.length;
-      const a=Math.max(from,block.offset),b=Math.min(end,block.offset+len);
-      if(b<=a)continue;
-      const text=block.el.textContent.slice(a-block.offset,b-block.offset);
-      // Do not paint a wrong sentence even if source offsets drift.
-      if(text!==source.slice(a,b))continue;
-      const range=findRange(block.el,a-block.offset,b-block.offset);
-      if(!range||range.toString()!==text)continue;
-      const color=markKeys.includes(mark.color)?mark.color:'amber';
-      groups.get(color).push(range);
-      painted.push({mark,range});
-    }
+    const ranges=rangesFor(mark.chapter,from,from+mark.text.length,blocks);
+    const color=markKeys.includes(mark.color)?mark.color:'amber';
+    groups.get(color).push(...ranges);
+    for(const range of ranges)painted.push({mark,range});
   }
   for(const [color,ranges] of groups)
     if(ranges.length)CSS.highlights.set(markKey(color),new Highlight(...ranges));
@@ -279,7 +292,9 @@ function quote(){
   if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return false;
   const ref=snap.ref;
   clearSelection(true);
-  jfDeskChooseQuote(ref);
+  // The displayed quote can preserve paragraph breaks while the associated
+  // durable mark uses original chapter characters (no synthetic line breaks).
+  jfDeskChooseQuote({...ref,text:snap.quoteText||ref.text,sourceText:ref.text});
   return true;
 }
 function reset(){
@@ -326,10 +341,16 @@ center.addEventListener('click',event=>{
       event.clientX>=r.left-2&&event.clientX<=r.right+2&&
       event.clientY>=r.top-2&&event.clientY<=r.bottom+2);
     if(!touched)continue;
-    const r=hit.range.cloneRange(),sel=selection();
-    sel?.removeAllRanges();sel?.addRange(r);
-    const snap=reference();
-    if(snap){snap.savedMark=hit.mark;active=snap;show();}
+    // A multi-paragraph mark has several CSS ranges. Do not reselect just
+    // one fragment and silently turn "取消标记" into a new short mark.
+    const ref={...hit.mark,anchorStart:markAnchor(hit.mark)};
+    active={ref,savedMark:hit.mark,session:jfDeskSession};
+    menu.querySelector('[data-action=mark]').textContent='取消标记';
+    menu.hidden=false;
+    const headerBottom=reader.querySelector('.jfReaderHeader')?.getBoundingClientRect().bottom||0;
+    const width=menu.offsetWidth||230,height=menu.offsetHeight||44;
+    menu.style.left=Math.max(8,Math.min(innerWidth-width-8,event.clientX-width/2))+'px';
+    menu.style.top=Math.max(headerBottom+5,Math.min(innerHeight-height-8,event.clientY-height-13))+'px';
     event.preventDefault();event.stopImmediatePropagation();
     break;
   }

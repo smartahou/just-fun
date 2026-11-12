@@ -18,7 +18,8 @@ for(const label of ['取消','标记','加入笔记'])
   assert(source.includes(label),'operation available: '+label);
 assert(source.includes("jfDeskMutate(saved?{action:'delete-mark'") &&
   source.includes("{action:'mark'"),'mark and undo use existing durable API');
-assert(source.includes('jfDeskChooseQuote(ref)'),'quote uses existing note chooser');
+assert(source.includes('jfDeskChooseQuote({...ref,text:snap.quoteText||ref.text,sourceText:ref.text})'),
+  'multi-paragraph note uses original text anchor but preserves readable selected passage');
 assert(source.includes('jfDeskPages[jfDeskPageIndex'),'paper anchor reads real page offset');
 assert(source.includes('new Highlight(...ranges)'),'stored marks do not mutate page DOM');
 assert(source.includes('range.getClientRects()'),'native selection toolbar follows actual glyph bounds');
@@ -26,11 +27,22 @@ assert(!source.includes("overlay.replaceChildren")&&
   !source.includes("className='jfEpubSelectionPatch'"),
   'never blend duplicate selection patches over native text');
 assert(source.includes("source.slice(mark.anchorStart,mark.anchorStart+text.length)===text") &&
-  source.includes("if(text!==source.slice(a,b))continue"),
-  'saved highlight segments verify the exact source text');
-assert(source.includes("const offset=blockOffset(block)") &&
-  source.includes("const anchorStart=anchored("),
-  'printed page anchor is verified before saving and reading');
+  source.includes("block.el.textContent.slice(a-offset,b-offset)!==expected"),
+  'saved highlight segments verify the exact original source text');
+assert(source.includes("offsetVerified:blockOffset(block)") &&
+  source.includes("const selectedSource=source.slice(start.at,end.at)") &&
+  source.includes("source.slice(anchorStart,anchorEnd)!==text") &&
+  source.includes("normal(raw)!==normal(text)"),
+  'cross-paragraph anchor comes from source-coordinate endpoints, not Range.toString separators');
+assert(source.includes("function rangesFor(chapter,from,to,blocks)")&&
+  source.includes("new Highlight(...ranges)")&&
+  source.includes("const ranges=rangesFor(snap.ref.chapter,"),
+  'per-block highlights exclude paragraph margins and paper-spread chrome');
+assert(source.includes("savedMark:hit.mark")&&
+  source.includes("if(active?.savedMark&&!hasSelection())return;"),
+  'clicking any fragment of a cross-paragraph mark opens its full mark actions');
+assert(reading.includes("const sourceText=typeof quote.sourceText"),
+  'cross-paragraph quote text and original-source mark text stay separate');
 assert(source.includes("event.preventDefault();event.stopImmediatePropagation();"),
   'tapping saved ink shows actions rather than turning the page');
 const inkStart=css.indexOf('.jfReader ::highlight(jf-epub-selection)');
@@ -44,9 +56,9 @@ assert(inkStart>=0&&inkEnd>inkStart &&
   inkRules.includes('text-decoration-line:underline') &&
   !/background\\s*:\\s*rgba/.test(inkRules),
   'EPUB transient and saved marks must be underlines, never filled blocks');
-assert(source.includes("CSS.highlights.set(transientKey,new Highlight(snap.range.cloneRange()))"),
-  'selected glyphs get one fine temporary underline');
+assert(source.includes("CSS.highlights.set(transientKey,new Highlight(...ranges))"),
+  'temporary underline is split accurately across printed paragraphs');
 assert(source.includes('CSS.highlights.delete(transientKey)'),
   'temporary underline disappears on cancel, save, or page turn');
 assert(!source.includes('innerHTML'),'selection module must not rewrite source HTML');
-console.log('PASS v7.129.2 EPUB selection: temporary and saved underlines, exact text anchors, no filled blocks');
+console.log('PASS v7.129.3 EPUB selection: cross-paragraph exact source anchors, segmented underlines, note text and click-to-edit');

@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.129.2 / Current version: v7.129.2** · 持续迭代 / Actively evolving
+**当前版本：v7.129.3 / Current version: v7.129.3** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.129.3 · 跨自然段精确划线**：修正原生 Range 字符串在段落之间插入换行、但 EPUB 章节文本坐标连续而造成选区失效的问题；使用起止 DOM 锚点映射原文精确字符跨度，逐段单独画细划线，不划段间留白与书脊；跨自然段的划线与笔记既可保存又可恢复；点击任一段已保存划线都定位整条标记，并继续支持取消和加入笔记。无正文 DOM 改写，不动分页和旧书质感。
 
 **v7.129.2 · 旧书细划线标记**：取消 EPUB/TXT 选中及已存标记的整行色块，统一为贴合文字的细下划线（正在选青灰、已保存茶褐），不遮挡正文或旧纸纹理；使用兼容 Safari/iPad 的 CSS Highlight 文字装饰属性，不更改分页、标记定位、笔记数据或现有操作条。
 
