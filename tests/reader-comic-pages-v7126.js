@@ -63,7 +63,7 @@ assert.equal(typeof api.fromSection,'function');
 const chapter=sec(new Element('H3','FILE:1'),image(1),image(2),image(3));
 const items=api.fromSection(chapter);
 assert.equal(items.length,3,'three scanned images form three physical leaves');
-assert.deepEqual(items.map(x=>x.comicIndex),[0,1,2]);
+assert.deepEqual(Array.from(items,x=>x.comicIndex),[0,1,2]);
 assert.equal(items[0].comicTotal,3);
 assert(items.every(x=>x.comic));
 assert.equal(items.map(x=>x.node.textContent).join(''),chapter.el.textContent,
