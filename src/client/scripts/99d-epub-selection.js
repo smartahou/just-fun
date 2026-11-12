@@ -1,17 +1,14 @@
 /*
- * Just Fun v7.129 · Selected passages live on the paper, not in a floating
- * blue browser rectangle.  This file operates only on visible reader clones:
- * never insert decoration into EPUB source, pagination blocks or cached faces.
- * Both notes and marks use the existing encrypted workspace transactions.
+ * v7.129.1 · Exact-source annotation on reflowed EPUB paper.
+ *
+ * One visual selection layer only: native ::selection while dragging, durable
+ * CSS Highlights after saving. Never touch page-engine DOM or source text.
  */
 (function(){
 'use strict';
 const reader=document.getElementById('jfReader');
 const center=document.getElementById('jfReadCenter');
 if(!reader||!center)return;
-const overlay=document.createElement('div');
-overlay.id='jfEpubSelectionOverlay';
-overlay.setAttribute('aria-hidden','true');
 const menu=document.createElement('div');
 menu.id='jfEpubSelectionMenu';
 menu.className='jfEpubSelectionMenu';
@@ -23,12 +20,19 @@ for(const [action,label] of [['cancel','取消'],['mark','标记'],['note','加�
   button.type='button';button.dataset.action=action;button.textContent=label;
   menu.append(button);
 }
-reader.append(overlay,menu);
-let active=null,raf=0,refreshFrame=0,refreshBusy=false;
+reader.append(menu);
 const markKeys=['blue','mint','amber','rose','violet'];
 const markKey=color=>'jf-epub-mark-'+color;
+let active=null,raf=0,refreshFrame=0;
+let painted=[]; // {mark,range}: same exact ranges as the visible highlights.
 const eligible=()=>!reader.hidden&&!!jfDeskBook&&!jfDeskOutline?.nativePdf&&!jfDeskRestoring;
-function rootFor(node){
+const selection=()=>window.getSelection();
+const hasSelection=()=>!!selection()&&!selection().isCollapsed&&!!selection().toString().trim();
+const sourceFor=chapter=>{
+  const section=jfDeskFlow.find(s=>s.n===chapter)?.el;
+  return section?.textContent??(!jfDeskPaged&&chapter===jfDeskChapter?jfReadText.textContent:null);
+};
+function owner(node){
   const el=node?.nodeType===1?node:node?.parentElement;
   if(!el)return null;
   if(jfDeskPaged){
@@ -37,129 +41,155 @@ function rootFor(node){
     let block=el;
     if(block===body)return null;
     while(block.parentElement&&block.parentElement!==body)block=block.parentElement;
-    if(block.parentElement!==body)return null;
-    const index=Array.prototype.indexOf.call(body.children,block);
+    const slot=Array.prototype.indexOf.call(body.children,block);
     const page=jfDeskPages[jfDeskPageIndex+(body.id==='jfSheetRight'?1:0)]||[];
-    const item=page[index];
+    const item=page[slot];
     if(!item||item.comic||!Number.isSafeInteger(item.offset))return null;
-    return {chapter:item.chapter,scope:block,base:item.offset};
+    return {el:block,chapter:item.chapter,offset:item.offset};
   }
   if(!jfReadText.contains(node))return null;
   const section=el.closest?.('[data-chapter]');
   const chapter=section?Number(section.dataset.chapter):jfDeskChapter;
-  if(!Number.isSafeInteger(chapter))return null;
-  return {chapter,scope:section||jfReadText,base:0};
+  return Number.isSafeInteger(chapter)?
+    {el:section||jfReadText,chapter,offset:0}:null;
 }
-function position(node,offset){
-  const part=rootFor(node);
-  if(!part)return null;
+// Exact source offset of a visible pagination block. The page-engine's
+// nominal item.offset may precede text transformed by editorial wrappers.
+// Verify it, then only accept a UNIQUE nearby match. Never guess.
+function blockOffset(block){
+  const source=sourceFor(block.chapter),text=block.el.textContent;
+  if(typeof source!=='string'||!text)return null;
+  if(source.slice(block.offset,block.offset+text.length)===text)return block.offset;
+  if(text.length<6)return null;
+  const lo=Math.max(0,block.offset-320),hi=Math.min(source.length,
+    block.offset+text.length+320);
+  const region=source.slice(lo,hi),first=region.indexOf(text);
+  if(first<0||region.indexOf(text,first+1)>=0)return null;
+  return lo+first;
+}
+function point(node,offset){
+  const block=owner(node);if(!block)return null;
+  const base=blockOffset(block);if(base===null)return null;
   try{
     const prefix=document.createRange();
-    prefix.selectNodeContents(part.scope);prefix.setEnd(node,offset);
-    return {chapter:part.chapter,at:part.base+prefix.toString().length};
+    prefix.selectNodeContents(block.el);
+    prefix.setEnd(node,offset);
+    return {chapter:block.chapter,at:base+prefix.toString().length};
   }catch{return null;}
+}
+// Verify a selected string against the chapter's immutable source before
+// persisting. An ambiguous or altered quote is not a safe mark.
+function anchored(text,chapter,estimate){
+  const source=sourceFor(chapter);
+  if(typeof source!=='string')return null;
+  if(source.slice(estimate,estimate+text.length)===text)return estimate;
+  const start=Math.max(0,estimate-512);
+  const region=source.slice(start,Math.min(source.length,
+    estimate+text.length+512));
+  const first=region.indexOf(text);
+  if(first<0||region.indexOf(text,first+1)>=0)return null;
+  return start+first;
 }
 function reference(){
   if(!eligible())return null;
-  const selection=window.getSelection();
-  if(!selection||selection.isCollapsed||selection.rangeCount!==1)return null;
-  const range=selection.getRangeAt(0);
-  const start=position(range.startContainer,range.startOffset);
-  const end=position(range.endContainer,range.endOffset);
-  if(!start||!end||start.chapter!==end.chapter||end.at<=start.at)return null;
-  const raw=range.toString(),trimmed=raw.trim();
-  if(!trimmed||trimmed.length>5000)return null;
-  const leading=raw.length-raw.trimStart().length;
-  let anchorStart=start.at+leading;
-  const source=jfDeskPaged?
-    jfDeskFlow.find(s=>s.n===start.chapter)?.el?.textContent:
-    (jfDeskFlow.find(s=>s.n===start.chapter)?.el||jfReadText).textContent;
-  if(typeof source==='string'){
-    // Reflow and block splitting may add a visual line break. Resolve it only
-    // when the quote occurs uniquely near the selected source offset.
-    if(source.slice(anchorStart,anchorStart+trimmed.length)!==trimmed){
-      const lo=Math.max(0,anchorStart-256),hi=Math.min(source.length,anchorStart+256+trimmed.length);
-      const region=source.slice(lo,hi);
-      const first=region.indexOf(trimmed);
-      if(first<0||region.indexOf(trimmed,first+1)>=0)return null;
-      anchorStart=lo+first;
-    }
-  }
+  const sel=selection();
+  if(!sel||sel.isCollapsed||sel.rangeCount!==1)return null;
+  const range=sel.getRangeAt(0);
+  const start=point(range.startContainer,range.startOffset);
+  const end=point(range.endContainer,range.endOffset);
+  if(!start||!end||start.chapter!==end.chapter)return null;
+  const raw=range.toString();
+  const text=raw.trim();
+  if(!text||text.length>5000)return null;
+  const lead=raw.length-raw.trimStart().length;
+  const tail=raw.length-raw.trimEnd().length;
+  if(end.at-tail<start.at+lead)return null;
+  const anchorStart=anchored(text,start.chapter,start.at+lead);
+  if(anchorStart===null)return null;
   const rects=Array.from(range.getClientRects()).filter(r=>r.width>1&&r.height>1);
   if(!rects.length)return null;
   return {range:range.cloneRange(),rects,
-    ref:{bookId:jfDeskBook.id,chapter:start.chapter,anchorStart,text:trimmed},
+    ref:{bookId:jfDeskBook.id,chapter:start.chapter,anchorStart,text},
     session:jfDeskSession};
 }
-function clearSelection(removeNative=false){
-  active=null;menu.hidden=true;overlay.replaceChildren();
-  if(removeNative)window.getSelection()?.removeAllRanges();
+function removeHighlights(){
+  painted=[];
+  if(globalThis.CSS?.highlights)
+    for(const color of markKeys)CSS.highlights.delete(markKey(color));
 }
-function patches(rects){
-  const lines=[];
-  // Joining adjacent fragments on each line avoids a jagged stripe per span.
-  for(const rect of rects.slice(0,100)){
-    const x=Math.max(0,rect.left),y=Math.max(0,rect.top);
-    const width=Math.min(innerWidth-x,rect.width),height=Math.min(innerHeight-y,rect.height);
-    if(width<=1||height<=1)continue;
-    const same=lines.find(p=>Math.abs(p.y-y)<3&&Math.abs(p.h-height)<4&&x<=p.x+p.w+5);
-    if(same){const right=Math.max(same.x+same.w,x+width);same.x=Math.min(same.x,x);same.w=right-same.x;}
-    else lines.push({x,y,w:width,h:height});
-  }
-  overlay.replaceChildren(...lines.map(p=>{
-    const part=document.createElement('span');part.className='jfEpubSelectionPatch';
-    part.style.left=p.x+'px';part.style.top=p.y+'px';
-    part.style.width=p.w+'px';part.style.height=p.h+'px';
-    return part;
-  }));
+function findSaved(ref){
+  const matches=(jfDeskWorkspace?.marks||[]).filter(m=>
+    m.type==='text'&&m.bookId===ref.bookId&&m.chapter===ref.chapter&&
+    m.text===ref.text);
+  const anchoredMark=matches.find(m=>m.anchorStart===ref.anchorStart);
+  if(anchoredMark)return anchoredMark;
+  // v7.129 may have saved the right quote at the wrong offset. Only offer
+  // removal when this text occurs exactly ONCE in its original chapter.
+  const source=sourceFor(ref.chapter);
+  if(typeof source!=='string'||!ref.text||source.indexOf(ref.text)<0||
+      source.indexOf(ref.text)!==source.lastIndexOf(ref.text))return null;
+  return matches.length===1?matches[0]:null;
+}
+function clearSelection(removeNative=false){
+  active=null;menu.hidden=true;
+  if(removeNative)selection()?.removeAllRanges();
+  refresh();
 }
 function show(){
   raf=0;
+  if(!eligible()){active=null;menu.hidden=true;removeHighlights();return;}
   const snap=reference();
-  if(!snap){clearSelection();return;}
+  if(!snap){
+    active=null;menu.hidden=true;
+    if(!hasSelection())refresh();else removeHighlights();
+    return;
+  }
   active=snap;
-  patches(snap.rects);
-  const box=snap.rects[snap.rects.length-1];
+  // Do not blend an already painted mark with a newly selected passage.
+  removeHighlights();
+  const same=findSaved(snap.ref);
+  const btn=menu.querySelector('[data-action=mark]');
+  btn.textContent=same?'取消标记':'标记';
+  const first=snap.rects[0],last=snap.rects[snap.rects.length-1];
   menu.hidden=false;
-  const same=(jfDeskWorkspace?.marks||[]).find(m=>
-    m.type==='text'&&m.bookId===snap.ref.bookId&&
-    m.chapter===snap.ref.chapter&&m.anchorStart===snap.ref.anchorStart&&
-    m.text===snap.ref.text);
-  const markButton=menu.querySelector('[data-action=mark]');
-  markButton.textContent=same?'取消标记':'标记';
-  const width=menu.offsetWidth||240,height=menu.offsetHeight||46;
-  const x=Math.min(innerWidth-width-10,Math.max(10,box.left+box.width/2-width/2));
-  const below=box.bottom+11;
-  const y=below+height+12<innerHeight?below:Math.max(8,snap.rects[0].top-height-12);
-  menu.style.left=Math.max(8,x)+'px';menu.style.top=y+'px';
+  const width=menu.offsetWidth||230,height=menu.offsetHeight||44;
+  const x=Math.max(8,Math.min(innerWidth-width-8,
+    last.left+last.width/2-width/2));
+  // Prefer above the selected passage: never bury its last line underneath
+  // an opaque toolbar or block the next line's reading.
+  const headerBottom=reader.querySelector('.jfReaderHeader')?.getBoundingClientRect().bottom||0;
+  const above=first.top-height-12;
+  const below=last.bottom+12;
+  const y=above>=headerBottom+6?above:Math.min(innerHeight-height-8,below);
+  menu.style.left=x+'px';
+  menu.style.top=Math.max(headerBottom+5,y)+'px';
 }
 function schedule(){
   if(raf)cancelAnimationFrame(raf);
   raf=requestAnimationFrame(show);
 }
-function findTextRange(el,start,end){
+function findRange(element,start,end){
   if(start<0||end<=start)return null;
-  const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
-  let node,seen=0,a=null,b=null;
-  while((node=walker.nextNode())){
-    const len=node.nodeValue.length;
-    if(!a&&start<seen+len)a={node,off:Math.max(0,start-seen)};
-    if(a&&end<=seen+len){b={node,off:Math.max(0,end-seen)};break;}
-    seen+=len;
+  const w=document.createTreeWalker(element,NodeFilter.SHOW_TEXT);
+  let node,at=0,head=null,tail=null;
+  while((node=w.nextNode())){
+    const count=node.nodeValue.length;
+    if(!head&&start<at+count)head={node,off:start-at};
+    if(head&&end<=at+count){tail={node,off:end-at};break;}
+    at+=count;
   }
-  if(!a||!b)return null;
+  if(!head||!tail)return null;
   const r=document.createRange();
-  try{r.setStart(a.node,a.off);r.setEnd(b.node,b.off);return r;}
+  try{r.setStart(head.node,head.off);r.setEnd(tail.node,tail.off);return r;}
   catch{return null;}
 }
-function scopes(){
+function visibleBlocks(){
   if(jfDeskPaged){
-    const left=document.getElementById('jfSheetLeft');
-    const right=document.getElementById('jfSheetRight');
     const output=[];
     for(const [body,page] of [
-      [left,jfDeskPages[jfDeskPageIndex]||[]],
-      [right,(jfDeskPagedGeometry().two?jfDeskPages[jfDeskPageIndex+1]:[])||[]]
+      [document.getElementById('jfSheetLeft'),jfDeskPages[jfDeskPageIndex]||[]],
+      [document.getElementById('jfSheetRight'),
+        (jfDeskPagedGeometry().two?jfDeskPages[jfDeskPageIndex+1]:[])||[]]
     ]){
       if(!body)continue;
       for(let i=0;i<page.length;i++){
@@ -171,62 +201,88 @@ function scopes(){
     return output;
   }
   const sections=[...jfReadText.querySelectorAll('.jfEpubChapter[data-chapter]')];
-  return sections.length?sections.map(el=>({el,chapter:Number(el.dataset.chapter),offset:0})):
+  return sections.length?
+    sections.map(el=>({el,chapter:Number(el.dataset.chapter),offset:0})):
     [{el:jfReadText,chapter:jfDeskChapter,offset:0}];
 }
+function markAnchor(mark){
+  const source=sourceFor(mark.chapter),text=mark.text;
+  if(typeof source!=='string'||!text)return null;
+  if(source.slice(mark.anchorStart,mark.anchorStart+text.length)===text)
+    return mark.anchorStart;
+  // Upgrade the *display* of old incorrect anchors non-destructively.
+  const lo=Math.max(0,mark.anchorStart-512);
+  const region=source.slice(lo,Math.min(source.length,
+    mark.anchorStart+text.length+512));
+  const first=region.indexOf(text);
+  if(first<0||region.indexOf(text,first+1)>=0)return null;
+  return lo+first;
+}
 function refresh(){
-  if(refreshBusy)return;
-  refreshBusy=true;
-  try{
-    if(!globalThis.CSS?.highlights)return;
-    for(const color of markKeys)CSS.highlights.delete(markKey(color));
-    if(!eligible())return;
-    const blocks=scopes(),marks=(jfDeskWorkspace?.marks||[]).filter(m=>
-      m.type==='text'&&m.bookId===jfDeskBook.id&&
-      Number.isSafeInteger(m.anchorStart)&&m.text);
-    if(!blocks.length||!marks.length)return;
-    const groups=new Map(markKeys.map(c=>[c,[]]));
-    const visibleChapters=new Set(blocks.map(b=>b.chapter));
-    for(const mark of marks){
-      if(!visibleChapters.has(mark.chapter))continue;
-      const from=mark.anchorStart,to=from+(mark.length||mark.text.length);
-      for(const block of blocks){
-        if(block.chapter!==mark.chapter)continue;
-        const length=block.el.textContent.length,lo=Math.max(from,block.offset),
-          hi=Math.min(to,block.offset+length);
-        if(lo>=hi)continue;
-        const range=findTextRange(block.el,lo-block.offset,hi-block.offset);
-        if(range)groups.get(markKeys.includes(mark.color)?mark.color:'amber').push(range);
-      }
+  removeHighlights();
+  if(!eligible()||hasSelection()||!globalThis.CSS?.highlights)return;
+  const blocks=visibleBlocks();
+  const byChapter=new Map();
+  for(const block of blocks){
+    const offset=blockOffset(block);
+    if(offset===null)continue;
+    if(!byChapter.has(block.chapter))byChapter.set(block.chapter,[]);
+    byChapter.get(block.chapter).push({...block,offset});
+  }
+  if(!byChapter.size)return;
+  const groups=new Map(markKeys.map(color=>[color,[]]));
+  const marks=(jfDeskWorkspace?.marks||[]).filter(m=>
+    m.type==='text'&&m.bookId===jfDeskBook.id&&
+    Number.isSafeInteger(m.anchorStart)&&m.text&&byChapter.has(m.chapter));
+  for(const mark of marks){
+    const from=markAnchor(mark);
+    if(from===null)continue;
+    const source=sourceFor(mark.chapter);
+    const end=from+mark.text.length;
+    for(const block of byChapter.get(mark.chapter)){
+      const len=block.el.textContent.length;
+      const a=Math.max(from,block.offset),b=Math.min(end,block.offset+len);
+      if(b<=a)continue;
+      const text=block.el.textContent.slice(a-block.offset,b-block.offset);
+      // Do not paint a wrong sentence even if source offsets drift.
+      if(text!==source.slice(a,b))continue;
+      const range=findRange(block.el,a-block.offset,b-block.offset);
+      if(!range||range.toString()!==text)continue;
+      const color=markKeys.includes(mark.color)?mark.color:'amber';
+      groups.get(color).push(range);
+      painted.push({mark,range});
     }
-    for(const [color,ranges] of groups)
-      if(ranges.length)CSS.highlights.set(markKey(color),new Highlight(...ranges));
-  }finally{refreshBusy=false;}
+  }
+  for(const [color,ranges] of groups)
+    if(ranges.length)CSS.highlights.set(markKey(color),new Highlight(...ranges));
 }
 async function mark(){
-  const snap=active;if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
+  const snap=active;
+  if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
+  const ref=snap.ref,saved=snap.savedMark||findSaved(ref);
   clearSelection(true);
-  const ref=snap.ref;
-  const saved=(jfDeskWorkspace?.marks||[]).find(m=>
-    m.type==='text'&&m.bookId===ref.bookId&&m.chapter===ref.chapter&&
-    m.anchorStart===ref.anchorStart&&m.text===ref.text);
   try{
     await jfDeskMutate(saved?{action:'delete-mark',mark:saved}:
       {action:'mark',mark:{...ref,type:'text',length:ref.text.length,color:'amber'}});
-    refresh();jfDeskMessage(saved?'已取消标记':'已标记原文');
-  }catch(error){jfDeskMessage('标记保存失败：'+error.message,true);}
+    refresh();
+    jfDeskMessage(saved?'已取消标记':'已标记原文');
+  }catch(error){jfDeskMessage('标记保存失败：'+error.message,true);refresh();}
 }
 function quote(){
-  const snap=active;if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return false;
+  const snap=active;
+  if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return false;
   const ref=snap.ref;
-  clearSelection(true);jfDeskChooseQuote(ref);return true;
+  clearSelection(true);
+  jfDeskChooseQuote(ref);
+  return true;
 }
 function reset(){
   if(raf)cancelAnimationFrame(raf);raf=0;
-  clearSelection(true);
-  if(globalThis.CSS?.highlights)for(const color of markKeys)CSS.highlights.delete(markKey(color));
+  active=null;menu.hidden=true;
+  removeHighlights();
+  selection()?.removeAllRanges();
 }
-function pageRendered(){clearSelection(true);refresh();}
+function pageRendered(){active=null;menu.hidden=true;selection()?.removeAllRanges();refresh();}
 for(const button of menu.querySelectorAll('button')){
   button.addEventListener('pointerdown',e=>e.preventDefault());
   button.addEventListener('click',()=>{
@@ -240,11 +296,12 @@ document.addEventListener('selectionchange',()=>{
   schedule();
 });
 document.addEventListener('pointerup',e=>{
-  if(!reader.hidden&&center.contains(e.target)&&!jfDeskOutline?.nativePdf)schedule();
+  if(!reader.hidden&&center.contains(e.target)&&!jfDeskOutline?.nativePdf)
+    schedule();
 },{passive:true});
 document.addEventListener('touchend',e=>{
   if(!reader.hidden&&center.contains(e.target)&&!jfDeskOutline?.nativePdf)
-    setTimeout(schedule,90);
+    setTimeout(schedule,110);
 },{passive:true});
 document.addEventListener('keyup',e=>{
   if(e.shiftKey&&!reader.hidden&&!jfDeskOutline?.nativePdf)schedule();
@@ -254,7 +311,24 @@ document.addEventListener('keydown',e=>{
     e.preventDefault();e.stopImmediatePropagation();clearSelection(true);
   }
 },true);
-window.addEventListener('resize',()=>{if(active)schedule();});
+center.addEventListener('click',event=>{
+  if(!eligible()||hasSelection()||!painted.length)return;
+  // A tap on saved ink opens its actual source selection. This capture
+  // listener prevents the existing half-page click-to-turn from eating it.
+  for(const hit of painted){
+    const touched=Array.from(hit.range.getClientRects()).some(r=>
+      event.clientX>=r.left-2&&event.clientX<=r.right+2&&
+      event.clientY>=r.top-2&&event.clientY<=r.bottom+2);
+    if(!touched)continue;
+    const r=hit.range.cloneRange(),sel=selection();
+    sel?.removeAllRanges();sel?.addRange(r);
+    const snap=reference();
+    if(snap){snap.savedMark=hit.mark;active=snap;show();}
+    event.preventDefault();event.stopImmediatePropagation();
+    break;
+  }
+},true);
+window.addEventListener('resize',()=>{if(active)schedule();else refresh();});
 center.addEventListener('scroll',()=>{
   if(active)clearSelection(true);
 },{passive:true});

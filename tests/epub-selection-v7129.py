@@ -11,6 +11,7 @@ from playwright.sync_api import sync_playwright
 
 FIRST = '纸书选区测试甲乙丙丁'
 SECOND = '加入笔记测试子丑寅卯'
+THIRD = '分页后精确标记辛壬癸甲乙丙丁'
 
 
 def make_epub(path):
@@ -29,10 +30,12 @@ def make_epub(path):
                    '</manifest><spine><itemref idref="a"/></spine></package>')
         text = (f'在一张古旧纸页上，{FIRST}，读者仍然能看到清楚的铅字。'
                 f'接下来{SECOND}，这段文字可以关联到读书笔记。')
+        long_text = '此处是用于检查分页后源文字坐标的连续内容，必须避免误标邻近的句子。' * 140
         z.writestr('OEBPS/chapter.xhtml',
                    '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
                    '<h2>选区测试</h2><p>' + text + '</p>'
                    '<p>此段用于检验注释之后正文没有被重写。</p>'
+                   '<p>' + long_text + THIRD + '，后文不应该被标记。</p>'
                    '</body></html>')
 
 
@@ -98,23 +101,51 @@ def main():
                 baseline = page.evaluate('jfDeskPages.length')
                 choose(page, FIRST)
                 visual = page.evaluate("""()=>{
-                  const patches=document.querySelectorAll('#jfEpubSelectionOverlay span');
                   const menu=document.getElementById('jfEpubSelectionMenu');
-                  return {patches:patches.length,visible:!menu.hidden,
-                    ref:JFEpubSelection.reference()?.ref};
+                  const ref=JFEpubSelection.reference()?.ref;
+                  const source=jfDeskFlow.find(x=>x.n===ref?.chapter)?.el.textContent;
+                  const sel=getSelection(),r=sel.getRangeAt(0);
+                  return {overlay:!!document.querySelector('#jfEpubSelectionOverlay'),
+                    visible:!menu.hidden,ref,selected:sel.toString(),
+                    sourceText:source?.slice(ref?.anchorStart,
+                      ref?.anchorStart+ref?.text.length),
+                    color:getComputedStyle(r.startContainer.parentElement,'::selection').color};
                 }""")
-                assert visual['patches'] >= 1 and visual['visible'], visual
+                assert not visual['overlay'] and visual['visible'], visual
                 assert visual['ref']['text'] == FIRST, visual
+                assert visual['sourceText'] == FIRST, visual
+                assert visual['selected'] == FIRST, visual
+                assert '255, 255, 255' not in visual['color'], visual
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='纸书选区测试甲乙丙丁')""")
                 marked = page.evaluate("""()=>({
                   marks:jfDeskWorkspace.marks.filter(x=>x.bookId===jfDeskBook.id).length,
                   ranges:CSS.highlights.get('jf-epub-mark-amber')?.size||0,
+                  painted:[...(CSS.highlights.get('jf-epub-mark-amber')||[])]
+                    .map(r=>r.toString()).join(''),
                   pageCount:jfDeskPages.length
                 })""")
                 assert marked['marks'] == 1 and marked['ranges'] >= 1, marked
+                assert marked['painted'] == FIRST, marked
                 assert marked['pageCount'] == baseline, marked
+                # Mouse-clicking an existing annotation must offer its actions,
+                # instead of triggering the half-sheet page-turn handler.
+                pos = page.evaluate("""()=>{
+                  const r=[...CSS.highlights.get('jf-epub-mark-amber')][0]
+                    .getClientRects()[0];
+                  return {x:r.left+r.width/2,y:r.top+r.height/2};
+                }""")
+                page.mouse.click(pos['x'], pos['y'])
+                page.wait_for_function("""()=>!document.getElementById(
+                  'jfEpubSelectionMenu').hidden &&
+                  document.querySelector('#jfEpubSelectionMenu '
+                    +'[data-action=mark]').textContent==='取消标记'""")
+                assert page.evaluate("getSelection().toString()") == FIRST
+                page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+                page.wait_for_function("""()=>!jfDeskWorkspace.marks.some(m=>
+                  m.text==='纸书选区测试甲乙丙丁')""")
+                assert page.evaluate('jfDeskPages.length') == baseline
                 choose(page, SECOND)
                 page.locator('#jfEpubSelectionMenu [data-action="note"]').click()
                 page.locator('#jfPdfQuoteChooser').wait_for(state='visible')
@@ -127,10 +158,39 @@ def main():
                 assert page.evaluate('jfDeskPages.length') == baseline
                 assert page.evaluate("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='加入笔记测试子丑寅卯')""")
+                # The precise-source check must hold inside a split paragraph,
+                # not only for a short untouched single-paragraph block.
+                target = page.evaluate("""()=>{
+                  const i=jfDeskPages.findIndex(p=>p.some(x=>
+                    x.node.textContent.includes('分页后精确标记辛壬癸甲乙丙丁')));
+                  const step=jfDeskPagedGeometry().two?2:1;
+                  if(i<0)return {i,found:false};
+                  jfDeskPageIndex=Math.floor(i/step)*step;
+                  jfDeskPagedRender();
+                  return {i,found:true,page:jfDeskPageIndex};
+                }""")
+                assert target['found'] and target['i'] >= 2, target
+                choose(page, THIRD)
+                ref = page.evaluate("""()=>JFEpubSelection.reference()?.ref""")
+                assert ref['text'] == THIRD, ref
+                source_fragment = page.evaluate("""(r)=>{
+                  const src=jfDeskFlow.find(s=>s.n===r.chapter).el.textContent;
+                  return src.slice(r.anchorStart,r.anchorStart+r.text.length);
+                }""", ref)
+                assert source_fragment == THIRD, (ref, source_fragment)
+                page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+                page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+                  m.text==='分页后精确标记辛壬癸甲乙丙丁')""")
+                split_paint = page.evaluate("""()=>{
+                  return [...(CSS.highlights.get('jf-epub-mark-amber')||[])]
+                    .map(r=>r.toString()).join('');
+                }""")
+                assert split_paint == THIRD, split_paint
+                assert page.evaluate('jfDeskPages.length') == baseline
                 assert not errors, errors
-                print('PASS v7.129 Chromium EPUB: soft selection patches, '
-                      'source-anchored durable mark, note chooser and '
-                      'atomic note+mark save; unchanged pagination', flush=True)
+                print('PASS v7.129.1 Chromium EPUB: legible native selection, exact '
+                      'source text, saved mark click/removal, split-page '
+                      'precision and existing note workflow', flush=True)
                 browser.close()
         finally:
             if proc is not None:

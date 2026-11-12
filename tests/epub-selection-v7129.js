@@ -21,8 +21,21 @@ assert(source.includes("jfDeskMutate(saved?{action:'delete-mark'") &&
 assert(source.includes('jfDeskChooseQuote(ref)'),'quote uses existing note chooser');
 assert(source.includes('jfDeskPages[jfDeskPageIndex'),'paper anchor reads real page offset');
 assert(source.includes('new Highlight(...ranges)'),'stored marks do not mutate page DOM');
-assert(source.includes('range.getClientRects()'),'soft selection overlay follows actual glyph bounds');
-assert(css.includes('.jfReader .jfEpubSelectionPatch') &&
-  css.includes('::highlight(jf-epub-mark-amber)'),'aged paper mark appearance');
+assert(source.includes('range.getClientRects()'),'native selection toolbar follows actual glyph bounds');
+assert(!source.includes("overlay.replaceChildren")&&
+  !source.includes("className='jfEpubSelectionPatch'"),
+  'never blend duplicate selection patches over native text');
+assert(source.includes("source.slice(mark.anchorStart,mark.anchorStart+text.length)===text") &&
+  source.includes("if(text!==source.slice(a,b))continue"),
+  'saved highlight segments verify the exact source text');
+assert(source.includes("const offset=blockOffset(block)") &&
+  source.includes("const anchorStart=anchored("),
+  'printed page anchor is verified before saving and reading');
+assert(source.includes("event.preventDefault();event.stopImmediatePropagation();"),
+  'tapping saved ink shows actions rather than turning the page');
+assert(css.includes('::highlight(jf-epub-mark-amber)') &&
+  css.includes('#jfPageView .jfSheetBody *::selection') &&
+  css.includes('-webkit-text-fill-color:#28251d'),
+  'native paper selection keeps original glyphs dark and readable');
 assert(!source.includes('innerHTML'),'selection module must not rewrite source HTML');
-console.log('PASS v7.129 EPUB selection: page anchors, gentle ink, existing mark/quote durability, no pagination DOM rewrite');
+console.log('PASS v7.129.1 EPUB selection: native readable ink, verified anchors, precise durable highlights, clickable saved marks');
