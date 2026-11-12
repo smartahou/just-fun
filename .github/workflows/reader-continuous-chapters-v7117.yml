@@ -21,6 +21,7 @@ jobs:
       - name: Continuous chapter semantics and reading regressions
         run: |
           node --check src/client/scripts/99-reading.js
+          node tests/lan-ipad-v7128.js
           node --check src/client/scripts/98d-page-engine.js
           node tests/reader-continuous-chapters-v7117.js
           node tests/reader-semantic-pagination-v7118.js
@@ -68,6 +69,8 @@ jobs:
           test -n "$CHROME"
           sudo ln -sf "$CHROME" /usr/bin/chromium
           /usr/bin/chromium --version
+      - name: LAN iPad mini - real HTTP access on private IPv4
+        run: python tests/lan-ipad-v7128.py
       - name: Large EPUB - disk-backed archive, chapters, cover and inline assets
         run: python tests/epub-large-file-v7125.py
       - name: Real Chromium - image-only manga leaves, original pixels and quick turns

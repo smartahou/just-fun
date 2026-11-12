@@ -109,7 +109,10 @@ async function jfAsrSaveTranscript(key,rows,revision,confirm){
 function jfAsrCheckOrigin(req){
   const origin=req.headers.origin;if(!origin)return;
   let parsed;try{parsed=new URL(origin);}catch{throw Error('请求来源无效');}
-  if(parsed.protocol!=='http:'||parsed.hostname!=='127.0.0.1'||parsed.host!==req.headers.host)throw Error('禁止跨站请求');
+  const trusted=parsed.hostname==='127.0.0.1'||
+    (JF_LAN_ENABLED&&JF_LAN_INTERFACES.some(iface=>iface.address===parsed.hostname));
+  if(parsed.protocol!=='http:'||!trusted||parsed.host!==req.headers.host)
+    throw Error('禁止跨站请求');
 }
 async function jfAsrJsonFetch(url,options={},max=2000000){
   const timer=AbortSignal.timeout(60000);

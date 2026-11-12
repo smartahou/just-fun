@@ -9,6 +9,13 @@ function startServer() {
         res
       ) => {
         try {
+          // A private-subnet client may use only this machine's actual LAN
+          // address and active port. Also blocks DNS rebinding/Host spoofing.
+          if(!jfLanRequestAllowed(req,server.address()?.port||PORT)){
+            res.writeHead(403,{'Content-Type':'text/plain; charset=utf-8'});
+            res.end('局域网来源或 Host 不受信任');
+            return;
+          }
           const url =
             new URL(
               req.url,
@@ -1386,7 +1393,7 @@ function startServer() {
       }
     );
 
-  // Retry strictly on EADDRINUSE; never expose the server outside loopback.
+  // Retry strictly on EADDRINUSE. --lan uses only verified local subnets.
   // After 20 consecutive conflicts let the OS allocate a free ephemeral port.
   let nextPort=PORT;
   let conflicts=0;
@@ -1407,6 +1414,12 @@ function startServer() {
     const actualPort=address && address.port;
     const url=`http://127.0.0.1:${actualPort}/`;
     console.log(`Just Fun 已启动：${url}`);
+    if(JF_LAN_ENABLED){
+      for(const item of JF_LAN_INTERFACES)
+        console.log(`iPad / 局域网访问：http://${item.address}:${actualPort}/ （${item.name}）`);
+      console.warn('局域网模式：仅在可信私有网络使用。其他同网段设备也能访问你的媒体与管理接口；请勿设置公网映射。');
+      console.log('若 iPad 无法连接，请检查 Windows 防火墙：只允许专用网络上的 Node.js 端口 '+actualPort+'。');
+    }
     openUrl(url);
   });
 }

@@ -4122,3 +4122,28 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader .jfReaderTools #jfReadComicEnhance[aria-pressed=true]{
   color:var(--jf-accent,inherit);
 }
+
+/* v7.128 · iPad mini portrait: one genuine book page, no forced zoom. */
+@media (min-width:621px) and (max-width:850px) and (orientation:portrait){
+  .jfReaderHeader{
+    height:54px;gap:7px;
+    padding:0 max(8px,env(safe-area-inset-left))
+      0 max(8px,env(safe-area-inset-right));
+  }
+  .jfReaderIdentity{flex:1 1 100px;min-width:65px}
+  .jfReaderIdentity span{display:none}
+  .jfReaderIdentity strong{font-size:12px}
+  .jfReaderTools{
+    flex:0 1 auto;min-width:0;max-width:calc(100% - 110px);
+    overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  .jfReaderTools::-webkit-scrollbar{display:none}
+  .jfReadIcon{width:35px;height:35px;font-size:14px}
+  .jfReadFooter{height:54px;padding:0 12px;gap:5px}
+  .jfReadFooter button{padding:10px}
+  .jfReadFooter select{max-width:48vw}
+  .jfReader.paged #jfPageView .jfSheet.jf-comic-leaf .jfSheetBody{
+    padding:8px 10px!important;
+  }
+}

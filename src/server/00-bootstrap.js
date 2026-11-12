@@ -154,9 +154,57 @@ if(!Number.isInteger(PORT) || PORT<1 || PORT>65535){
   console.error('端口号必须是 1 到 65535 的整数');
   process.exit(2);
 }
-// 安全策略：服务只监听本机回环地址，禁止局域网设备访问。
-// 即使传入 --host 参数也不会改变监听地址。
-const HOST = '127.0.0.1';
+// LAN access is explicit opt-in. The default listener stays loopback-only.
+// Do not treat --host=0.0.0.0 as authorization to expose a private library.
+function jfLanIPv4Parts(value){
+  const parts=String(value||'').split('.');
+  if(parts.length!==4||parts.some(v=>!/^\d{1,3}$/.test(v)||Number(v)>255))return null;
+  return parts.map(Number);
+}
+function jfLanPrivateIPv4(value){
+  const p=jfLanIPv4Parts(value);
+  return !!p&&(p[0]===10||(p[0]===172&&p[1]>=16&&p[1]<=31)||
+    (p[0]===192&&p[1]===168)||(p[0]===169&&p[1]===254));
+}
+function jfLanNetworkList(){
+  const networks=[];
+  for(const [name,items] of Object.entries(os.networkInterfaces())){
+    for(const item of items||[]){
+      if(item.family!=='IPv4'||item.internal||!jfLanPrivateIPv4(item.address))continue;
+      if(!jfLanIPv4Parts(item.netmask))continue;
+      if(networks.some(v=>v.address===item.address))continue;
+      networks.push({name,address:item.address,netmask:item.netmask});
+    }
+  }
+  networks.sort((a,b)=>{
+    const rank=v=>v.address.startsWith('192.168.')?0:v.address.startsWith('10.')?1:2;
+    return rank(a)-rank(b)||a.name.localeCompare(b.name);
+  });
+  return networks;
+}
+function jfLanSameSubnet(address,iface){
+  const client=jfLanIPv4Parts(String(address||'').replace(/^::ffff:/,''));
+  const server=jfLanIPv4Parts(iface.address);
+  const mask=jfLanIPv4Parts(iface.netmask);
+  return !!client&&!!server&&!!mask&&client.every((byte,i)=>
+    (byte&mask[i])===(server[i]&mask[i]));
+}
+const JF_LAN_ENABLED=args.includes('--lan');
+const JF_LAN_INTERFACES=JF_LAN_ENABLED?jfLanNetworkList():[];
+if(JF_LAN_ENABLED&&!JF_LAN_INTERFACES.length){
+  console.error('未找到可用的私有 IPv4 局域网地址；请连接 Wi-Fi 或局域网后重试。');
+  process.exit(2);
+}
+const HOST=JF_LAN_ENABLED?'0.0.0.0':'127.0.0.1';
+function jfLanRequestAllowed(req,port){
+  if(!JF_LAN_ENABLED)return true;
+  const remote=String(req.socket?.remoteAddress||'').replace(/^::ffff:/,'');
+  const host=String(req.headers?.host||'');
+  if(remote==='127.0.0.1'&&host==='127.0.0.1:'+port)return true;
+  if(!jfLanPrivateIPv4(remote))return false;
+  const iface=JF_LAN_INTERFACES.find(item=>host===item.address+':'+port);
+  return !!iface&&jfLanSameSubnet(remote,iface);
+}
 
 // A visible, native cooked terminal line enables Windows Chinese IME, selection,
 // paste and backspace.  Password entry still uses its separate hidden reader.
@@ -208,7 +256,7 @@ function readLibraryDirectory(question='请输入媒体目录（可见、支持�
 const LEGACY_BACKUP_LIST = BACKUPS_MODE;
 const REQUEST_HASH = args.includes('--hash');
 const REQUEST_PWD = args.includes('--pwd');
-const allowed = new Set(['--hash','--pwd','--no-screenshot','--refresh','--backups','--restore','--doctor']);
+const allowed = new Set(['--hash','--pwd','--lan','--no-screenshot','--refresh','--backups','--restore','--doctor']);
 for(let i=0;i<args.length;i++) {
   const a=args[i];
   if(a==='--port' || a==='--host'){i++;continue;}

@@ -7,7 +7,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const comic=fs.readFileSync(path.join(root,'src/client/scripts/98d1-comic-pages.js'),'utf8');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
-assert.equal(require('../package.json').version,'7.127.0');
+assert(Number(require('../package.json').version.split('.')[1])>=127,'v7.127 comic rendering baseline is retained');
 class Element {
   constructor(tag='DIV',text='',natural=0){
     this.tagName=tag.toUpperCase();

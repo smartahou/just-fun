@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.127.0 / Current version: v7.127.0** · 持续迭代 / Actively evolving
+**当前版本：v7.128.0 / Current version: v7.128.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.128 · iPad mini 竖屏局域网访问**：默认仍仅监听 127.0.0.1。主动使用 `--lan` 或 Windows「局域网启动.cmd」时，允许同一私有 IPv4 网段的设备通过电脑实际局域网 IP 和端口访问（默认 3865）；启动日志显示可用地址，拒绝其他网段和伪造 Host，阅读 API 的同源校验兼容局域网地址。iPad mini 竖屏保留单页模式并收紧阅读器工具栏，不改变旧书素材和分页引擎。**安全提醒：局域网模式不是账户隔离或公网服务，同网段设备可能访问媒体及管理接口；只在可信 Wi-Fi 使用，不要映射公网端口。**
 
 **v7.127 · 漫画旧纸印刷还原**：恢复漫画扫描图在原版旧纸上的自然墨迹融入效果，不再出现高亮白色矩形贴图；扩大图片版心，仅对实际近纯白边缘进行小尺寸采样与均匀缩放，保留长宽比、内容与页序，禁止重编码和超出纸页的拉伸。扫描图不回退到耗时的 Canvas 去底；已有漫画独立分页与邻页预解码保持原状。
 
@@ -175,6 +177,15 @@ Just Fun is a **local-first personal workspace** for video, audio, pictures, boo
 **Fullscreen playhead continuity:** Exiting native fullscreen retains the actual current video time and updates the Feed seek slider and time label, including when switching Feed items while fullscreen. **Human-led, AI-assisted development:** The owner determines product requirements, tests actual Windows behavior, and accepts changes. **AI disclosure:** Work up to and including v7.31 (2026-11-03) was produced with **OpenAI ChatGPT · GPT-6**; the "reasoning model" wording comes from that session's own description, and no exact thinking-effort level is recorded or inferable. From **v7.32 (2026-11-04)** onward, daily iteration is handled by **DeepSeek Harness**, a local coding agent whose model identifier is **`deepseek-flash`**; its reasoning-effort setting is likewise unverified. Neither statement covers work the other did not perform. The v7.32 commits `946c7b2`, `5b6b8f7`, `eff5f84` and `33016ee` are the auditable record. GitHub — not a chat transcript — is the canonical source history. Linux/Chromium synthetic tests supplement, but never replace, real device acceptance.
 
 **Uniform Hash policy:** Hash mode is one library-wide setting, independent of folder depth or other documents. All media in the root and nested folders use 32-character anonymous physical filenames; previously indexed original-name media are safely adopted with a write-ahead journal, preserving IDs and metadata. Nonmedia files and physical directory names are left untouched. Existing original-name media files may be renamed once on upgrade, so back up the library first. **Folder API contract:** The server explicitly returns `state: ready`, while the move picker also accepts older server responses without this field; nested folders are not silently filtered out. **Move targets:** Existing regular subfolders remain selectable even if empty, document-only, or vacated by a previous media move. Hidden caches, dependency folders and symlinks are excluded. **File operations:** Media in the library root, nested folders and data/ share the same operations. Explicit moves may target existing nested folders or managed data folders, with file-identity validation, no overwrite, rollback and per-file error reporting. H.264 compatibility encoding offers a real FFmpeg cancel action (medium preset, CRF 18), leaving source media unchanged. **Audio quality:** Video batch extraction preserves supported original audio packets via `-c:a copy`; other codecs are decoded and saved as FLAC without additional lossy compression. Original video files remain untouched. **Windows:** Clone the repository; run 更新.cmd (Update) once, then 启动.cmd (Start). 回退.cmd (Rollback) switches to a previous verified runtime without undoing user data. Git, compatible Node.js, FFmpeg/FFprobe and pinned PDF.js build assets are needed.
+
+
+### iPad mini / 局域网阅读
+
+1. Windows 首次使用先运行 `更新.cmd`，之后双击 `局域网启动.cmd`（或命令 `node dist/douyin.js --lan --port=3865`）。启动后按原流程输入媒体目录。
+2. 电脑与 iPad mini 连接同一可信 Wi-Fi 或私有局域网，在 iPad 的 Safari 输入**启动窗口打印的完整地址**，如 `http://192.168.1.23:3865/`。端口被占用时应用会自动选择其他端口，以实际打印的为准。
+3. 若无法连接，检查电脑的 IP 是否变化、Wi-Fi 是否开启客户端隔离，以及 Windows 防火墙是否允许该端口从**专用网络**入站。不要在公用网络上开放，也不要配置路由器公网端口转发。
+
+普通 `启动.cmd` 仍只开放电脑本机 `127.0.0.1`，与过去完全一致。打开局域网访问会让同一私有网段的其他设备访问 Just Fun，不适合不可信网络。
 
 **Privacy:** Do not submit personal media, credentials, notes, cache databases, or real user paths. Optional AI features can send data to the third-party services you choose. This is not an Internet-hardened multi-user server.
 

@@ -112,6 +112,24 @@ def main():
                   return sheet&&sheet.closest('.jfSheet')?.classList.contains('jf-comic-leaf')&&
                     sheet.querySelector('img[data-jf-comic-image]');
                 }""")
+                # iPad mini portrait is a single real paper page, not a
+                # squeezed desktop double-spread with hidden navigation.
+                page.set_viewport_size({'width': 744, 'height': 1133})
+                page.wait_for_function("()=>!jfDeskPagedGeometry().two")
+                ipad = page.evaluate("""()=>{
+                  const head=document.querySelector('.jfReaderHeader');
+                  const tools=document.querySelector('.jfReaderTools');
+                  const rect=head?.getBoundingClientRect();
+                  return {
+                    single:!jfDeskPagedGeometry().two,
+                    headerHeight:rect?.height||0,
+                    headerWidth:rect?.width||0,
+                    toolbarWidth:tools?.getBoundingClientRect().width||0,
+                    bodyWidth:document.documentElement.clientWidth
+                  };
+                }""")
+                assert ipad['single'] and 45 <= ipad['headerHeight'] <= 60, ipad
+                assert ipad['headerWidth'] <= 744 and ipad['toolbarWidth'] > 60, ipad
                 assert not errors, errors
                 print('PASS v7.126 real Chrome manga: ' +
                       json.dumps(report, ensure_ascii=False), flush=True)
