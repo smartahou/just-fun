@@ -47,7 +47,7 @@ def epub(dest):
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='jf-comics-v7126-') as temp:
+    with tempfile.TemporaryDirectory(prefix='jf-architecture-test-comics-v7126-') as temp:
         work = pathlib.Path(temp)
         library = work / 'library'
         library.mkdir()
@@ -68,7 +68,7 @@ def main():
                 page.goto(origin, wait_until='domcontentloaded')
                 page.wait_for_function("typeof jfDeskOpenReader === 'function'")
                 page.evaluate('(bookId)=>jfDeskOpenReader(bookId,0)', book['id'])
-                page.wait_for_function("()=>jfDeskFlow.length>0")
+                page.wait_for_function("()=>jfDeskFlow.length>0 && !jfDeskRestoring")
                 page.locator('#jfReadPaged').click()
                 page.wait_for_function("()=>jfDeskPaged&&jfDeskPages.length>0")
                 page.evaluate("""async()=>{

@@ -53,7 +53,7 @@ def create_large_epub(dest):
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='justfun-large-epub-v7125-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='jf-architecture-test-large-epub-v7125-') as tmp:
         root = pathlib.Path(tmp)
         library = root / 'books'
         library.mkdir()
