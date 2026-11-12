@@ -80,7 +80,10 @@ assert(!classes.has('jf-image-stacks'),'old photo stacking disabled when aged-pa
 aged=true;assert.equal(stacks.apply(view,.5,700,false),null);
 assert(!classes.has('jf-image-stacks'),'single-leaf mode gets no two-sided stacks');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-const section=css.slice(css.indexOf('/* v7.88 · User-authored 11-pair'));
+const v788=css.indexOf('/* v7.88 · User-authored 11-pair');
+const v790=css.indexOf('/* v7.90 · Photographic fore-edge',v788);
+assert(v788>=0&&v790>v788,'v7.88 image-stack rules remain separately scoped');
+const section=css.slice(v788,v790);
 assert(section.startsWith('/* v7.88'),'image-specific CSS exists');
 assert(section.includes('background:var(--jf-stack-art) center center / 100% 100% no-repeat!important'));
 assert(section.includes('clip-path:none!important')&&section.includes('box-shadow:none!important'),
