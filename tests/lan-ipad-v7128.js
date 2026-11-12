@@ -67,8 +67,13 @@ assert(normalLauncher.includes('Choose 1 or 2')&&
   normalLauncher.includes('start --lan')&&normalLauncher.includes('start %*')&&
   normalLauncher.includes('goto lan')&&normalLauncher.includes('goto finish'),
   'ASCII Windows launcher offers explicit iPad LAN opt-in without parsed blocks');
+const gitAttributes=fs.readFileSync(path.join(root,'.gitattributes'),'utf8');
+assert(/^\*\.cmd -text$/m.test(gitAttributes),
+  'batch files must be byte-exact: CRLF stored in Git cannot be re-normalized');
 for(const cmdFile of ['启动.cmd','局域网启动.cmd']){
   const cmd=fs.readFileSync(path.join(root,cmdFile),'utf8');
+  assert(cmd.includes('\r\n')&&!cmd.replace(/\r\n/g,'').includes('\n'),
+    'Windows launcher must contain committed CRLF without bare LF');
   assert(!/[\u0080-\uffff]/.test(cmd),'launcher must contain ASCII-only command text');
 }
 assert(router.includes('iPad mini Safari 访问以下局域网地址')&&

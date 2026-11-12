@@ -1,10 +1,12 @@
 # Reproducible Git checkouts for all application/build/test sources.
-# Build also normalizes legacy Windows worktrees that were already checked out with CRLF.
+# Windows launchers are committed with their exact CRLF bytes.
+# Do NOT apply text/eol conversion to .cmd: existing Git blobs already have
+# CRLF; rewriting them via a clean filter makes checkout look permanently dirty.
 *.js text eol=lf
 *.html text eol=lf
 *.css text eol=lf
 *.json text eol=lf
 *.py text eol=lf
 *.md text eol=lf
-*.cmd text eol=crlf
+*.cmd -text
 *.ico binary
