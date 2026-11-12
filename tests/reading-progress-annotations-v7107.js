@@ -13,7 +13,9 @@ const part=(from,to)=>{
 };
 // v7.111 supersedes the old max-percent overlay. Percent is now a pure
 // function of source anchor, not of known page counts or a prior display.
-const source=part("const jfDeskFolioCacheRevision='v"+require('../package.json').version+"';",'// Background census:');
+const revisionLine=js.match(/const jfDeskFolioCacheRevision='v7\.\d+\.\d+';/)?.[0];
+assert(revisionLine,'folio cache revision must be explicitly declared');
+const source=part(revisionLine,'// Background census:');
 const progressContext={
   jfDeskBook:{id:'test-book'},jfDeskPagesSig:'sig-test',
   jfDeskOutline:{chapters:Array.from({length:15})},

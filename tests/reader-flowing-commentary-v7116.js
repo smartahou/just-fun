@@ -32,7 +32,7 @@ assert(css.includes('> .jfPrintCommentaryNote')&&
        css.includes('.jfPrintCommentaryText'),'render and measurement use semantic flow styles');
 assert(css.includes('margin:0 .8em 0 0!important'),'one typographic gap, not fixed column');
 assert(css.includes('text-indent:-1.25em!important'),'hanging continuation indent');
-assert(read.includes("const jfDeskFolioCacheRevision='v"+require('../package.json').version+"'"),
+assert(/const jfDeskFolioCacheRevision='v7\.\d+\.\d+';/.test(read),
   'page-count caches are invalidated');
 assert(read.includes("table.classList.add('jfPrintSourceCommentary')"),
   'only verified citations are transformed');

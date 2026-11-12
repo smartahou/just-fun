@@ -40,7 +40,7 @@ assert.equal(model.progress(4,450),mid,'partial census cannot change percent');
 const saved=db.get(model.cacheKey());
 assert(saved,'verified page counts persisted');
 const savedData=JSON.parse(saved);
-assert.equal(savedData.version,'v'+pkg.version);
+assert.equal(savedData.version,model.rev,'stored folio cache revision is independent of visual release');
 assert.equal(savedData.layout,'book-1|font-400|1360x840');
 assert.equal(savedData.chapters,8);
 counts.clear();

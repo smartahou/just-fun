@@ -8,5 +8,5 @@ for(const line of ["function commentaryNoteFragments(item)","var notes=commentar
   assert(engine.includes(line),'source and text conservation: '+line);
 }
 assert(!engine.includes('commentarySetTracks('),'old fixed-column layout has been retired');
-assert(reader.includes("const jfDeskFolioCacheRevision='v"+require('../package.json').version+"'"));
+assert(/const jfDeskFolioCacheRevision='v7\.\d+\.\d+';/.test(reader));
 console.log('PASS old v7.113/v7.115 core citation invariants under v7.116 flowing prose');
