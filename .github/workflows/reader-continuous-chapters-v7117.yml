@@ -31,6 +31,7 @@ jobs:
           node tests/reader-prepared-faces-v7122.js
           node tests/reader-paginator-measure-v7123.js
           node tests/reader-comic-pages-v7126.js
+          node tests/epub-selection-v7129.js
           node tests/reader-flowing-commentary-v7116.js
           node tests/reader-single-commentary-v7114.js
           node tests/reader-commentary-grid-v7113.js
@@ -75,6 +76,8 @@ jobs:
         run: python tests/epub-large-file-v7125.py
       - name: Real Chromium - image-only manga leaves, original pixels and quick turns
         run: python tests/reader-comic-pages-v7126.py
+      - name: EPUB selection - real Chromium mark and note acceptance
+        run: python tests/epub-selection-v7129.py
       - name: Real Chromium - no blank leaves, no skipped poetry, bounded window
         run: python tests/reader-page-performance-v7119.py
       - name: Real Chromium - middle-book reverse and full roundtrip

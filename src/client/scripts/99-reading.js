@@ -272,7 +272,7 @@ function jfDeskMutate(payload){
     if(jfDeskSaveFailed)throw Error('笔记数据尚未安全载入；拒绝继续写入');
     try{
       const updated=await jfDeskApi('workspace','POST',{...payload,revision:jfDeskWorkspace.revision});
-      jfDeskWorkspace=updated;return updated;
+      jfDeskWorkspace=updated;window.JFEpubSelection?.refresh?.();return updated;
     }catch(error){
       const message=String(error&&error.message||'');
       const stale=/重新载入|已被其他页面修改|conflict|409/i.test(message);
@@ -423,6 +423,7 @@ document.getElementById('jfPdfZoomOut').addEventListener('click',()=>jfDeskPdfSc
 document.getElementById('jfPdfZoomIn').addEventListener('click',()=>jfDeskPdfScale(jfDeskPdfZoom+.15));
 document.getElementById('jfPdfFit').addEventListener('click',()=>jfDeskPdfScale(1));
 async function jfDeskOpenReader(bookId,chapter){
+  window.JFEpubSelection?.reset?.();
   jfDeskPdfClear();jfDeskPdfInfo=null;jfDeskPdfZoom=1;
   jfReadRawText='';jfReadRawToDisplay=null;jfReadVisualText='';jfReadHtml='';
   document.getElementById('jfReadExcerpt').disabled=false;
@@ -1039,6 +1040,7 @@ async function jfDeskCloseReader(){
     catch(e){jfDeskMessage('阅读位置未保存：'+e.message,true);return false;}
   }
   jfDeskRestoring=false;jfReadCenter.classList.remove('jf-reading-opening');
+  window.JFEpubSelection?.reset?.();
   window.JFEpubPaperToc?.close();
   jfDeskSyncImmersive(false);
   document.getElementById('jfReadTypographyPanel').hidden=true;
@@ -1416,7 +1418,7 @@ async function jfDeskQuoteCommit(){
     if(quotes.length>40)throw Error('目标笔记摘录已达上限');
     let mark=null;
     if(quote.type==='image'&&Array.isArray(quote.area)&&!quote.pages?.length)mark={bookId:quote.bookId,chapter:quote.chapter,type:'area',area:quote.area,...(quote.segments?{segments:quote.segments}:{})};
-    else if(quote.text&&Number.isSafeInteger(quote.anchorStart))mark={type:'text',text:quote.text.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(quote.text.length,5000)};
+    else if(quote.text&&Number.isSafeInteger(quote.anchorStart))mark={type:'text',text:quote.text.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(quote.text.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:'amber'})};
     // Persist the new note, destination, and source highlight in one encrypted transaction.
     await jfDeskMutate({action:'note',note:{...note,quotes,blocks},...(mark?{alsoMark:mark}:{})});
     jfDeskQuoteLast=note.id;jfDeskQuoteDismiss();
@@ -1517,6 +1519,7 @@ function jfDeskScheduleEditor(){jfDeskEditorVersion++;jfDeskDirty=true;jfDeskMes
 async function jfDeskExcerpt(){
   if(!jfDeskBook){jfDeskMessage('请先打开一本书',true);return;}
   if(jfDeskOutline?.nativePdf)return jfPdfJsQuoteSelection();
+  if(window.JFEpubSelection?.quote?.())return;
   const sel=getSelection(),text=sel?.toString().trim()||'';
   if(!text||!jfReadText.contains(sel.anchorNode)||!jfReadText.contains(sel.focusNode)){
     jfDeskMessage('请先选中正文，再点击摘录',true);return;
@@ -3332,6 +3335,7 @@ function jfDeskPagedRender(direction){
     clearTimeout(jfDeskTurnTimer);
   }
   jfDeskUpdateProgress();
+  window.JFEpubSelection?.pageRendered?.();
   jfDeskFaceMetrics.turns++;
   jfDeskFaceMetrics.renderMs.push(performance.now()-renderStart);
   if(jfDeskFaceMetrics.renderMs.length>100)jfDeskFaceMetrics.renderMs.shift();

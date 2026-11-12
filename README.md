@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.128.2 / Current version: v7.128.2** · 持续迭代 / Actively evolving
+**当前版本：v7.129.0 / Current version: v7.129.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.129 · 旧书选区与摘录工具条**：EPUB/TXT 原文选中不再出现刺眼蓝色高亮和白字，采用旧纸上的柔和青灰半透明选区及克制的浮动操作条（取消／标记／加入笔记）。纸书双页和连续模式统一定位原文章节锚点，标记沿用已有加密工作区，收藏后的标记通过 CSS Highlight 绘制，不向书页插入节点、不改变分页计数；再次选中同一段可取消标记。加入笔记复用现有摘录目标选择与原文关联。保留 iPad Safari 原生可拖动选区端点，不叠加假手柄。
 
 **v7.128.2 · Windows CMD 启动兼容性**：修复普通启动菜单的 Windows 批处理解析异常。两个 CMD 启动脚本的控制台命令改为简短 ASCII，规避不同 Windows 终端编码下的意外命令拆分，保留本机 / iPad 局域网二选一，以及实际 IP 和端口输出。
 

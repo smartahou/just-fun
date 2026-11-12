@@ -66,7 +66,8 @@
     "src/client/scripts/98f-epub-paper-tabs.js",
     "src/client/scripts/99-reading.js",
     "src/client/scripts/99c-note-editor.js",
-    "src/client/scripts/99a-pdfjs.js"
+    "src/client/scripts/99a-pdfjs.js",
+    "src/client/scripts/99d-epub-selection.js"
   ],
   "assets": [
     "assets/favicon.ico"
