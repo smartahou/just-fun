@@ -354,8 +354,11 @@ def main():
                 stored = page.evaluate("""(text)=>{
                   const mark=jfDeskWorkspace.marks.find(m=>m.text===text);
                   const ranges=[...(CSS.highlights.get('jf-epub-mark-amber')||[])];
-                  return {mark,ink:ranges.map(r=>r.toString()).join(''),
-                    leaves:[...new Set(ranges.map(r=>r.startContainer.parentElement
+                  // Earlier quote/note acceptance steps legitimately created
+                  // other amber marks. New mark ranges are the final two.
+                  const own=ranges.slice(-2);
+                  return {mark,ink:own.map(r=>r.toString()).join(''),
+                    leaves:[...new Set(own.map(r=>r.startContainer.parentElement
                       .closest('.jfSheetBody')?.id))]};
                 }""", selectedAcross)
                 assert stored['mark']['anchorStart']==facing['ref']['anchorStart'], stored
@@ -363,7 +366,7 @@ def main():
                 assert set(stored['leaves'])=={'jfSheetLeft','jfSheetRight'}, stored
                 point = page.evaluate("""()=>{
                   const r=[...CSS.highlights.get('jf-epub-mark-amber')]
-                    .find(x=>x.startContainer.parentElement
+                    .slice(-2).find(x=>x.startContainer.parentElement
                       .closest('.jfSheetBody')?.id==='jfSheetRight')
                     .getClientRects()[0];
                   return {x:r.left+r.width/2,y:r.top+r.height/2};
