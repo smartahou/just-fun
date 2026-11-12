@@ -88,6 +88,95 @@ def choose_across_paragraphs(page):
     return outcome
 
 
+def choose_across_visible_pages(page):
+    """Exercise real DOM Range from left printed leaf into its facing right leaf."""
+    result = page.evaluate("""()=>{
+      if(!jfDeskPagedGeometry().two)return {ok:false,reason:'single page'};
+      const pages=jfDeskPages;
+      let idx=-1;
+      for(let i=0;i+1<pages.length;i+=2){
+        const a=pages[i],b=pages[i+1];
+        if(a.length&&b.length&&a[a.length-1].chapter===b[0].chapter&&
+          a.some(x=>(x.node?.textContent||'').trim().length>14)&&
+          b.some(x=>(x.node?.textContent||'').trim().length>14)){
+          idx=i;break;
+        }
+      }
+      if(idx<0)return {ok:false,reason:'no adjacent same-chapter leaves'};
+      jfDeskPageIndex=idx;jfDeskPagedRender();
+      const left=[...document.querySelectorAll('#jfSheetLeft p')]
+        .filter(el=>el.textContent.trim().length>=9);
+      const right=[...document.querySelectorAll('#jfSheetRight p')]
+        .filter(el=>el.textContent.trim().length>=9);
+      if(!left.length||!right.length)return {
+        ok:false,reason:'missing printed paragraph',index:idx};
+      function last(el){
+        const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n,value=null;
+        while((n=w.nextNode()))if(n.nodeValue.trim().length>=9)value=n;
+        return value;
+      }
+      function first(el){
+        const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;
+        while((n=w.nextNode()))if(n.nodeValue.trim().length>=9)return n;
+        return null;
+      }
+      const start=last(left[left.length-1]),end=first(right[0]);
+      if(!start||!end)return {ok:false,reason:'text node missing'};
+      const r=document.createRange();r.setStart(start,start.nodeValue.length-9);
+      r.setEnd(end,11);
+      const s=getSelection();s.removeAllRanges();s.addRange(r);
+      document.dispatchEvent(new Event('selectionchange'));
+      return {ok:true,index:idx,raw:s.toString()};
+    }""")
+    assert result['ok'], result
+    page.wait_for_function("""()=>!document.getElementById('jfEpubSelectionMenu').hidden&&
+      (CSS.highlights.get('jf-epub-selection')?.size||0)>=2""")
+    checked = page.evaluate("""()=>{
+      const ref=JFEpubSelection.reference()?.ref;
+      const original=jfDeskFlow.find(x=>x.n===ref?.chapter)?.el.textContent;
+      const ink=[...(CSS.highlights.get('jf-epub-selection')||[])];
+      return {ref,source:original?.slice(ref.anchorStart,ref.anchorStart+ref.text.length),
+        ink:ink.map(r=>r.toString()).join(''),
+        leaves:[...new Set(ink.map(r=>r.startContainer.parentElement
+          .closest('.jfSheetBody')?.id))]};
+    }""")
+    assert checked['ref'] and checked['ref']['text']==checked['source'], checked
+    assert checked['ink']==checked['ref']['text'], checked
+    assert set(checked['leaves'])=={'jfSheetLeft','jfSheetRight'}, checked
+    return result, checked
+
+
+def assert_drag_stays_native(page):
+    """120 selection updates during a held pointer never cause annotation layout."""
+    report = page.evaluate("""()=>{
+      const m=JFEpubSelection.metrics,before={settles:m.settles,lookups:m.pointLookups};
+      const paragraph=document.querySelector('#jfSheetLeft p');
+      const t=document.createTreeWalker(paragraph,NodeFilter.SHOW_TEXT).nextNode();
+      if(!t||t.nodeValue.length<10)return {ok:false,reason:'no long text node'};
+      paragraph.dispatchEvent(new PointerEvent('pointerdown',{
+        bubbles:true,pointerType:'mouse',clientX:20,clientY:40}));
+      const sel=getSelection(),range=document.createRange();
+      for(let i=0;i<120;i++){
+        range.setStart(t,0);
+        range.setEnd(t,Math.min(t.length,1+i%Math.max(2,t.length-1)));
+        sel.removeAllRanges();sel.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+        document.dispatchEvent(new PointerEvent('pointermove',{
+          bubbles:true,pointerType:'mouse',clientX:30+i,clientY:40}));
+      }
+      const whileDragging={settles:m.settles-before.settles,
+        lookups:m.pointLookups-before.lookups,
+        active:document.getElementById('jfReader').classList.contains('jfEpubDragging')};
+      document.dispatchEvent(new PointerEvent('pointerup',{
+        bubbles:true,pointerType:'mouse',clientX:165,clientY:40}));
+      sel.removeAllRanges();
+      return {ok:true,whileDragging};
+    }""")
+    assert report['ok'] and report['whileDragging']['active'], report
+    assert report['whileDragging']['settles']==0, report
+    assert report['whileDragging']['lookups']==0, report
+
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -255,6 +344,40 @@ def main():
                 assert page.evaluate('jfDeskPages.length') == baseline
                 assert page.evaluate("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='加入笔记测试子丑寅卯')""")
+                # A real selection spanning two facing *physical* leaves
+                # must be accepted without including paper headers or spine.
+                facingSetup, facing = choose_across_visible_pages(page)
+                selectedAcross = facing['ref']['text']
+                page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+                page.wait_for_function("""(text)=>jfDeskWorkspace.marks.some(m=>
+                  m.text===text)""", arg=selectedAcross)
+                stored = page.evaluate("""(text)=>{
+                  const mark=jfDeskWorkspace.marks.find(m=>m.text===text);
+                  const ranges=[...(CSS.highlights.get('jf-epub-mark-amber')||[])];
+                  return {mark,ink:ranges.map(r=>r.toString()).join(''),
+                    leaves:[...new Set(ranges.map(r=>r.startContainer.parentElement
+                      .closest('.jfSheetBody')?.id))]};
+                }""", selectedAcross)
+                assert stored['mark']['anchorStart']==facing['ref']['anchorStart'], stored
+                assert stored['ink']==selectedAcross, stored
+                assert set(stored['leaves'])=={'jfSheetLeft','jfSheetRight'}, stored
+                point = page.evaluate("""()=>{
+                  const r=[...CSS.highlights.get('jf-epub-mark-amber')]
+                    .find(x=>x.startContainer.parentElement
+                      .closest('.jfSheetBody')?.id==='jfSheetRight')
+                    .getClientRects()[0];
+                  return {x:r.left+r.width/2,y:r.top+r.height/2};
+                }""")
+                page.mouse.click(point['x'],point['y'])
+                page.wait_for_function("""()=>!document.getElementById(
+                  'jfEpubSelectionMenu').hidden&&
+                  document.querySelector('#jfEpubSelectionMenu [data-action=mark]')
+                    .textContent==='取消标记'""")
+                page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+                page.wait_for_function("""(text)=>!jfDeskWorkspace.marks.some(m=>
+                  m.text===text)""", arg=selectedAcross)
+                assert page.evaluate('jfDeskPages.length')==baseline
+                assert_drag_stays_native(page)
                 # The precise-source check must hold inside a split paragraph,
                 # not only for a short untouched single-paragraph block.
                 target = page.evaluate("""()=>{
@@ -285,9 +408,9 @@ def main():
                 assert split_paint == THIRD, split_paint
                 assert page.evaluate('jfDeskPages.length') == baseline
                 assert not errors, errors
-                print('PASS v7.129.3 Chromium EPUB: cross-paragraph selection, source-' 
-                      'accurate segmented underlines, saved mark click/removal, '
-                      'split pagination and note workflow', flush=True)
+                print('PASS v7.129.4 Chromium EPUB: selection across facing leaves, '
+                      'saved mark on both pages, right-leaf undo, '
+                      '120 native drag events, precise source offsets', flush=True)
                 browser.close()
         finally:
             if proc is not None:

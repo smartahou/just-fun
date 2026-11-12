@@ -4148,6 +4148,16 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   }
 }
 
+/* v7.129.4 · Native drag renders a thin underline immediately without
+   any JavaScript Range work until release; the settled glyphs are then
+   decorated by a single precise CSS Highlight. */
+.jfReader.jfEpubDragging:not(.jfPdfMode) #jfReadText *::selection,
+.jfReader.jfEpubDragging.paged:not(.jfPdfMode) #jfPageView .jfSheetBody *::selection{
+  text-decoration-line:underline;
+  text-decoration-color:#60776c;
+  text-decoration-thickness:2px;
+  text-underline-offset:3px;
+}
 /* v7.129.2 · Only fine underlines, no selection or saved-mark fill.
    Individual decoration properties are compatible with iPad Safari. */
 .jfReader:not(.jfPdfMode) #jfReadText::selection,

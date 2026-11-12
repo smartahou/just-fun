@@ -3779,6 +3779,9 @@ jfReadCenter.addEventListener('scroll',()=>{if(jfReader.hidden||jfDeskRestoring)
 // was selecting text or hit an interactive element.
 jfReadCenter.addEventListener('click',event=>{
   if(!jfDeskPaged||jfReader.hidden||jfDeskOutline?.nativePdf)return;
+  // Dragging across the two printed leaves can dispatch a synthetic click
+  // after the browser collapses its Selection. Never turn the page then.
+  if(window.JFEpubSelection?.suppressTurn?.())return;
   if((window.getSelection()?.toString()||'').trim())return;
   if(event.target.closest('a,button,input,select,textarea,label,#jfEpubTocPane,#jfEpubNotePane'))return;
   const rect=jfReadCenter.getBoundingClientRect();

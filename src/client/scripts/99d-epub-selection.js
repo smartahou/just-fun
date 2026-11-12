@@ -1,5 +1,5 @@
 /*
- * v7.129.3 · Source-contiguous multi-paragraph selection.
+ * v7.129.4 · Fast native drag and exact two-leaf source selection.
  *
  * Selection endpoints are resolved to ORIGINAL chapter text positions, not
  * the browser's paragraph-separated Range.toString(). CSS Highlight ranges
@@ -25,14 +25,25 @@ reader.append(menu);
 const markKeys=['blue','mint','amber','rose','violet'];
 const markKey=color=>'jf-epub-mark-'+color;
 const transientKey='jf-epub-selection';
-let active=null,raf=0,refreshFrame=0;
+let active=null,raf=0,refreshFrame=0,settleTimer=0,dragging=false;
+let pointerStart=null,lastDragEnd=0,dragWasReal=false;
+let sourceCache=new WeakMap(),offsetCache=new WeakMap();
+const metrics={settles:0,selectionEvents:0,dragEvents:0,pointLookups:0};
+const transientClear=()=>{
+  if(globalThis.CSS?.highlights)CSS.highlights.delete(transientKey);
+};
 let painted=[]; // {mark,range}: same exact ranges as the visible highlights.
 const eligible=()=>!reader.hidden&&!!jfDeskBook&&!jfDeskOutline?.nativePdf&&!jfDeskRestoring;
 const selection=()=>window.getSelection();
 const hasSelection=()=>!!selection()&&!selection().isCollapsed&&!!selection().toString().trim();
 const sourceFor=chapter=>{
   const section=jfDeskFlow.find(s=>s.n===chapter)?.el;
-  return section?.textContent??(!jfDeskPaged&&chapter===jfDeskChapter?jfReadText.textContent:null);
+  if(!section)return !jfDeskPaged&&chapter===jfDeskChapter?jfReadText.textContent:null;
+  const cached=sourceCache.get(section);
+  if(cached!==undefined)return cached;
+  const text=section.textContent;
+  sourceCache.set(section,text);
+  return text;
 };
 function owner(node){
   const el=node?.nodeType===1?node:node?.parentElement;
@@ -59,20 +70,27 @@ function owner(node){
 // nominal item.offset may precede text transformed by editorial wrappers.
 // Verify it, then only accept a UNIQUE nearby match. Never guess.
 function blockOffset(block){
+  const cached=offsetCache.get(block.el);
+  if(cached&&cached.chapter===block.chapter&&cached.hint===block.offset)
+    return cached.value;
+  metrics.pointLookups++;
   const source=sourceFor(block.chapter),text=block.el.textContent;
-  if(typeof source!=='string'||!text)return null;
-  if(source.slice(block.offset,block.offset+text.length)===text)return block.offset;
-  if(text.length<6)return null;
+  const finish=value=>{
+    offsetCache.set(block.el,{chapter:block.chapter,hint:block.offset,value});
+    return value;
+  };
+  if(typeof source!=='string'||!text)return finish(null);
+  if(source.slice(block.offset,block.offset+text.length)===text)
+    return finish(block.offset);
+  if(text.length<6)return finish(null);
   const lo=Math.max(0,block.offset-320),hi=Math.min(source.length,
     block.offset+text.length+320);
   const region=source.slice(lo,hi),first=region.indexOf(text);
-  if(first>=0&&region.indexOf(text,first+1)<0)return lo+first;
-  // In long prettified EPUB chapters, whitespace nodes between paragraphs
-  // accumulate beyond the nominal page-engine offset. Only use an exact,
-  // chapter-wide UNIQUE match; repeated prose must never guess an anchor.
+  if(first>=0&&region.indexOf(text,first+1)<0)return finish(lo+first);
+  // A far-off match must be UNIQUE chapter-wide. Never guess a repeated
+  // sentence's source location when the paginator has split a paragraph.
   const found=source.indexOf(text);
-  if(found<0||source.indexOf(text,found+1)>=0)return null;
-  return found;
+  return finish(found>=0&&source.indexOf(text,found+1)<0?found:null);
 }
 function point(node,offset){
   const block=owner(node);if(!block)return null;
@@ -104,14 +122,27 @@ function reference(){
   const anchorEnd=anchorStart+text.length;
   if(source.slice(anchorStart,anchorEnd)!==text)return null;
   const raw=range.toString().trim();
-  // Reject accidental selection of page UI/chapter decoration. Whitespace
-  // between paragraphs is layout, not source text; compare visible characters.
+  // A DOM Range across the left/right paper leaves also traverses *reader
+  // chrome* (per-page headings, invisible stack spans, the spine). Its
+  // Range.toString() is NOT the book text. The independently verified start
+  // and end source offsets are authoritative; never reject on raw mismatch.
   const normal=s=>s.replace(/[\s\u00a0\u200b]+/g,'');
-  if(normal(raw)!==normal(text))return null;
-  const rects=Array.from(range.getClientRects()).filter(r=>r.width>1&&r.height>1);
+  const quoteText=normal(raw)===normal(text)?raw:text;
+  // Only the endpoints are needed for toolbar positioning; asking for
+  // every ClientRect on the enclosing two-page Range causes forced reflow
+  // across the entire spread and becomes visibly slow while selecting.
+  const firstRange=document.createRange(),lastRange=document.createRange();
+  firstRange.setStart(range.startContainer,range.startOffset);
+  firstRange.setEnd(range.startContainer,Math.min(
+    range.startContainer.nodeType===3?range.startContainer.nodeValue.length:
+      range.startContainer.childNodes.length,range.startOffset+1));
+  lastRange.setStart(range.endContainer,Math.max(0,range.endOffset-1));
+  lastRange.setEnd(range.endContainer,range.endOffset);
+  const rects=[firstRange.getBoundingClientRect(),lastRange.getBoundingClientRect()]
+    .filter(r=>r.width>0&&r.height>0);
   if(!rects.length)return null;
   return {range:range.cloneRange(),rects,
-    quoteText:raw, // Preserve natural paragraph breaks in the note body.
+    quoteText, // Keep authored breaks if safe; discard unrelated page chrome.
     ref:{bookId:jfDeskBook.id,chapter:start.chapter,anchorStart,text},
     session:jfDeskSession};
 }
@@ -142,6 +173,8 @@ function clearSelection(removeNative=false){
 }
 function show(){
   raf=0;
+  if(dragging)return;
+  metrics.settles++;
   if(!eligible()){active=null;menu.hidden=true;removeHighlights();return;}
   const snap=reference();
   if(!snap){
@@ -156,8 +189,9 @@ function show(){
   // adjacent <p> blocks or between two visible paper leaves.
   removeHighlights();
   if(globalThis.CSS?.highlights&&typeof Highlight!=='undefined'){
+    const blocks=visibleBlocks();
     const ranges=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
-      snap.ref.anchorStart+snap.ref.text.length,visibleBlocks());
+      snap.ref.anchorStart+snap.ref.text.length,blocks);
     if(ranges.length)
       CSS.highlights.set(transientKey,new Highlight(...ranges));
   }
@@ -178,9 +212,13 @@ function show(){
   menu.style.left=x+'px';
   menu.style.top=Math.max(headerBottom+5,y)+'px';
 }
-function schedule(){
-  if(raf)cancelAnimationFrame(raf);
-  raf=requestAnimationFrame(show);
+function schedule(delay=0){
+  if(settleTimer){clearTimeout(settleTimer);settleTimer=0;}
+  if(raf){cancelAnimationFrame(raf);raf=0;}
+  if(dragging)return;
+  if(delay>0){
+    settleTimer=setTimeout(()=>{settleTimer=0;raf=requestAnimationFrame(show);},delay);
+  }else raf=requestAnimationFrame(show);
 }
 function findRange(element,start,end){
   if(start<0||end<=start)return null;
@@ -299,11 +337,20 @@ function quote(){
 }
 function reset(){
   if(raf)cancelAnimationFrame(raf);raf=0;
+  if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
+  dragging=false;pointerStart=null;reader.classList.remove('jfEpubDragging');
+  sourceCache=new WeakMap();offsetCache=new WeakMap();
   active=null;menu.hidden=true;
   removeHighlights();
   selection()?.removeAllRanges();
 }
-function pageRendered(){active=null;menu.hidden=true;selection()?.removeAllRanges();refresh();}
+function pageRendered(){
+  if(raf)cancelAnimationFrame(raf);raf=0;
+  if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
+  active=null;menu.hidden=true;dragging=false;pointerStart=null;
+  reader.classList.remove('jfEpubDragging');
+  selection()?.removeAllRanges();refresh();
+}
 for(const button of menu.querySelectorAll('button')){
   button.addEventListener('pointerdown',e=>e.preventDefault());
   button.addEventListener('click',()=>{
@@ -312,20 +359,42 @@ for(const button of menu.querySelectorAll('button')){
     else quote();
   });
 }
+// Keep each mouse/touch movement native: selectionchange must not scan
+// chapters, measure a Range, or rebuild CSS highlights on every frame.
+document.addEventListener('pointerdown',e=>{
+  if(!eligible()||!center.contains(e.target)||e.target.closest('button,a,input,textarea'))return;
+  dragging=true;pointerStart={x:e.clientX,y:e.clientY};
+  dragWasReal=false;reader.classList.add('jfEpubDragging');
+  menu.hidden=true;active=null;transientClear();
+  if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
+  if(raf)cancelAnimationFrame(raf);raf=0;
+},{passive:true,capture:true});
+document.addEventListener('pointermove',e=>{
+  if(!dragging||!pointerStart)return;
+  metrics.dragEvents++;
+  if(Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y)>6)
+    dragWasReal=true;
+},{passive:true});
+const finishPointer=e=>{
+  if(!dragging)return;
+  dragging=false;pointerStart=null;reader.classList.remove('jfEpubDragging');
+  if(dragWasReal)lastDragEnd=Date.now();
+  // Touch selection handles may settle one event after pointerup.
+  schedule(e.pointerType==='touch'?110:25);
+};
+document.addEventListener('pointerup',finishPointer,{passive:true});
+document.addEventListener('pointercancel',finishPointer,{passive:true});
 document.addEventListener('selectionchange',()=>{
   if(reader.hidden||jfDeskOutline?.nativePdf)return;
-  schedule();
+  metrics.selectionEvents++;
+  if(dragging)return;
+  if(!hasSelection()&&!active&&menu.hidden)return;
+  // Browser selection handles and Shift+Arrow may not emit pointerup.
+  // Coalesce them; the usual mouse release settles almost immediately.
+  schedule(Date.now()-lastDragEnd<80?45:130);
 });
-document.addEventListener('pointerup',e=>{
-  if(!reader.hidden&&center.contains(e.target)&&!jfDeskOutline?.nativePdf)
-    schedule();
-},{passive:true});
-document.addEventListener('touchend',e=>{
-  if(!reader.hidden&&center.contains(e.target)&&!jfDeskOutline?.nativePdf)
-    setTimeout(schedule,110);
-},{passive:true});
 document.addEventListener('keyup',e=>{
-  if(e.shiftKey&&!reader.hidden&&!jfDeskOutline?.nativePdf)schedule();
+  if(e.shiftKey&&!reader.hidden&&!jfDeskOutline?.nativePdf)schedule(35);
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!menu.hidden){
@@ -364,5 +433,8 @@ const sourceObserver=new MutationObserver(()=>{
   refreshFrame=requestAnimationFrame(()=>{refreshFrame=0;refresh();});
 });
 sourceObserver.observe(jfReadText,{childList:true,subtree:true});
-window.JFEpubSelection={quote,refresh,reset,pageRendered,reference};
+window.JFEpubSelection={
+  quote,refresh,reset,pageRendered,reference,metrics,
+  suppressTurn:()=>dragWasReal&&Date.now()-lastDragEnd<460
+};
 })();

@@ -22,18 +22,26 @@ assert(source.includes('jfDeskChooseQuote({...ref,text:snap.quoteText||ref.text,
   'multi-paragraph note uses original text anchor but preserves readable selected passage');
 assert(source.includes('jfDeskPages[jfDeskPageIndex'),'paper anchor reads real page offset');
 assert(source.includes('new Highlight(...ranges)'),'stored marks do not mutate page DOM');
-assert(source.includes('range.getClientRects()'),'native selection toolbar follows actual glyph bounds');
+assert(source.includes('firstRange.getBoundingClientRect()')&&
+  !source.includes('Array.from(range.getClientRects())'),
+  'only selection endpoints measured: no two-page full layout work during drag');
 assert(!source.includes("overlay.replaceChildren")&&
   !source.includes("className='jfEpubSelectionPatch'"),
   'never blend duplicate selection patches over native text');
 assert(source.includes("source.slice(mark.anchorStart,mark.anchorStart+text.length)===text") &&
   source.includes("block.el.textContent.slice(a-offset,b-offset)!==expected"),
   'saved highlight segments verify the exact original source text');
-assert(source.includes("offsetVerified:blockOffset(block)") &&
-  source.includes("const selectedSource=source.slice(start.at,end.at)") &&
+assert(source.includes("const selectedSource=source.slice(start.at,end.at)") &&
   source.includes("source.slice(anchorStart,anchorEnd)!==text") &&
-  source.includes("normal(raw)!==normal(text)"),
-  'cross-paragraph anchor comes from source-coordinate endpoints, not Range.toString separators');
+  source.includes("const quoteText=normal(raw)===normal(text)?raw:text"),
+  'across physical leaves ignore page chrome in Range.toString');
+assert(source.includes("let sourceCache=new WeakMap(),offsetCache=new WeakMap()")&&
+  source.includes("offsetCache.get(block.el)"),
+  'immutable source and block coordinates cached');
+assert(source.includes("if(dragging)return;") &&
+  source.includes("schedule(Date.now()-lastDragEnd<80?45:130)") &&
+  source.includes("suppressTurn:()=>dragWasReal&&Date.now()-lastDragEnd<460"),
+  'no selection work while moving pointer, no accidental turn on release');
 assert(source.includes("function rangesFor(chapter,from,to,blocks)")&&
   source.includes("new Highlight(...ranges)")&&
   source.includes("const ranges=rangesFor(snap.ref.chapter,"),
@@ -61,4 +69,4 @@ assert(source.includes("CSS.highlights.set(transientKey,new Highlight(...ranges)
 assert(source.includes('CSS.highlights.delete(transientKey)'),
   'temporary underline disappears on cancel, save, or page turn');
 assert(!source.includes('innerHTML'),'selection module must not rewrite source HTML');
-console.log('PASS v7.129.3 EPUB selection: cross-paragraph exact source anchors, segmented underlines, note text and click-to-edit');
+console.log('PASS v7.129.4 EPUB selection: accurate facing pages and cached, post-release selection processing');
