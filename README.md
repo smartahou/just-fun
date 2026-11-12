@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.128.1 / Current version: v7.128.1** · 持续迭代 / Actively evolving
+**当前版本：v7.128.2 / Current version: v7.128.2** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.128.2 · Windows CMD 启动兼容性**：修复普通启动菜单的 Windows 批处理解析异常。两个 CMD 启动脚本的控制台命令改为简短 ASCII，规避不同 Windows 终端编码下的意外命令拆分，保留本机 / iPad 局域网二选一，以及实际 IP 和端口输出。
 
 **v7.128.1 · 局域网启动提示修正**：Windows「启动.cmd」增加本机 / iPad 局域网模式选择，默认仍为本机以保护私人媒体；「局域网启动.cmd」保持一键局域网。服务启动后突出打印实际局域网 IP 与自动协商后的真实端口；若选择本机模式，明确提示该地址不能用于 iPad，不再让用户误以为 127.0.0.1 可跨设备访问。
 
@@ -187,7 +189,7 @@ Just Fun is a **local-first personal workspace** for video, audio, pictures, boo
 2. 电脑与 iPad mini 连接同一可信 Wi-Fi 或私有局域网，在 iPad 的 Safari 输入**启动窗口打印的完整地址**，如 `http://192.168.1.23:3865/`。端口被占用时应用会自动选择其他端口，以实际打印的为准。
 3. 若无法连接，检查电脑的 IP 是否变化、Wi-Fi 是否开启客户端隔离，以及 Windows 防火墙是否允许该端口从**专用网络**入站。不要在公用网络上开放，也不要配置路由器公网端口转发。
 
-普通 `启动.cmd` 的默认选项仍只开放电脑本机 `127.0.0.1`；选择「2」则显式开启局域网模式。打开局域网访问会让同一私有网段的其他设备访问 Just Fun，不适合不可信网络。
+普通 `启动.cmd` 的默认选项仍只开放电脑本机 `127.0.0.1`；菜单显示英文 `2 - iPad / LAN`，输入 `2` 则显式开启局域网模式。打开局域网访问会让同一私有网段的其他设备访问 Just Fun，不适合不可信网络。
 
 **Privacy:** Do not submit personal media, credentials, notes, cache databases, or real user paths. Optional AI features can send data to the third-party services you choose. This is not an Internet-hardened multi-user server.
 

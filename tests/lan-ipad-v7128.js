@@ -63,9 +63,14 @@ assert(router.includes('jfLanRequestAllowed(req,server.address()?.port||PORT)'),
 assert(router.includes('server.listen(nextPort,HOST)'), 'all fallback ports honor bind address');
 assert(fs.readFileSync(path.join(root,'局域网启动.cmd'),'utf8').includes('start --lan'), 'Windows LAN launcher');
 const normalLauncher=fs.readFileSync(path.join(root,'启动.cmd'),'utf8');
-assert(normalLauncher.includes('请选择 1 或 2')&&
-  normalLauncher.includes('start --lan')&&normalLauncher.includes('start %*'),
-  'normal Windows launcher offers explicit iPad LAN opt-in');
+assert(normalLauncher.includes('Choose 1 or 2')&&
+  normalLauncher.includes('start --lan')&&normalLauncher.includes('start %*')&&
+  normalLauncher.includes('goto lan')&&normalLauncher.includes('goto finish'),
+  'ASCII Windows launcher offers explicit iPad LAN opt-in without parsed blocks');
+for(const path of ['启动.cmd','局域网启动.cmd']){
+  const cmd=fs.readFileSync(path.join(root,path),'utf8');
+  assert(!/[\u0080-\uffff]/.test(cmd),'launcher must contain ASCII-only command text');
+}
 assert(router.includes('iPad mini Safari 访问以下局域网地址')&&
   router.includes('上方端口是实际监听端口')&&
   router.includes('当前是【仅本机模式】'),

@@ -2,22 +2,24 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 where node >nul 2>&1
-if errorlevel 1 (echo 需要 Node.js 22.13 或更高版本。& pause & exit /b 1)
-if /I "%~1"=="--lan" goto direct
+if errorlevel 1 goto missing_node
+if /I "%~1"=="--lan" goto lan
 echo.
-echo Just Fun 启动方式：
-echo [1] 仅电脑本机访问（默认）
-echo [2] iPad mini / 局域网访问（启动后显示 IP 和端口）
-set "JF_LAN_CHOICE="
-set /p "JF_LAN_CHOICE=请选择 1 或 2（直接回车选 1）："
-if "%JF_LAN_CHOICE%"=="2" (
-  echo 已选择局域网模式：仅在可信的专用网络使用。
-  node "scripts\local-deploy-v723.js" start --lan %*
-) else (
-  node "scripts\local-deploy-v723.js" start %*
-)
-goto done
-:direct
+echo Just Fun - Start mode
+echo 1 - This computer only
+echo 2 - iPad / LAN
+set "JF_START_MODE="
+set /p "JF_START_MODE=Choose 1 or 2 [default 1]: "
+if "%JF_START_MODE%"=="2" goto lan
+:local
 node "scripts\local-deploy-v723.js" start %*
-:done
+goto finish
+:lan
+node "scripts\local-deploy-v723.js" start --lan %*
+goto finish
+:missing_node
+echo Node.js 22.13 or newer is required.
+pause
+exit /b 1
+:finish
 if errorlevel 1 pause
