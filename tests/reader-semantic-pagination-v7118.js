@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'..');
 const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
 const engine=fs.readFileSync(path.join(root,'src/client/scripts/98d-page-engine.js'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'7.123.0');
+assert(Number(pkg.version.split('.')[1])>=123,'reader regression baseline >=7.123');
 function segment(source,a,b){
   const i=source.indexOf(a),j=source.indexOf(b,i+a.length);
   assert(i>=0&&j>i,'Missing source boundary '+a);

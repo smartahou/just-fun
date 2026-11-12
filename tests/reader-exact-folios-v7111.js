@@ -16,6 +16,7 @@ const context={
   jfDeskOutline:{chapters:Array.from({length:8})},
   jfDeskBook:{id:'user-book-1'},jfDeskPagesSig:'book-1|font-400|1360x840',
   jfDeskChapterPageCounts:counts,jfDeskBookPages:null,
+  jfDeskPages:[],jfDeskPageIndex:0,
   jfDeskPaperOmittedChapter:n=>n===0,
   jfDeskPaperFirstReadable:()=>1,
   jfDeskFlow:[{n:4,el:{textContent:'x'.repeat(900)}},
@@ -39,7 +40,7 @@ assert.equal(model.progress(4,450),mid,'partial census cannot change percent');
 const saved=db.get(model.cacheKey());
 assert(saved,'verified page counts persisted');
 const savedData=JSON.parse(saved);
-assert.equal(savedData.version,'v7.123.0');
+assert.equal(savedData.version,'v'+pkg.version);
 assert.equal(savedData.layout,'book-1|font-400|1360x840');
 assert.equal(savedData.chapters,8);
 counts.clear();

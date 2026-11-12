@@ -5,7 +5,7 @@
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const src=fs.readFileSync(path.join(__dirname,'../src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.123.0');
+assert(Number(require('../package.json').version.split('.')[1])>=123,'reader regression baseline >=7.123');
 const a=src.indexOf('// v7.122 · Three bounded'),b=src.indexOf('function jfDeskPagedRender(direction){',a);
 assert(a>0&&b>a,'missing face-pool implementation');
 const faceCode=src.slice(a,b);
@@ -43,7 +43,7 @@ const ctx={
   jfDeskPages:pages,jfDeskPageIndex:0,jfDeskPaged:true,
   jfDeskSession:1,jfDeskBook:{id:'book-A'},jfDeskPagesSig:'font18-geo',
   jfDeskOutline:{chapters:Array.from({length:8},(_,n)=>({title:'poem '+n}))},
-  jfDeskPagedGeometry:()=>({two:true}),jfReader:{hidden:false},
+  jfDeskPagedGeometry:()=>({two:true}),jfReader:{hidden:false,classList:{toggle(){}}},
   clearTimeout:()=>{},setTimeout:()=>1,
   performance:{now:()=>0}
 };

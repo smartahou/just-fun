@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
-assert.equal(require('../package.json').version,'7.123.0');
+assert(Number(require('../package.json').version.split('.')[1])>=123,'reader regression baseline >=7.123');
 assert(source.includes('if(jfDeskPaged&&!jfDeskOutline?.nativePdf)return jfDeskPageTurn(delta);'),
   'footer arrows must turn physical pages, never restart chapter loading');
 const slice=(begin,end)=>{
