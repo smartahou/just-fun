@@ -33,12 +33,16 @@ assert(source.includes("const offset=blockOffset(block)") &&
   'printed page anchor is verified before saving and reading');
 assert(source.includes("event.preventDefault();event.stopImmediatePropagation();"),
   'tapping saved ink shows actions rather than turning the page');
-assert(css.includes('::highlight(jf-epub-mark-amber)') &&
-  css.includes('::highlight(jf-epub-selection)') &&
+const inkStart=css.indexOf('.jfReader ::highlight(jf-epub-selection)');
+const inkEnd=css.indexOf('@media(max-width:620px)',inkStart);
+const inkRules=css.slice(inkStart,inkEnd);
+// Exclude the toolbar's intentionally opaque background from this check.
+assert(inkStart>=0&&inkEnd>inkStart &&
+  css.includes('::highlight(jf-epub-mark-amber)') &&
   css.includes('#jfPageView .jfSheetBody *::selection') &&
   css.includes('background-color:transparent!important') &&
-  css.includes('text-decoration-line:underline') &&
-  !css.slice(css.indexOf('/* v7.129.2 ·')).includes('background:rgba('),
+  inkRules.includes('text-decoration-line:underline') &&
+  !/background\\s*:\\s*rgba/.test(inkRules),
   'EPUB transient and saved marks must be underlines, never filled blocks');
 assert(source.includes("CSS.highlights.set(transientKey,new Highlight(snap.range.cloneRange()))"),
   'selected glyphs get one fine temporary underline');
