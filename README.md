@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.128.0 / Current version: v7.128.0** · 持续迭代 / Actively evolving
+**当前版本：v7.128.1 / Current version: v7.128.1** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.128.1 · 局域网启动提示修正**：Windows「启动.cmd」增加本机 / iPad 局域网模式选择，默认仍为本机以保护私人媒体；「局域网启动.cmd」保持一键局域网。服务启动后突出打印实际局域网 IP 与自动协商后的真实端口；若选择本机模式，明确提示该地址不能用于 iPad，不再让用户误以为 127.0.0.1 可跨设备访问。
 
 **v7.128 · iPad mini 竖屏局域网访问**：默认仍仅监听 127.0.0.1。主动使用 `--lan` 或 Windows「局域网启动.cmd」时，允许同一私有 IPv4 网段的设备通过电脑实际局域网 IP 和端口访问（默认 3865）；启动日志显示可用地址，拒绝其他网段和伪造 Host，阅读 API 的同源校验兼容局域网地址。iPad mini 竖屏保留单页模式并收紧阅读器工具栏，不改变旧书素材和分页引擎。**安全提醒：局域网模式不是账户隔离或公网服务，同网段设备可能访问媒体及管理接口；只在可信 Wi-Fi 使用，不要映射公网端口。**
 
@@ -181,11 +183,11 @@ Just Fun is a **local-first personal workspace** for video, audio, pictures, boo
 
 ### iPad mini / 局域网阅读
 
-1. Windows 首次使用先运行 `更新.cmd`，之后双击 `局域网启动.cmd`（或命令 `node dist/douyin.js --lan --port=3865`）。启动后按原流程输入媒体目录。
+1. Windows 首次使用先运行 `更新.cmd`，之后双击 `局域网启动.cmd`，或在普通 `启动.cmd` 中选择「2」（或命令 `node dist/douyin.js --lan --port=3865`）。启动后按原流程输入媒体目录。
 2. 电脑与 iPad mini 连接同一可信 Wi-Fi 或私有局域网，在 iPad 的 Safari 输入**启动窗口打印的完整地址**，如 `http://192.168.1.23:3865/`。端口被占用时应用会自动选择其他端口，以实际打印的为准。
 3. 若无法连接，检查电脑的 IP 是否变化、Wi-Fi 是否开启客户端隔离，以及 Windows 防火墙是否允许该端口从**专用网络**入站。不要在公用网络上开放，也不要配置路由器公网端口转发。
 
-普通 `启动.cmd` 仍只开放电脑本机 `127.0.0.1`，与过去完全一致。打开局域网访问会让同一私有网段的其他设备访问 Just Fun，不适合不可信网络。
+普通 `启动.cmd` 的默认选项仍只开放电脑本机 `127.0.0.1`；选择「2」则显式开启局域网模式。打开局域网访问会让同一私有网段的其他设备访问 Just Fun，不适合不可信网络。
 
 **Privacy:** Do not submit personal media, credentials, notes, cache databases, or real user paths. Optional AI features can send data to the third-party services you choose. This is not an Internet-hardened multi-user server.
 

@@ -62,6 +62,14 @@ assert.throws(()=>originGuard(off)(req('127.0.0.1','192.168.1.23:3865','http://1
 assert(router.includes('jfLanRequestAllowed(req,server.address()?.port||PORT)'), 'guard is first for every URL');
 assert(router.includes('server.listen(nextPort,HOST)'), 'all fallback ports honor bind address');
 assert(fs.readFileSync(path.join(root,'局域网启动.cmd'),'utf8').includes('start --lan'), 'Windows LAN launcher');
+const normalLauncher=fs.readFileSync(path.join(root,'启动.cmd'),'utf8');
+assert(normalLauncher.includes('请选择 1 或 2')&&
+  normalLauncher.includes('start --lan')&&normalLauncher.includes('start %*'),
+  'normal Windows launcher offers explicit iPad LAN opt-in');
+assert(router.includes('iPad mini Safari 访问以下局域网地址')&&
+  router.includes('上方端口是实际监听端口')&&
+  router.includes('当前是【仅本机模式】'),
+  'startup must distinguish a usable LAN address from loopback');
 const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
 assert(css.includes('v7.128 · iPad mini portrait')&&css.includes('orientation:portrait'));
 console.log('PASS v7.128: loopback default, LAN CIDR and DNS Host checks, same-origin, Windows launcher and iPad mini portrait');

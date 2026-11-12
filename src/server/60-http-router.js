@@ -1415,10 +1415,18 @@ function startServer() {
     const url=`http://127.0.0.1:${actualPort}/`;
     console.log(`Just Fun 已启动：${url}`);
     if(JF_LAN_ENABLED){
+      console.log('========================================');
+      console.log('📱 iPad mini Safari 访问以下局域网地址：');
       for(const item of JF_LAN_INTERFACES)
         console.log(`iPad / 局域网访问：http://${item.address}:${actualPort}/ （${item.name}）`);
+      console.log('========================================');
+      console.log('上方端口是实际监听端口，请不要把 127.0.0.1 输入 iPad。');
       console.warn('局域网模式：仅在可信私有网络使用。其他同网段设备也能访问你的媒体与管理接口；请勿设置公网映射。');
       console.log('若 iPad 无法连接，请检查 Windows 防火墙：只允许专用网络上的 Node.js 端口 '+actualPort+'。');
+    }else{
+      console.log('当前是【仅本机模式】；127.0.0.1 不能在 iPad 上打开。');
+      console.log('如需 iPad 访问，请关闭本窗口，运行「局域网启动.cmd」，或在「启动.cmd」菜单选择 2。');
+      console.log('只有开启局域网模式，才会打印真正可访问的局域网 IP 和端口。');
     }
     openUrl(url);
   });
