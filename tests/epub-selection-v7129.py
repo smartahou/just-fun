@@ -33,8 +33,8 @@ def make_epub(path):
         long_text = '此处是用于检查分页后源文字坐标的连续内容，必须避免误标邻近的句子。' * 140
         z.writestr('OEBPS/chapter.xhtml',
                    '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
-                   '<h2>选区测试</h2><p>' + text + '</p>'
-                   '<p>此段用于检验注释之后正文没有被重写。</p>'
+                   '<h2>选区测试</h2>\n    <p>' + text + '</p>\n    '
+                   '<p>此段用于检验注释之后正文没有被重写。</p>\n    '
                    '<p>' + long_text + THIRD + '，后文不应该被标记。</p>'
                    '</body></html>')
 
@@ -141,7 +141,8 @@ def choose_across_visible_pages(page):
           .closest('.jfSheetBody')?.id))]};
     }""")
     assert checked['ref'] and checked['ref']['text']==checked['source'], checked
-    assert checked['ink']==checked['ref']['text'], checked
+    assert checked['ink'].replace(' ', '').replace('\n', '')==(
+        checked['ref']['text'].replace(' ', '').replace('\n', '')), checked
     assert set(checked['leaves'])=={'jfSheetLeft','jfSheetRight'}, checked
     return result, checked
 
@@ -149,7 +150,7 @@ def choose_across_visible_pages(page):
 def assert_drag_stays_native(page):
     """120 selection updates during a held pointer never cause annotation layout."""
     report = page.evaluate("""()=>{
-      const m=JFEpubSelection.metrics,before={settles:m.settles,lookups:m.pointLookups};
+      const m=JFEpubSelection.metrics,before={settles:m.settles,maps:m.maps,redraws:m.redraws};
       const paragraph=document.querySelector('#jfSheetLeft p');
       const t=document.createTreeWalker(paragraph,NodeFilter.SHOW_TEXT).nextNode();
       if(!t||t.nodeValue.length<10)return {ok:false,reason:'no long text node'};
@@ -165,7 +166,7 @@ def assert_drag_stays_native(page):
           bubbles:true,pointerType:'mouse',clientX:30+i,clientY:40}));
       }
       const whileDragging={settles:m.settles-before.settles,
-        lookups:m.pointLookups-before.lookups,
+        maps:m.maps-before.maps,redraws:m.redraws-before.redraws,
         active:document.getElementById('jfReader').classList.contains('jfEpubDragging')};
       document.dispatchEvent(new PointerEvent('pointerup',{
         bubbles:true,pointerType:'mouse',clientX:165,clientY:40}));
@@ -174,7 +175,7 @@ def assert_drag_stays_native(page):
     }""")
     assert report['ok'] and report['whileDragging']['active'], report
     assert report['whileDragging']['settles']==0, report
-    assert report['whileDragging']['lookups']==0, report
+    assert report['whileDragging']['maps']==0 and report['whileDragging']['redraws']==0, report
 
 
 def main():
@@ -251,6 +252,18 @@ def main():
                 assert marked['marks'] == 1 and marked['ranges'] >= 1, marked
                 assert marked['painted'] == FIRST and marked['underline'] == 'underline', marked
                 assert marked['pageCount'] == baseline, marked
+                # A routine progress mutation used to repaint ALL highlights,
+                # even though neither the visible book nor marks changed.
+                before_progress = page.evaluate('JFEpubSelection.metrics.redraws')
+                page.evaluate("""async()=>{
+                  await jfDeskMutate({action:'progress',bookId:jfDeskBook.id,
+                    chapter:jfDeskChapter,ratio:0,mode:'paged',
+                    total:jfDeskOutline.chapters.length});
+                }""")
+                page.wait_for_timeout(90)
+                after_progress = page.evaluate('JFEpubSelection.metrics.redraws')
+                assert after_progress == before_progress, (
+                    before_progress, after_progress)
                 # Mouse-clicking an existing annotation must offer its actions,
                 # instead of triggering the half-sheet page-turn handler.
                 pos = page.evaluate("""()=>{
@@ -286,7 +299,8 @@ def main():
                 assert '纸书选区测试甲乙丙丁' in cross['ref']['text'], cross
                 assert '此段用于检验注释之后' in cross['ref']['text'], cross
                 assert len(cross['ranges']) >= 2, cross
-                assert ''.join(cross['ranges']) == cross['ref']['text'], cross
+                assert ''.join(cross['ranges']).replace(' ', '').replace('\n', '') == (
+                    cross['ref']['text'].replace(' ', '').replace('\n', '')), cross
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""(selected)=>jfDeskWorkspace.marks.some(m=>
                   m.text===selected)""", arg=cross['ref']['text'])
@@ -296,7 +310,8 @@ def main():
                     .map(r=>r.toString())};
                 }""", cross['ref']['text'])
                 assert cross_mark['mark']['anchorStart'] == cross['ref']['anchorStart'], cross_mark
-                assert ''.join(cross_mark['ranges']) == cross['ref']['text'], cross_mark
+                assert ''.join(cross_mark['ranges']).replace(' ', '').replace('\n', '') == (
+                    cross['ref']['text'].replace(' ', '').replace('\n', '')), cross_mark
                 assert len(cross_mark['ranges']) >= 2, cross_mark
                 # Tap the second (not first) line of the same saved mark:
                 # the menu must still target the WHOLE cross-paragraph mark.
@@ -362,7 +377,8 @@ def main():
                       .closest('.jfSheetBody')?.id))]};
                 }""", selectedAcross)
                 assert stored['mark']['anchorStart']==facing['ref']['anchorStart'], stored
-                assert stored['ink']==selectedAcross, stored
+                assert stored['ink'].replace(' ', '').replace('\n', '')==(
+                    selectedAcross.replace(' ', '').replace('\n', '')), stored
                 assert set(stored['leaves'])=={'jfSheetLeft','jfSheetRight'}, stored
                 point = page.evaluate("""()=>{
                   const r=[...CSS.highlights.get('jf-epub-mark-amber')]
@@ -410,8 +426,49 @@ def main():
                 }""")
                 assert split_paint == THIRD, split_paint
                 assert page.evaluate('jfDeskPages.length') == baseline
+                # Reader reopening previously dropped all marks because the
+                # render hook ran while jfDeskRestoring was true.
+                page.evaluate('()=>JFEpubSelection.reset()')
+                page.evaluate('()=>JFEpubSelection.restoreReady()')
+                page.wait_for_function("""()=>JFEpubSelection.metrics.lastVisible>=1
+                  && (CSS.highlights.get('jf-epub-mark-amber')?.size||0)>=1""")
+                diagnostic = page.evaluate('JFEpubSelection.diagnostics()')
+                assert diagnostic['lastReasons'].get('unresolved', 0) == 0, diagnostic
+                assert diagnostic['paintMs'] < 200, diagnostic
+                # Dozens of visible saved marks must not produce an O(N)
+                # geometry measurement per click or a giant redraw.
+                pressure = page.evaluate("""()=>{
+                  const own=(jfDeskPages[jfDeskPageIndex]||[])
+                    .concat(jfDeskPages[jfDeskPageIndex+1]||[]);
+                  const existing=jfDeskWorkspace.marks;
+                  const fake=[];
+                  for(const item of own){
+                    if(!Number.isSafeInteger(item.sourceOffset)||!item.node)continue;
+                    const text=item.node.textContent;
+                    for(let i=0;i+3<=text.length&&fake.length<120;i+=3)
+                      fake.push({type:'text',bookId:jfDeskBook.id,chapter:item.chapter,
+                        anchorStart:item.sourceOffset+i,text:text.slice(i,i+3),
+                        length:3,color:'amber'});
+                  }
+                  if(fake.length<30)return {ok:false,count:fake.length};
+                  window.__jfStressOriginalMarks=existing;
+                  jfDeskWorkspace.marks=existing.concat(fake);
+                  const before=JFEpubSelection.metrics.redraws;
+                  JFEpubSelection.refresh();
+                  return {ok:true,count:fake.length,before};
+                }""")
+                assert pressure['ok'], pressure
+                page.wait_for_function("""(before)=>
+                  JFEpubSelection.metrics.redraws>before""", arg=pressure['before'])
+                pressure_diag = page.evaluate('JFEpubSelection.diagnostics()')
+                assert pressure_diag['paintMs'] < 250, (pressure,pressure_diag)
+                assert pressure_diag['lastVisible'] >= 2, pressure_diag
+                page.evaluate("""()=>{
+                  jfDeskWorkspace.marks=window.__jfStressOriginalMarks;
+                  delete window.__jfStressOriginalMarks;JFEpubSelection.refresh();
+                }""")
                 assert not errors, errors
-                print('PASS v7.129.4 Chromium EPUB: selection across facing leaves, '
+                print('PASS v7.130 Chromium EPUB: selection across facing leaves, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

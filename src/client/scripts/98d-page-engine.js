@@ -283,7 +283,9 @@
       notes.push({
         chapter:item.chapter,node:para,
         key:(item.key||'commentary')+'#note'+k,
-        offset:(item.offset||0)+offset,sourceRow:true
+        offset:(item.offset||0)+offset,
+        sourceOffset:Number.isSafeInteger(item.sourceOffset)?item.sourceOffset+offset:undefined,
+        sourceRow:true
       });
       offset=stop;
     }
@@ -334,7 +336,8 @@
     }
     function fits(h){return used+h<=pageH-EPS;}
     function asPageItem(item){
-      return {chapter:item.chapter,node:item.node,key:item.key,offset:item.offset};
+      return {chapter:item.chapter,node:item.node,key:item.key,offset:item.offset,
+        sourceOffset:item.sourceOffset};
     }
 
     while(queue.length){
@@ -420,7 +423,7 @@
             flush();queue.unshift(item);continue;
           }
         }
-        cur.push({chapter:item.chapter,node:el,key:item.key,offset:item.offset});
+        cur.push(asPageItem(item));
         used=candidateHeight;
         continue;
       }
@@ -432,11 +435,13 @@
         var scaled=fitFigure(el,pageH,host);
         if(scaled){
           flush();
-          pages.push([{chapter:item.chapter,node:scaled,key:item.key,offset:item.offset,scaled:true}]);
+          pages.push([{chapter:item.chapter,node:scaled,key:item.key,offset:item.offset,
+          sourceOffset:item.sourceOffset,scaled:true}]);
           continue;
         }
         flush();
-        pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,oversized:true}]);
+        pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,
+          sourceOffset:item.sourceOffset,oversized:true}]);
         continue;
       }
 
@@ -463,21 +468,27 @@
         // Preserve original block offsets and exact text/image conservation.
         var headOffset=item.offset||0;
         var tailOffset=headOffset+split.head.textContent.length;
-        cur.push({chapter:item.chapter,node:split.head,key:(item.key||'')+'#1',offset:headOffset,split:true});
+        cur.push({chapter:item.chapter,node:split.head,key:(item.key||'')+'#1',
+          offset:headOffset,sourceOffset:item.sourceOffset,split:true});
         // Only a carried-over paragraph should start flush-left on the new
         // page. A genuinely new paragraph at the top keeps its 2em indent.
         if(split.tail.tagName==='P')split.tail.classList.add('jfPrintContinuation');
         if(split.tail.classList?.contains('jfPrintCommentaryNote'))
           split.tail.classList.add('jfPrintCommentaryContinuation');
         flush();
-        queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',offset:tailOffset,split:true});
+        queue.unshift({chapter:item.chapter,node:split.tail,key:(item.key||'')+'#2',
+          offset:tailOffset,
+          sourceOffset:Number.isSafeInteger(item.sourceOffset)?
+            item.sourceOffset+split.head.textContent.length:undefined,
+          split:true});
         continue;
       }
 
       if(cur.length){flush();queue.unshift(item);continue;}
 
       // Nothing fits on an empty page: it must be an unsplittable block.
-      pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,oversized:true}]);
+      pages.push([{chapter:item.chapter,node:el,key:item.key,offset:item.offset,
+          sourceOffset:item.sourceOffset,oversized:true}]);
       batchBlocked=false;
     }
     flush();

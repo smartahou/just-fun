@@ -272,7 +272,12 @@ function jfDeskMutate(payload){
     if(jfDeskSaveFailed)throw Error('笔记数据尚未安全载入；拒绝继续写入');
     try{
       const updated=await jfDeskApi('workspace','POST',{...payload,revision:jfDeskWorkspace.revision});
-      jfDeskWorkspace=updated;window.JFEpubSelection?.refresh?.();return updated;
+      jfDeskWorkspace=updated;
+      // Reading progress saves must not force a global underline rebuild.
+      if(payload.action==='mark'||payload.action==='delete-mark'||
+         payload.action==='update-mark'||(payload.action==='note'&&payload.alsoMark))
+        window.JFEpubSelection?.refresh?.();
+      return updated;
     }catch(error){
       const message=String(error&&error.message||'');
       const stale=/重新载入|已被其他页面修改|conflict|409/i.test(message);
@@ -740,6 +745,8 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null,anch
     jfReadCenter.classList.remove('jf-reading-opening');
     jfDeskProgressSignature='';
     jfDeskUpdateProgress();
+    // pageRendered() ran while restoring; paint only after the book is ready.
+    window.JFEpubSelection?.restoreReady?.();
   };
   try{
     const html=await jfDeskFlowFetch(number);
@@ -2548,6 +2555,14 @@ function jfDeskBlocksFor(sec){
     if(result)keyedGlyphs.set(img.getAttribute('src')||img.src,result);
   }
   const raw=Array.prototype.slice.call(sec.el.children);
+  // v7.130: annotation source coordinates account for literal XHTML whitespace
+  // nodes between top-level elements; page layout offset remains unchanged.
+  const sourceStarts=new WeakMap();
+  let sourceCursor=0;
+  for(const child of sec.el.childNodes){
+    if(child.nodeType===1)sourceStarts.set(child,sourceCursor);
+    sourceCursor+=(child.textContent||'').length;
+  }
   const blocks=[];
   const imprint=jfDeskIsImprintChapter(sec.n,sec.el.textContent);
   let i=0,acc=0,consecutiveBlanks=0;
@@ -2561,7 +2576,7 @@ function jfDeskBlocksFor(sec){
     if(bridged){
       jfDeskDecorateImprintBlock(bridged.node,sec.n,imprint,k);
       blocks.push({chapter:sec.n,node:bridged.node,key:sec.n+':'+(i++),
-        offset:acc,mergedGlyphs:bridged.count});
+        offset:acc,sourceOffset:sourceStarts.get(node),mergedGlyphs:bridged.count});
       for(let m=k;m<=bridged.end;m++)acc+=raw[m].textContent.length;
       k=bridged.end;
       continue;
@@ -2574,7 +2589,8 @@ function jfDeskBlocksFor(sec){
       const caption=document.createElement('figcaption');
       caption.textContent=next.textContent.trim();
       wrap.appendChild(caption);
-      blocks.push({chapter:sec.n,node:wrap,key:sec.n+':'+(i++),offset:acc,mergedCaption:true});
+      blocks.push({chapter:sec.n,node:wrap,key:sec.n+':'+(i++),
+        offset:acc,sourceOffset:sourceStarts.get(node),mergedCaption:true});
       acc+=node.textContent.length+next.textContent.length;
       k++;
       continue;
@@ -2603,7 +2619,8 @@ function jfDeskBlocksFor(sec){
       }
     }
     blocks.push({chapter:sec.n,node:printed,
-                 key:sec.n+':'+(i++),offset:acc});
+                 key:sec.n+':'+(i++),offset:acc,
+                 sourceOffset:sourceStarts.get(node)});
     acc+=node.textContent.length;
   }
   // Only the paginated clones receive transparent ink; the source DOM and

@@ -1,72 +1,47 @@
 #!/usr/bin/env node
 'use strict';
-// v7.129: pure source contract checks; the real Chromium test covers selection.
+// v7.130 · Structural contracts; Chromium exercises real DOM and persistence.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
-const manifest=JSON.parse(fs.readFileSync(path.join(root,'build.manifest.json'),'utf8'));
-const modulePath='src/client/scripts/99d-epub-selection.js';
-assert(manifest.scripts.includes(modulePath),'new selection module is bundled offline');
-assert(manifest.scripts.indexOf(modulePath)>manifest.scripts.indexOf('src/client/scripts/99-reading.js'));
-const source=fs.readFileSync(path.join(root,modulePath),'utf8');
-new Function(source);
-const reading=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
-const css=fs.readFileSync(path.join(root,'src/client/styles/41-reading.css'),'utf8');
-assert(reading.includes('window.JFEpubSelection?.pageRendered?.()'),'visible face switch refreshes marks');
-assert(reading.includes('window.JFEpubSelection?.refresh?.()'),'workspace mutations refresh marks');
-assert(reading.includes('window.JFEpubSelection?.quote?.()'),'old excerpt button works with paper mode');
-for(const label of ['取消','标记','加入笔记'])
-  assert(source.includes(label),'operation available: '+label);
-assert(source.includes("jfDeskMutate(saved?{action:'delete-mark'") &&
-  source.includes("{action:'mark'"),'mark and undo use existing durable API');
-assert(source.includes('jfDeskChooseQuote({...ref,text:snap.quoteText||ref.text,sourceText:ref.text})'),
-  'multi-paragraph note uses original text anchor but preserves readable selected passage');
-assert(source.includes('jfDeskPages[jfDeskPageIndex'),'paper anchor reads real page offset');
-assert(source.includes('new Highlight(...ranges)'),'stored marks do not mutate page DOM');
-assert(source.includes('firstRange.getBoundingClientRect()')&&
-  !source.includes('Array.from(range.getClientRects())'),
-  'only selection endpoints measured: no two-page full layout work during drag');
-assert(!source.includes("overlay.replaceChildren")&&
-  !source.includes("className='jfEpubSelectionPatch'"),
-  'never blend duplicate selection patches over native text');
-assert(source.includes("source.slice(mark.anchorStart,mark.anchorStart+text.length)===text") &&
-  source.includes("block.el.textContent.slice(a-offset,b-offset)!==expected"),
-  'saved highlight segments verify the exact original source text');
-assert(source.includes("const selectedSource=source.slice(start.at,end.at)") &&
-  source.includes("source.slice(anchorStart,anchorEnd)!==text") &&
-  source.includes("const quoteText=normal(raw)===normal(text)?raw:text"),
-  'across physical leaves ignore page chrome in Range.toString');
-assert(source.includes("let sourceCache=new WeakMap(),offsetCache=new WeakMap()")&&
-  source.includes("offsetCache.get(block.el)"),
-  'immutable source and block coordinates cached');
-assert(source.includes("if(dragging)return;") &&
-  source.includes("schedule(Date.now()-lastDragEnd<80?45:130)") &&
-  source.includes("suppressTurn:()=>dragWasReal&&Date.now()-lastDragEnd<460"),
-  'no selection work while moving pointer, no accidental turn on release');
-assert(source.includes("function rangesFor(chapter,from,to,blocks)")&&
-  source.includes("new Highlight(...ranges)")&&
-  source.includes("const ranges=rangesFor(snap.ref.chapter,"),
-  'per-block highlights exclude paragraph margins and paper-spread chrome');
-assert(source.includes("savedMark:hit.mark")&&
-  source.includes("if(active?.savedMark&&!hasSelection())return;"),
-  'clicking any fragment of a cross-paragraph mark opens its full mark actions');
-assert(reading.includes("const sourceText=typeof quote.sourceText"),
-  'cross-paragraph quote text and original-source mark text stay separate');
-assert(source.includes("event.preventDefault();event.stopImmediatePropagation();"),
-  'tapping saved ink shows actions rather than turning the page');
-const inkStart=css.indexOf('.jfReader ::highlight(jf-epub-selection)');
-const inkEnd=css.indexOf('@media(max-width:620px)',inkStart);
-const inkRules=css.slice(inkStart,inkEnd);
-// Exclude the toolbar's intentionally opaque background from this check.
-assert(inkStart>=0&&inkEnd>inkStart &&
-  css.includes('::highlight(jf-epub-mark-amber)') &&
-  css.includes('#jfPageView .jfSheetBody *::selection') &&
-  css.includes('background-color:transparent!important') &&
-  inkRules.includes('text-decoration-line:underline') &&
-  !/background\\s*:\\s*rgba/.test(inkRules),
-  'EPUB transient and saved marks must be underlines, never filled blocks');
-assert(source.includes("CSS.highlights.set(transientKey,new Highlight(...ranges))"),
-  'temporary underline is split accurately across printed paragraphs');
-assert(source.includes('CSS.highlights.delete(transientKey)'),
-  'temporary underline disappears on cancel, save, or page turn');
-assert(!source.includes('innerHTML'),'selection module must not rewrite source HTML');
-console.log('PASS v7.129.4 EPUB selection: accurate facing pages and cached, post-release selection processing');
+const read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const manifest=JSON.parse(read('build.manifest.json'));
+const moduleFile='src/client/scripts/99d-epub-selection.js';
+assert(manifest.scripts.includes(moduleFile),'bundled offline');
+assert(manifest.scripts.indexOf(moduleFile)>manifest.scripts.indexOf('src/client/scripts/99-reading.js'));
+const source=read(moduleFile),reader=read('src/client/scripts/99-reading.js');
+const engine=read('src/client/scripts/98d-page-engine.js');
+const css=read('src/client/styles/41-reading.css');
+for(const js of [source,reader,engine])new Function(js);
+assert(reader.includes('sourceStarts.set(child,sourceCursor)'),'source DOM whitespace mapped');
+assert(reader.includes('sourceOffset:sourceStarts.get(node)'),'source offsets carried into blocks');
+assert(engine.includes('sourceOffset:item.sourceOffset'),'original source offsets survive pagination');
+assert(engine.includes('item.sourceOffset+split.head.textContent.length'),
+  'split paragraph tail retains exact original coordinate');
+assert(source.includes('item.sourceOffset')&&source.includes('function rangesFor('),
+  'annotation range uses declared source coordinates instead of text guessing');
+assert(!source.includes('source.indexOf(text)')&&!source.includes('source.indexOf(block.el.textContent)'),
+  'printed page mapping never guesses by searching repeated text');
+assert(source.includes('source.indexOf(mark.text)')&&source.includes('resolvedLegacy'),
+  'prior wrong anchors recover only with unique verified text');
+assert(source.includes('const span=source.slice(a.offset,z.offset)'),
+  'selection from exact endpoint offsets supports paragraphs and both leaves');
+assert(source.includes('schedulePaint')&&source.includes('lastPaintKey'),
+  'mark changes draw once, stable state skips redraw');
+assert(source.includes('CSS.highlights.set(key(col),new Highlight(...ranges))'),
+  'durable markup replaces registry entry atomically');
+assert(source.includes('document.caretRangeFromPoint')&&
+  !source.includes('hit.range.getClientRects'),
+  'existing marks use a single caret hit-test, not all-range geometry');
+assert(reader.includes("if(payload.action==='mark'||payload.action==='delete-mark'")&&
+  reader.includes("window.JFEpubSelection?.restoreReady?.()"),
+  'progress never redraws marks; reopening always paints after restore');
+assert(source.includes('lastReasons')&&source.includes('diagnostics'),
+  'render failures expose diagnostics rather than being invisible');
+for(const t of ['取消','标记','加入笔记'])assert(source.includes(t),t+' action present');
+assert(source.includes('jfDeskChooseQuote({...snap.ref,')&&
+  source.includes('sourceText:snap.ref.text'),'note retains original mark source');
+assert(css.includes('::highlight(jf-epub-selection)')&&
+  css.includes('text-decoration-line:underline')&&
+  css.includes('background-color:transparent!important'),'single legible thin line');
+assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
+console.log('PASS v7.130 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

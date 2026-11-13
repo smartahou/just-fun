@@ -4200,6 +4200,15 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   background:rgba(214,229,210,.17);outline:0;
 }
 .jfReader .jfEpubSelectionMenu [data-action=note]{color:#d4e9d7}
+/* v7.130 · source-mapped selection and saved marks remain thin underlines.
+   A temporary selection hides archived ink without deleting its DOM ranges. */
+.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-amber),
+.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-blue),
+.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-mint),
+.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-rose),
+.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-violet){
+  text-decoration-line:none;
+}
 /* User selection and archived marks use source-accurate underlines only.
    Never put translucent rectangles over old paper or ink. */
 .jfReader ::highlight(jf-epub-selection){
