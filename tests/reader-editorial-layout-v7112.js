@@ -35,8 +35,10 @@ assert(engine.includes("para.className='jfPrintCommentaryNote'"),
   'each editorial row is now one flowing paragraph');
 assert(engine.includes('if(para.textContent!==original.slice(offset,stop))return null'),
   'each commentary paragraph preserves original characters exactly');
-assert(engine.includes('offset:(item.offset||0)+offset,sourceRow:true'),
-  'each row remains anchored to original text offset');
+assert(engine.includes('offset:(item.offset||0)+offset,')&&
+       engine.includes('sourceOffset:Number.isSafeInteger(item.sourceOffset)?item.sourceOffset+offset:undefined,')&&
+       engine.includes('sourceRow:true'),
+  'editorial row retains legacy pagination offset and the exact original-text coordinate');
 assert(engine.includes('fresh<=pageH-EPS&&together>pageH-EPS&&cur.length'),
   'editorial heading stays with a fitting next paragraph without giant blank leaves');
 assert(reader.includes("document.getElementById('jfPageView').appendChild(holder)"),
