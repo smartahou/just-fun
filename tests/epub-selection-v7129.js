@@ -69,6 +69,16 @@ assert(source.includes('const EDGE_DWELL_MS=720')&&
   source.includes('function cornerDirection(')&&source.includes('function edgeTurn(')&&
   source.includes('function adjacentSource('),
   'corner dwell auto-turn uses existing prepared spreads only');
+assert(source.includes("const limit=direction<0?low:high")&&
+  source.includes('return {index};')&&
+  !source.includes('virtual.index=jfDeskPageIndex;virtual.pending=null;'),
+  'turning either way preserves the original selection endpoint');
+assert(source.includes('function captureDragSeed()')&&
+  source.includes('if(direction&&(selecting()||dragSeed))armEdge(direction)'),
+  'forward edge works after the native selection collapses in the outer gutter');
+assert(source.includes('edgeLocked=true;')&&source.includes('edgeLocked=false;')&&
+  source.includes('if(edgeLocked){stopEdge();return;}'),
+  'stationary pointer does not keep turning entire unselected spreads');
 assert(source.includes('if(virtual)return virtualReference()')&&
   source.includes('if(virtual&&virtual.session===jfDeskSession')&&
   source.includes('virtual.focus=virtual.pending.focus'),
@@ -80,4 +90,4 @@ assert(source.includes('if(dragging||virtual)return;')&&
   source.includes('else if(selecting())armEdge(direction);'),
   'normal native selection avoids eager expensive redraws');
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.133 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.134 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

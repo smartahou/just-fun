@@ -221,16 +221,21 @@ def assert_corner_dwell(page, direction, pointer_type='mouse'):
       const native=getSelection();
       native.removeAllRanges();native.addRange(range);
       document.dispatchEvent(new Event('selectionchange'));
+      const previous=JFEpubSelection.reference()?.ref;
+      // Moving off the RIGHT leaf can collapse the browser's live Selection.
+      // The last real source range must still seed the outgoing page turn.
+      if(direction>0){
+        native.removeAllRanges();
+        document.dispatchEvent(new Event('selectionchange'));
+      }
       const shell=sheet.parentElement.getBoundingClientRect();
-      const x=direction<0?shell.left+18:shell.right-18;
+      const x=direction<0?shell.left-12:shell.right+12;
       const y=shell.top+20;
       document.dispatchEvent(new PointerEvent('pointermove',{
         bubbles:true,pointerType,pointerId:73,buttons:1,
         clientX:x,clientY:y}));
       return {ok:true,index,chapter:jfDeskChapter,
-        before:node.nodeValue.slice(1,7),target:index+direction*2,
-        x,y,sourceIndex:positionDummy()};
-      function positionDummy(){return JFEpubSelection.reference()?.ref.anchorStart;}
+        before:previous,target:index+direction*2,x,y};
     }""", {'direction': direction, 'pointerType': pointer_type})
     assert started['ok'], started
     page.wait_for_function("""(target)=>
@@ -246,16 +251,53 @@ def assert_corner_dwell(page, direction, pointer_type='mouse'):
         index:jfDeskPageIndex};
     }""")
     assert after['ref'] and after['exact'], (started,after)
-    assert len(after['ref']['text'])>len(started['before']), (started,after)
+    # Turning pages must NOT select the newly exposed full leaf.
+    assert after['ref'] == started['before'], (started,after)
+    first_index=after['index']
+    page.wait_for_timeout(950)
+    stable=page.evaluate("""()=>({page:jfDeskPageIndex,
+      locked:JFEpubSelection.diagnostics().edgeLocked})""")
+    assert stable['page']==first_index and stable['locked'], (started,stable)
+    # Only a new drag movement over real text may extend the stored span.
+    continued=page.evaluate("""({direction,pointerType})=>{
+      const sheet=document.getElementById(
+        direction<0?'jfSheetLeft':'jfSheetRight');
+      const walker=document.createTreeWalker(sheet,NodeFilter.SHOW_TEXT);
+      let node=null,next;
+      while((next=walker.nextNode())){
+        if(next.nodeValue.trim().length>20){node=next;break;}
+      }
+      if(!node)return {ok:false,reason:'new page has no text node'};
+      const at=Math.floor(node.nodeValue.length/2);
+      const r=document.createRange();
+      r.setStart(node,at);r.setEnd(node,at+1);
+      const rect=r.getBoundingClientRect();
+      const x=rect.left+Math.max(1,rect.width/2),y=rect.top+rect.height/2;
+      document.dispatchEvent(new PointerEvent('pointermove',{
+        bubbles:true,pointerType,pointerId:73,buttons:1,clientX:x,clientY:y}));
+      const ref=JFEpubSelection.reference()?.ref;
+      return {ok:!!ref,ref,x,y,
+        page:jfDeskPageIndex,locked:JFEpubSelection.diagnostics().edgeLocked,
+        ink:CSS.highlights.get('jf-epub-selection')?.size||0};
+    }""", {'direction': direction,'pointerType':pointer_type})
+    assert continued['ok'] and continued['ref'], (started,continued)
+    assert len(continued['ref']['text'])>len(after['ref']['text']), (
+      started,after,continued)
+    assert continued['page']==first_index and not continued['locked'], continued
+    page.wait_for_function("""()=>JFEpubSelection.diagnostics().crossPage&&
+      (CSS.highlights.get('jf-epub-selection')?.size||0)>0""")
     page.evaluate("""({pointerType,x,y})=>{
       document.dispatchEvent(new PointerEvent('pointerup',{
         bubbles:true,pointerType,pointerId:73,button:0,buttons:0,
         clientX:x,clientY:y}));
-    }""", {'pointerType': pointer_type,'x':started['x'],'y':started['y']})
+    }""", {'pointerType': pointer_type,
+              'x':continued['x'],'y':continued['y']})
     page.wait_for_function("""()=>!document.getElementById(
       'jfEpubSelectionMenu').hidden && !!JFEpubSelection.reference()""")
     assert page.evaluate("""()=>[...(CSS.highlights.get(
       'jf-epub-selection')||[])].length>0""")
+    assert page.evaluate('()=>JFEpubSelection.reference()?.ref.text') == (
+      continued['ref']['text'])
     page.evaluate('()=>JFEpubSelection.reset()')
     return after
 
@@ -620,7 +662,7 @@ def main():
                 assert_corner_dwell(page, 1, 'mouse')
                 assert_corner_dwell(page, -1, 'touch')
                 assert not errors, errors
-                print('PASS v7.132 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.134 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

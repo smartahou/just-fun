@@ -42,6 +42,7 @@ let dismissOnClick=false;
 // Only a held text drag in the outer upper corner enters the cross-page path.
 const EDGE_DWELL_MS=720;
 let edgeTimer=0,edgeDirection=0,virtual=null,virtualFrame=0,lastDragPoint=null;
+let dragSeed=null,edgeLocked=false;
 let settleTimer=0,settleFrame=0,paintFrame=0,observerFrame=0;
 let blockCache=null,sourceCache=new WeakMap(),resolvedLegacy=new WeakMap();
 let viewGeneration=0,paintedMarks=[],lastPaintKey=null;
@@ -60,6 +61,7 @@ function stopVirtual(){
   stopEdge();
   if(virtualFrame)cancelAnimationFrame(virtualFrame);
   virtualFrame=0;virtual=null;lastDragPoint=null;
+  dragSeed=null;edgeLocked=false;
 }
 const cancelTimer=()=>{
   if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
@@ -211,9 +213,12 @@ function virtualReference(){
   const span=source.slice(start,end),text=span.trim();
   if(!text)return null;
   const leading=span.length-span.trimStart().length;
+  const point=virtual.lastRect||(lastDragPoint?{
+    left:lastDragPoint.x,top:lastDragPoint.y,bottom:lastDragPoint.y,
+    width:0,height:0}:null);
   return {ref:{bookId:virtual.bookId,chapter:virtual.chapter,
       anchorStart:start+leading,text},
-    quoteText:text,rects:virtual.lastRect?[virtual.lastRect]:[],
+    quoteText:text,rects:point?[point]:[],
     session:virtual.session};
 }
 function reference(){
@@ -368,10 +373,12 @@ function cornerDirection(x,y){
   if(!left||!right)return 0;
   const nearTop=r=>Math.min(88,r.height*.14);
   const nearSide=r=>Math.min(94,r.width*.22);
-  if(x>=left.left-5&&x<=left.left+nearSide(left)&&
-     y>=left.top-5&&y<=left.top+nearTop(left))return -1;
-  if(x<=right.right+5&&x>=right.right-nearSide(right)&&
-     y>=right.top-5&&y<=right.top+nearTop(right))return 1;
+  // Accept the narrow outer gutter past each sheet: a real drag can end
+  // slightly outside the paper without its native Selection staying alive.
+  if(x>=left.left-20&&x<=left.left+nearSide(left)&&
+     y>=left.top-12&&y<=left.top+nearTop(left))return -1;
+  if(x<=right.right+20&&x>=right.right-nearSide(right)&&
+     y>=right.top-12&&y<=right.top+nearTop(right))return 1;
   return 0;
 }
 function adjacentSource(direction,chapter,anchor){
@@ -394,24 +401,39 @@ function adjacentSource(direction,chapter,anchor){
     low=Math.min(low,from);high=Math.max(high,to);
   }
   if(!Number.isFinite(low)||!Number.isFinite(high)||high<=low)return null;
-  const focus=direction<0?low:high;
-  if(Math.abs(focus-anchor)>5000||focus===anchor)return null;
-  return {index,focus};
+  const limit=direction<0?low:high;
+  if(Math.abs(limit-anchor)>5000||limit===anchor)return null;
+  // Checking this boundary proves the neighbouring spread can be selected.
+  // It is NOT the selection endpoint: flipping pages must not add any text.
+  return {index};
+}
+function captureDragSeed(){
+  // Cheap source-coordinate lookups only; never read layout or paint during
+  // ordinary native dragging. Keep the last valid text range when hovering
+  // over a blank corner causes the browser Selection to collapse.
+  if(!dragging||virtual||!ready())return;
+  const sel=current();
+  if(!sel||sel.isCollapsed||sel.rangeCount!==1)return;
+  const a=position(sel.anchorNode,sel.anchorOffset);
+  const b=position(sel.focusNode,sel.focusOffset);
+  if(!a||!b||a.chapter!==b.chapter||a.offset===b.offset||
+     Math.abs(a.offset-b.offset)>5000)return;
+  dragSeed={bookId:jfDeskBook.id,session:jfDeskSession,
+    chapter:a.chapter,anchor:a.offset,focus:b.offset};
 }
 function edgeTurn(direction){
   edgeTimer=0;
   if(!dragging||!ready()||edgeDirection!==direction||!lastDragPoint||
      cornerDirection(lastDragPoint.x,lastDragPoint.y)!==direction)return;
+  // Use the most recent native range; dragging into the outer gutter can
+  // collapse the live browser selection before the dwell timer fires.
+  captureDragSeed();
   let original=virtual;
   if(!original){
-    const sel=current();
-    if(!sel||sel.isCollapsed||sel.rangeCount!==1)return;
-    const a=position(sel.anchorNode,sel.anchorOffset);
-    const b=position(sel.focusNode,sel.focusOffset);
-    if(!a||!b||a.chapter!==b.chapter||a.offset===b.offset)return;
-    original={bookId:jfDeskBook.id,session:jfDeskSession,
-      chapter:a.chapter,anchor:a.offset,focus:b.offset,
-      index:jfDeskPageIndex,lastRect:null,pending:null};
+    const seed=dragSeed;
+    if(!seed||seed.bookId!==jfDeskBook?.id||
+       seed.session!==jfDeskSession)return;
+    original={...seed,index:jfDeskPageIndex,lastRect:null,pending:null};
   }
   if(original.pending)return;
   const target=adjacentSource(direction,original.chapter,original.anchor);
@@ -430,9 +452,15 @@ function edgeTurn(direction){
   }
 }
 function armEdge(direction){
+  if(!direction){
+    stopEdge();
+    // One dwell = one turn. Leaving the corner re-enables the next one.
+    edgeLocked=false;
+    return;
+  }
+  if(edgeLocked){stopEdge();return;}
   if(direction===edgeDirection)return;
   stopEdge();
-  if(!direction)return;
   edgeDirection=direction;
   edgeTimer=setTimeout(()=>edgeTurn(direction),EDGE_DWELL_MS);
 }
@@ -537,14 +565,16 @@ function pageRendered(){
   if(virtual&&virtual.session===jfDeskSession&&
      virtual.bookId===jfDeskBook?.id&&jfDeskPaged){
     if(virtual.pending&&jfDeskPageIndex===virtual.pending.index){
-      virtual.focus=virtual.pending.focus;
+      // Keep the exact selection endpoint unchanged when pages flip.
       virtual.index=jfDeskPageIndex;virtual.pending=null;
+      edgeLocked=true;
+      stopEdge();
     }
     current()?.removeAllRanges();
     invalidate();schedulePaint();scheduleVirtual();
-    if(dragging&&lastDragPoint&&!virtual.pending)
-      armEdge(cornerDirection(lastDragPoint.x,lastDragPoint.y));
-    else if(!dragging)scheduleSettle();
+    // Do NOT re-arm while the pointer is still at the same corner.
+    // Otherwise a stationary mouse would repeatedly flip entire spreads.
+    if(!dragging)scheduleSettle();
     return;
   }
   stopVirtual();
@@ -596,8 +626,11 @@ document.addEventListener('pointermove',event=>{
     if(event.cancelable)event.preventDefault();
     if(!direction)extendVirtual(caretAt(event.clientX,event.clientY)||{});
     armEdge(direction);
-  }else if(selecting())armEdge(direction);
-  else stopEdge();
+  }else{
+    if(selecting())captureDragSeed();
+    if(direction&&(selecting()||dragSeed))armEdge(direction);
+    else armEdge(0);
+  }
 },{passive:false});
 function endPointer(event){
   if(!dragging)return;
@@ -612,7 +645,8 @@ document.addEventListener('pointercancel',endPointer,{passive:true});
 document.addEventListener('selectionchange',()=>{
   if(!canRead())return;
   metrics.selectEvents++;
-  if(dragging||virtual)return;
+  if(dragging){captureDragSeed();return;}
+  if(virtual)return;
   if(!selecting()&&!active&&menu.hidden)return;
   scheduleSettle(120);
   if(!selecting())schedulePaint();
@@ -681,7 +715,8 @@ window.JFEpubSelection={
   metrics,diagnostics:()=>({...metrics,book:jfDeskBook?.id,
     chapter:jfDeskChapter,page:jfDeskPageIndex,visibleBlocks:blocks().length,
     selected:selecting(),painted:paintedMarks.length,
-    crossPage:!!virtual,edgeDirection}),
+    crossPage:!!virtual,edgeDirection,edgeLocked,
+    anchor:virtual?.anchor,focus:virtual?.focus,dragSeed:!!dragSeed}),
   suppressTurn:()=>moved&&Date.now()-dragEnded<480
 };
 })();
