@@ -99,5 +99,26 @@ assert(source.includes('function textPointAt(x,y)')&&
 assert(source.includes('if(dragging){captureDragSeed();return;}')&&
   source.includes('if(virtual)return;')&&source.includes('else armEdge(0);'),
   'normal native selection avoids eager expensive redraws');
+const savedInkTints={
+  amber:['#947349','rgba(148,115,73,.09)'],
+  blue:['#668b9c','rgba(102,139,156,.09)'],
+  mint:['#698c72','rgba(105,140,114,.09)'],
+  rose:['#ad7c7b','rgba(173,124,123,.09)'],
+  violet:['#8474a1','rgba(132,116,161,.09)']
+};
+for(const [name,[underline,tint]] of Object.entries(savedInkTints)){
+  const selector='.jfReader ::highlight(jf-epub-mark-'+name+')';
+  const at=css.indexOf(selector+'{');
+  assert(at>=0,'missing saved mark style '+name);
+  const rule=css.slice(at,css.indexOf('}',at)+1);
+  assert(rule.includes('text-decoration-color:'+underline),
+    name+' must retain its existing thin underline hue');
+  assert(rule.includes('background-color:'+tint),
+    name+' must use the same hue at 9% opacity');
+}
+assert(/\.jfReader\.jfEpubSelecting ::highlight\(jf-epub-mark-violet\)\s*\{[^}]*background-color:transparent/.test(css),
+  'archived tints disappear during active selection');
+assert(/\.jfReader ::highlight\(jf-epub-selection\)\s*\{[^}]*background-color:transparent/.test(css),
+  'temporary selection stays transparent');
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.135 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.136 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

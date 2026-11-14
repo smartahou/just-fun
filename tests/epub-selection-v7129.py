@@ -478,10 +478,13 @@ def main():
                     .map(r=>r.toString()).join(''),
                   underline:getComputedStyle(document.querySelector('#jfSheetLeft p'),
                     '::highlight(jf-epub-mark-amber)').textDecorationLine,
+                  background:getComputedStyle(document.querySelector('#jfSheetLeft p'),
+                    '::highlight(jf-epub-mark-amber)').backgroundColor,
                   pageCount:jfDeskPages.length
                 })""")
                 assert marked['marks'] == 1 and marked['ranges'] >= 1, marked
                 assert marked['painted'] == FIRST and marked['underline'] == 'underline', marked
+                assert marked['background'] == 'rgba(148, 115, 73, 0.09)', marked
                 assert marked['pageCount'] == baseline, marked
                 # EPUB exposes a real book-wide mark index.
                 assert page.locator('#jfPdfMarksListToggle').is_visible()
@@ -760,7 +763,7 @@ def main():
                 assert_corner_dwell(page, -1, 'touch')
                 assert_real_forward_mouse(page)
                 assert not errors, errors
-                print('PASS v7.135 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.136 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

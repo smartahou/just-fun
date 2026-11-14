@@ -4226,17 +4226,18 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader .jfEpubColorPalette [data-color=mint]{--mark-color:#86a38b}
 .jfReader .jfEpubColorPalette [data-color=rose]{--mark-color:#be9390}
 .jfReader .jfEpubColorPalette [data-color=violet]{--mark-color:#a295b5}
-/* v7.130 · source-mapped selection and saved marks remain thin underlines.
-   A temporary selection hides archived ink without deleting its DOM ranges. */
+/* v7.136 · saved ink keeps its thin underline and adds a barely visible
+   same-hue tint; temporary selection still hides archived ink. */
 .jfReader.jfEpubSelecting ::highlight(jf-epub-mark-amber),
 .jfReader.jfEpubSelecting ::highlight(jf-epub-mark-blue),
 .jfReader.jfEpubSelecting ::highlight(jf-epub-mark-mint),
 .jfReader.jfEpubSelecting ::highlight(jf-epub-mark-rose),
 .jfReader.jfEpubSelecting ::highlight(jf-epub-mark-violet){
   text-decoration-line:none;
+  background-color:transparent;
 }
-/* User selection and archived marks use source-accurate underlines only.
-   Never put translucent rectangles over old paper or ink. */
+/* Temporary selection stays unfilled. Archived ink keeps the book texture
+   visible under a faint same-hue background tint. */
 .jfReader ::highlight(jf-epub-selection){
   background-color:transparent;
   color:inherit;
@@ -4251,18 +4252,32 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader ::highlight(jf-epub-mark-mint),
 .jfReader ::highlight(jf-epub-mark-rose),
 .jfReader ::highlight(jf-epub-mark-violet){
-  background-color:transparent;
   color:inherit;
   text-decoration-line:underline;
   text-decoration-style:solid;
   text-decoration-thickness:1.5px;
   text-underline-offset:3px;
 }
-.jfReader ::highlight(jf-epub-mark-amber){text-decoration-color:#947349}
-.jfReader ::highlight(jf-epub-mark-blue){text-decoration-color:#668b9c}
-.jfReader ::highlight(jf-epub-mark-mint){text-decoration-color:#698c72}
-.jfReader ::highlight(jf-epub-mark-rose){text-decoration-color:#ad7c7b}
-.jfReader ::highlight(jf-epub-mark-violet){text-decoration-color:#8474a1}
+.jfReader ::highlight(jf-epub-mark-amber){
+  text-decoration-color:#947349;
+  background-color:rgba(148,115,73,.09);
+}
+.jfReader ::highlight(jf-epub-mark-blue){
+  text-decoration-color:#668b9c;
+  background-color:rgba(102,139,156,.09);
+}
+.jfReader ::highlight(jf-epub-mark-mint){
+  text-decoration-color:#698c72;
+  background-color:rgba(105,140,114,.09);
+}
+.jfReader ::highlight(jf-epub-mark-rose){
+  text-decoration-color:#ad7c7b;
+  background-color:rgba(173,124,123,.09);
+}
+.jfReader ::highlight(jf-epub-mark-violet){
+  text-decoration-color:#8474a1;
+  background-color:rgba(132,116,161,.09);
+}
 @media(max-width:620px){
   .jfReader .jfEpubSelectionMenu{font-size:12px}
   .jfReader .jfEpubSelectionMenu button{min-height:40px;padding:10px 12px}
