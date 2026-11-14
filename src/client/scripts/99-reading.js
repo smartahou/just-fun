@@ -275,6 +275,7 @@ function jfDeskMutate(payload){
       jfDeskWorkspace=updated;
       // Reading progress saves must not force a global underline rebuild.
       if(payload.action==='mark'||payload.action==='delete-mark'||
+          payload.action==='recolor-mark'||
          payload.action==='update-mark'||(payload.action==='note'&&payload.alsoMark))
         window.JFEpubSelection?.refresh?.();
       return updated;

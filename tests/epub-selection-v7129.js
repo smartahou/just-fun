@@ -37,7 +37,17 @@ assert(reader.includes("if(payload.action==='mark'||payload.action==='delete-mar
   'progress never redraws marks; reopening always paints after restore');
 assert(source.includes('lastReasons')&&source.includes('diagnostics'),
   'render failures expose diagnostics rather than being invisible');
-for(const t of ['取消','标记','加入笔记'])assert(source.includes(t),t+' action present');
+for(const t of ['取消标记','标记','加入笔记'])assert(source.includes(t),t+' action present');
+assert(!source.includes("['cancel','取消']"),'tap-away replaces cancel button');
+assert(source.includes('dismissOnClick')&&source.includes('event.stopImmediatePropagation()'),
+  'one outside click dismisses selection before pagination click');
+assert(source.includes('jfEpubColorPalette')&&source.includes("action:'recolor-mark'")&&
+  reader.includes("payload.action==='recolor-mark'"),
+  'five reusable colors recolor without losing saved mark identity');
+assert(source.includes('function indexFor(block)')&&source.includes('const {nodes}=indexFor(block)'),
+  'text nodes and exact ranges are indexed once per rendered block');
+assert(css.includes('[aria-pressed=true]')&&css.includes('[data-color=amber]'),
+  'low saturation palette indicates current ink color');
 assert(source.includes('jfDeskChooseQuote({...snap.ref,')&&
   source.includes('sourceText:snap.ref.text'),'note retains original mark source');
 assert(css.includes('::highlight(jf-epub-selection)')&&

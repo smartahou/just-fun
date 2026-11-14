@@ -8,22 +8,37 @@
 const reader=document.getElementById('jfReader');
 const center=document.getElementById('jfReadCenter');
 if(!reader||!center)return;
+const colors=['blue','mint','amber','rose','violet'];
+const colorNames={amber:'茶褐',blue:'青蓝',mint:'草绿',rose:'淡红',violet:'灰紫'};
 const menu=document.createElement('div');
 menu.id='jfEpubSelectionMenu';
 menu.className='jfEpubSelectionMenu';
 menu.setAttribute('role','toolbar');
 menu.setAttribute('aria-label','选中文字操作');
 menu.hidden=true;
-for(const [action,label] of [['cancel','取消'],['mark','标记'],['note','加入笔记']]){
+for(const [action,label] of [['mark','标记'],['note','加入笔记']]){
   const button=document.createElement('button');
   button.type='button';button.dataset.action=action;button.textContent=label;
   menu.append(button);
 }
+const palette=document.createElement('span');
+palette.className='jfEpubColorPalette';
+palette.setAttribute('role','group');
+palette.setAttribute('aria-label','划线颜色');
+for(const color of ['amber','blue','mint','rose','violet']){
+  const button=document.createElement('button');
+  button.type='button';button.dataset.color=color;
+  button.title=colorNames[color]+'划线';
+  button.setAttribute('aria-label',colorNames[color]+'划线');
+  button.setAttribute('aria-pressed','false');
+  palette.append(button);
+}
+menu.insertBefore(palette,menu.querySelector('[data-action=note]'));
 reader.append(menu);
-const colors=['blue','mint','amber','rose','violet'];
 const key=color=>'jf-epub-mark-'+color;
 const transient='jf-epub-selection';
 let active=null,dragging=false,moved=false,pointerAt=null,dragEnded=0;
+let dismissOnClick=false;
 let settleTimer=0,settleFrame=0,paintFrame=0,observerFrame=0;
 let blockCache=null,sourceCache=new WeakMap(),resolvedLegacy=new WeakMap();
 let viewGeneration=0,paintedMarks=[],lastPaintKey=null;
@@ -78,18 +93,20 @@ function blocks(){
           offset=item.offset;
         if(offset===null||source?.slice(offset,offset+el.textContent.length)!==el.textContent)
           continue;
-        result.push({el,chapter:item.chapter,offset,len:el.textContent.length});
+        result.push({el,chapter:item.chapter,offset,len:el.textContent.length,
+          text:el.textContent});
       }
     }
   }else{
     const sections=jfReadText.querySelectorAll('.jfEpubChapter[data-chapter]');
     if(sections.length){
       for(const el of sections)result.push({
-        el,chapter:Number(el.dataset.chapter),offset:0,len:el.textContent.length
+        el,chapter:Number(el.dataset.chapter),offset:0,len:el.textContent.length,
+        text:el.textContent
       });
     }else if(jfReadText.firstChild){
       result.push({el:jfReadText,chapter:jfDeskChapter,offset:0,
-        len:jfReadText.textContent.length});
+        len:jfReadText.textContent.length,text:jfReadText.textContent});
     }
   }
   metrics.maps++;
@@ -101,9 +118,34 @@ function owner(node){
   if(!el)return null;
   return blocks().find(b=>b.el.contains(node))||null;
 }
+function indexFor(block){
+  if(block.index)return block.index;
+  const starts=new WeakMap(),nodes=[];
+  const walker=document.createTreeWalker(block.el,NodeFilter.SHOW_TEXT);
+  let node,at=0;
+  while((node=walker.nextNode())){
+    const len=node.nodeValue.length;
+    starts.set(node,at);
+    nodes.push({node,start:at,end:at+len});
+    at+=len;
+  }
+  block.index={starts,nodes};
+  return block.index;
+}
 function position(node,at){
   const block=owner(node);
   if(!block)return null;
+  // Most caret hits and drag endpoints are text nodes: look up the cached
+  // source index instead of rebuilding a DOM Range over the whole paragraph.
+  if(node.nodeType===3){
+    const start=indexFor(block).starts.get(node);
+    if(start!==undefined){
+      const offset=block.offset+start+at;
+      return offset>=block.offset&&offset<=block.offset+block.len?
+        {chapter:block.chapter,offset}:null;
+    }
+  }
+  // Element boundary endpoints are uncommon; preserve their exact behavior.
   try{
     const prefix=document.createRange();
     prefix.selectNodeContents(block.el);
@@ -123,20 +165,24 @@ function rangesFor(chapter,start,end){
        block.offset+block.len<=start)continue;
     const from=Math.max(start,block.offset),to=Math.min(end,block.offset+block.len);
     const localStart=from-block.offset,localEnd=to-block.offset;
-    if(block.el.textContent.slice(localStart,localEnd)!==source.slice(from,to))
+    if(block.text.slice(localStart,localEnd)!==source.slice(from,to))
       continue;
-    const walker=document.createTreeWalker(block.el,NodeFilter.SHOW_TEXT);
-    let node,at=0,a=null,z=null;
-    while((node=walker.nextNode())){
-      const next=at+node.nodeValue.length;
-      if(!a&&localStart<next)a={node,offset:localStart-at};
-      if(a&&localEnd<=next){z={node,offset:localEnd-at};break;}
-      at=next;
+    // The visible leaf's text node index is built at most once per render.
+    const {nodes}=indexFor(block);
+    let lo=0,hi=nodes.length;
+    while(lo<hi){
+      const mid=(lo+hi)>>>1;
+      if(nodes[mid].end<=localStart)lo=mid+1;else hi=mid;
     }
+    const a=nodes[lo];
+    let last=lo;
+    while(last<nodes.length&&nodes[last].end<localEnd)last++;
+    const z=nodes[last];
     if(!a||!z)continue;
     const range=document.createRange();
     try{
-      range.setStart(a.node,a.offset);range.setEnd(z.node,z.offset);
+      range.setStart(a.node,localStart-a.start);
+      range.setEnd(z.node,localEnd-z.start);
       if(range.toString()===source.slice(from,to))output.push(range);
     }catch{}
   }
@@ -237,6 +283,7 @@ function schedulePaint(force=false){
   paintFrame=requestAnimationFrame(paint);
 }
 function resetSelection(removeNative){
+  cancelTimer();dismissOnClick=false;
   active=null;menu.hidden=true;
   reader.classList.remove('jfEpubSelecting');
   clearTransient();
@@ -246,6 +293,10 @@ function resetSelection(removeNative){
 function placeMenu(snap,near=null){
   const mark=snap.savedMark||savedFor(snap.ref);
   menu.querySelector('[data-action=mark]').textContent=mark?'取消标记':'标记';
+  for(const button of palette.querySelectorAll('[data-color]')){
+    button.setAttribute('aria-pressed',String(
+      (mark?(mark.color||'blue'):'amber')===button.dataset.color));
+  }
   menu.hidden=false;
   const width=menu.offsetWidth||230,height=menu.offsetHeight||44;
   const rect=near||snap.rects?.[snap.rects.length-1];
@@ -284,6 +335,20 @@ function scheduleSettle(delay=0){
   },delay);
   else settleFrame=requestAnimationFrame(settle);
 }
+async function applyColor(color){
+  const snap=active;
+  if(!colors.includes(color)||!snap||snap.ref.bookId!==jfDeskBook?.id||
+     snap.session!==jfDeskSession)return;
+  const saved=snap.savedMark||savedFor(snap.ref);
+  resetSelection(true);
+  if(saved&&(saved.color||'blue')===color)return;
+  try{
+    if(saved)await jfDeskMutate({action:'recolor-mark',mark:saved,color});
+    else await jfDeskMutate({action:'mark',mark:{...snap.ref,type:'text',
+      length:snap.ref.text.length,color}});
+    jfDeskMessage(saved?'已更换划线颜色':'已标记原文');
+  }catch(error){jfDeskMessage('划线保存失败：'+error.message,true);}
+}
 async function mark(){
   const snap=active;
   if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
@@ -307,7 +372,7 @@ function quote(){
 function refresh(){schedulePaint(true);}
 function pageRendered(){
   cancelTimer();
-  active=null;menu.hidden=true;dragging=false;pointerAt=null;
+  active=null;menu.hidden=true;dragging=false;pointerAt=null;dismissOnClick=false;
   reader.classList.remove('jfEpubDragging','jfEpubSelecting');
   current()?.removeAllRanges();
   clearTransient();invalidate();schedulePaint();
@@ -317,7 +382,7 @@ function reset(){
   cancelTimer();
   if(paintFrame)cancelAnimationFrame(paintFrame);paintFrame=0;
   if(observerFrame)cancelAnimationFrame(observerFrame);observerFrame=0;
-  active=null;dragging=false;pointerAt=null;blockCache=null;
+  active=null;dragging=false;pointerAt=null;dismissOnClick=false;blockCache=null;
   sourceCache=new WeakMap();resolvedLegacy=new WeakMap();
   reader.classList.remove('jfEpubSelecting','jfEpubDragging');
   clearTransient();clearPaint();current()?.removeAllRanges();
@@ -325,14 +390,17 @@ function reset(){
 for(const button of menu.querySelectorAll('button')){
   button.addEventListener('pointerdown',event=>event.preventDefault());
   button.addEventListener('click',()=>{
-    if(button.dataset.action==='cancel')resetSelection(true);
+    if(button.dataset.color)void applyColor(button.dataset.color);
     else if(button.dataset.action==='mark')void mark();
-    else quote();
+    else if(button.dataset.action==='note')quote();
   });
 }
 document.addEventListener('pointerdown',event=>{
   if(!ready()||!center.contains(event.target)||
      event.target.closest('button,a,input,textarea,select'))return;
+  // Preserve whether this pointer-down began with an open selection. The
+  // following click must dismiss it before the reader's page-turn handler.
+  dismissOnClick=!!active||!menu.hidden||selecting();
   dragging=true;moved=false;pointerAt={x:event.clientX,y:event.clientY};
   reader.classList.add('jfEpubDragging');
   menu.hidden=true;active=null;clearTransient();cancelTimer();
@@ -346,7 +414,7 @@ document.addEventListener('pointermove',event=>{
 function endPointer(event){
   if(!dragging)return;
   dragging=false;pointerAt=null;reader.classList.remove('jfEpubDragging');
-  if(moved)dragEnded=Date.now();
+  if(moved){dragEnded=Date.now();dismissOnClick=false;}
   scheduleSettle(event.pointerType==='touch'?110:25);
 }
 document.addEventListener('pointerup',endPointer,{passive:true});
@@ -376,7 +444,16 @@ function caretAt(x,y){
   return p?position(p.startContainer,p.startOffset):null;
 }
 center.addEventListener('click',event=>{
-  if(!ready()||selecting()||!paintedMarks.length)return;
+  if(!ready())return;
+  if(dismissOnClick){
+    dismissOnClick=false;
+    if(!moved){
+      resetSelection(true);
+      event.preventDefault();event.stopImmediatePropagation();
+      return;
+    }
+  }
+  if(selecting()||!paintedMarks.length)return;
   // One caret hit-test, not getClientRects() on every stored mark.
   const point=caretAt(event.clientX,event.clientY);
   if(!point)return;
@@ -388,6 +465,12 @@ center.addEventListener('click',event=>{
   placeMenu(active,{left:event.clientX,top:event.clientY,
     bottom:event.clientY,width:0});
   event.preventDefault();event.stopImmediatePropagation();
+},true);
+// A tap outside the page closes a stale toolbar without interfering with
+// actual header/footer controls. Pointer actions on the toolbar are exempt.
+document.addEventListener('pointerdown',event=>{
+  if(!ready()||center.contains(event.target)||menu.contains(event.target))return;
+  if(active||!menu.hidden)resetSelection(true);
 },true);
 window.addEventListener('resize',()=>{invalidate();schedulePaint(true);});
 center.addEventListener('scroll',()=>{
