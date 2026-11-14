@@ -134,7 +134,7 @@ assert(reader.includes('function jfDeskTagSourceImages(section,chapter)')&&
   reader.includes('jfDeskTagSourceImages(first,number)'),
   'source image ordinals survive EPUB flow and printed clone generation');
 assert(reader.includes("mark={type:'epub-image'")&&
-  reader.includes("epubImageIndex:quote.epubImageIndex"),
+  reader.includes("imageIndex:quote.epubImageIndex"),
   'image note atomically writes its source image annotation');
 assert(pdf.includes("mark.type==='epub-image'")&&
   pdf.includes('JFEpubSelection?.jumpImage?.(mark)'),
