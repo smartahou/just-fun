@@ -96,9 +96,10 @@ assert(source.includes('function textPointAt(x,y)')&&
   source.includes('if(!onText&&dragOriginInText&&dragSeed)')&&
   source.includes('enterVirtual();'),
   'non-text margins cannot expand selection by browser caret clamping');
-assert(source.includes('if(dragging){captureDragSeed();return;}')&&
-  source.includes('if(virtual)return;')&&source.includes('else armEdge(0);'),
-  'normal native selection avoids eager expensive redraws');
+assert(source.includes('if(dragging){captureDragSeed();scheduleLivePreview();return;}')&&
+  source.includes('if(virtual)return;')&&source.includes('else armEdge(0);')&&
+  source.includes('if(!liveFrame)liveFrame=requestAnimationFrame(livePreview)'),
+  'normal native drag only schedules one bounded visual preview per frame');
 const savedInkTints={
   amber:['#947349','rgba(148,115,73,.09)'],
   blue:['#668b9c','rgba(102,139,156,.09)'],
