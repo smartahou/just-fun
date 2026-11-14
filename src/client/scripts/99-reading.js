@@ -585,6 +585,9 @@ function jfDeskFlowSection(n,html){
   return sec;
 }
 function jfDeskTagSourceImages(section,chapter){
+  // The overwhelming majority of prose chapters contain no images; avoid
+  // walking every text node when there are no image offsets to stamp.
+  if(!section.querySelector('img'))return;
   // Stable source-order identities survive cloned facing leaves, resizes and
   // the original EPUB image URL being replaced by optional plate processing.
   // Metadata only: no change to the text stream, dimensions or node ordering.
