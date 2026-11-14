@@ -676,27 +676,34 @@ def assert_epub_images(page,book_id):
         NodeFilter.SHOW_TEXT);
       let node,prior=null;
       while((node=walker.nextNode())){
-        if(!node.nodeValue.trim()||!node.parentElement?.closest(
-          '#jfSheetLeft,#jfSheetRight'))continue;
+        if(!node.nodeValue.trim()||node.nodeValue.length<25||
+           !node.parentElement?.closest(
+             '#jfSheetLeft .jfSheetBody p,#jfSheetRight .jfSheetBody p'))continue;
         if(node.compareDocumentPosition(img)&
            Node.DOCUMENT_POSITION_FOLLOWING)prior=node;
       }
-      if(!prior||prior.length<10)return {ok:false,reason:'missing drag start'};
+      if(!prior||prior.length<25)return {ok:false,reason:'missing text drag start'};
       const coord=at=>{
         const r=document.createRange();r.setStart(prior,at);r.setEnd(prior,at+1);
         const rect=r.getBoundingClientRect();
         return {x:rect.left+rect.width/2,y:rect.top+rect.height/2};
       };
       const r=img.getBoundingClientRect();
-      return {ok:true,start:coord(prior.length-10),
-        textEnd:coord(prior.length-2),picture:{x:r.left+r.width/2,y:r.top+r.height/2}};
+      return {ok:true,start:coord(5),
+        textEnd:coord(15),picture:{x:r.left+r.width/2,y:r.top+r.height/2}};
     }""")
     assert drag['ok'],drag
     page.mouse.move(drag['start']['x'],drag['start']['y'])
     page.mouse.down()
     try:
         page.mouse.move(drag['textEnd']['x'],drag['textEnd']['y'],steps=6)
-        page.wait_for_function("""()=>getSelection()?.toString().length>=2""")
+        page.wait_for_timeout(140)
+        native=page.evaluate("""()=>({
+          text:getSelection()?.toString(),
+          diagnostics:JFEpubSelection.diagnostics(),
+          active:document.activeElement?.tagName
+        })""")
+        assert len(native['text'] or '')>=2, (drag,native)
         page.mouse.move(drag['picture']['x'],drag['picture']['y'],steps=6)
         page.wait_for_function("""()=>JFEpubSelection.reference()?.images?.some(
           i=>i.imageIndex===1)""",timeout=3000)
