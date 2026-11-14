@@ -678,7 +678,7 @@ def assert_epub_images(page,book_id):
       while((node=walker.nextNode())){
         if(!node.nodeValue.trim()||node.nodeValue.length<25||
            !node.parentElement?.closest(
-             '#jfSheetLeft .jfSheetBody p,#jfSheetRight .jfSheetBody p'))continue;
+             '#jfSheetLeft p,#jfSheetRight p'))continue;
         if(node.compareDocumentPosition(img)&
            Node.DOCUMENT_POSITION_FOLLOWING)prior=node;
       }
