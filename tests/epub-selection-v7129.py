@@ -2,6 +2,8 @@
 """v7.129 Chromium: EPUB paper selection, saved mark and source-linked notes."""
 import json
 import pathlib
+import struct
+import zlib
 import tempfile
 import urllib.request
 import zipfile
@@ -38,6 +40,45 @@ def make_epub(path):
                    '<p>' + long_text + THIRD + '，后文不应该被标记。</p>'
                    '</body></html>')
 
+
+
+def make_epub_images(path):
+    """Two visual illustrations sharing the same file but distinct source anchors."""
+    width,height=240,146
+    raw=bytearray()
+    for y in range(height):
+        raw.append(0)
+        for x in range(width):
+            raw.extend((32+(x*3+y)%75,65+(x+y*2)%80,76+(x*2+y*3)%88))
+    def chunk(kind,data):
+        return (struct.pack('>I',len(data))+kind+data+
+                struct.pack('>I',zlib.crc32(kind+data)&0xffffffff))
+    png=(b'\x89PNG\r\n\x1a\n'+
+         chunk(b'IHDR',struct.pack('>2I5B',width,height,8,2,0,0,0))+
+         chunk(b'IDAT',zlib.compress(bytes(raw),9))+chunk(b'IEND',b''))
+    with zipfile.ZipFile(path,'w') as z:
+        z.writestr('mimetype','application/epub+zip',
+                   compress_type=zipfile.ZIP_STORED)
+        z.writestr('META-INF/container.xml',
+                   '<container><rootfiles><rootfile '
+                   'full-path="OEBPS/content.opf"/></rootfiles></container>')
+        z.writestr('OEBPS/content.opf',
+                   '<package version="3.0" xmlns="http://www.idpf.org/2007/opf">'
+                   '<metadata><dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">'
+                   'Illustrations</dc:title></metadata><manifest>'
+                   '<item id="a" href="chapter.xhtml" media-type="application/xhtml+xml"/>'
+                   '<item id="photo" href="media/photo.png" media-type="image/png"/>'
+                   '</manifest><spine><itemref idref="a"/></spine></package>')
+        text='<p>'+'这是含有图片的旧书章节，图片前后的正文应保持原有分页行为。'*6+'</p>'
+        middle='<p>'+'图文并茂，原文照旧，重复图片的标记必须分别保存。'*9+'</p>'
+        z.writestr('OEBPS/chapter.xhtml',
+                   '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+                   '<h2>插图标记验收</h2>'+text+
+                   '<figure><img src="media/photo.png" alt="第一幅测试插图"/></figure>'+
+                   middle+
+                   '<figure><img src="media/photo.png" alt="第二幅测试插图"/></figure>'+
+                   text+'</body></html>')
+        z.writestr('OEBPS/media/photo.png',png)
 
 def choose(page, word):
     result = page.evaluate("""(word)=>{
@@ -398,6 +439,121 @@ def assert_real_forward_mouse(page):
     page.evaluate('()=>JFEpubSelection.reset()')
 
 
+
+def assert_epub_images(page,book_id):
+    """Click and mark two repeated EPUB illustrations by independent source index."""
+    page.evaluate('(id)=>jfDeskOpenReader(id,0)',book_id)
+    page.wait_for_function("""(id)=>jfDeskBook?.id===id&&!jfDeskRestoring&&
+      jfDeskPages.length>=1""",arg=book_id,timeout=12000)
+    overview=page.evaluate("""()=>{
+      const images=[...jfDeskFlow[0].el.querySelectorAll('img')];
+      return {indices:images.map(i=>i.dataset.jfEpubImageIndex),
+        sources:images.map(i=>i.getAttribute('src')),paged:jfDeskPaged};
+    }""")
+    assert overview['paged'] and overview['indices']==['0','1'],overview
+    assert overview['sources'][0]==overview['sources'][1],overview
+
+    def focus(index):
+        result=page.evaluate("""(index)=>{
+          const sel='img[data-jf-epub-image-index="'+index+'"]';
+          const at=jfDeskPages.findIndex(page=>page.some(b=>
+            b.node?.matches?.(sel)||b.node?.querySelector?.(sel)));
+          if(at<0)return {ok:false,reason:'no paginated image',index};
+          const step=jfDeskPagedGeometry().two?2:1;
+          jfDeskPageIndex=Math.floor(at/step)*step;
+          jfDeskPagedRender();
+          const img=document.querySelector('#jfSheetLeft '+sel+
+            ',#jfSheetRight '+sel);
+          if(!img)return {ok:false,reason:'no visible image',index,at};
+          const r=img.getBoundingClientRect();
+          return {ok:r.width>20&&r.height>20,
+            x:r.left+r.width/2,y:r.top+r.height/2,
+            page:jfDeskPageIndex,chapter:img.dataset.jfEpubImageChapter,
+            source:img.currentSrc};
+        }""",index)
+        assert result['ok'],result
+        page.mouse.click(result['x'],result['y'])
+        page.wait_for_function("""(index)=>!document.getElementById(
+          'jfEpubSelectionMenu').hidden&&
+          JFEpubSelection.reference()?.ref.type==='epub-image'&&
+          JFEpubSelection.reference()?.ref.imageIndex===index""",arg=index)
+        assert page.evaluate('jfDeskPageIndex')==result['page'],result
+        return result
+
+    focus(0)
+    page.locator('#jfEpubSelectionMenu [data-color="mint"]').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+      m.bookId===jfDeskBook.id&&m.type==='epub-image'&&
+      m.imageIndex===0&&m.color==='mint')""")
+    page.wait_for_function("""()=>!!document.querySelector(
+      '#jfSheetLeft img[data-jf-epub-image-color="mint"],'+
+      '#jfSheetRight img[data-jf-epub-image-color="mint"]')""")
+    style=page.evaluate("""()=>{
+      const img=document.querySelector(
+        '#jfSheetLeft img[data-jf-epub-image-color="mint"],'+
+        '#jfSheetRight img[data-jf-epub-image-color="mint"]');
+      return {outline:getComputedStyle(img).outlineStyle,
+        originals:jfDeskFlow[0].el.querySelectorAll('img').length};
+    }""")
+    assert style['outline']=='solid' and style['originals']==2,style
+
+    focus(0)
+    page.locator('#jfEpubSelectionMenu [data-action="note"]').click()
+    page.locator('#jfPdfQuoteChooser').wait_for(state='visible')
+    page.locator('#jfPdfQuoteOptions button[data-note-id="new"]').click()
+    page.locator('#jfPdfQuoteNewTitle').fill('旧书插图笔记')
+    page.locator('#jfPdfQuoteCommit').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.notes.some(n=>
+      n.title==='旧书插图笔记'&&n.quotes.some(q=>
+        q.type==='image'&&q.epubImageIndex===0&&
+        q.image.startsWith('data:image/jpeg;base64,')))""",timeout=12000)
+    saved=page.evaluate("""()=>{
+      const n=jfDeskWorkspace.notes.find(n=>n.title==='旧书插图笔记');
+      return {index:n.quotes[0].epubImageIndex,size:n.quotes[0].image.length};
+    }""")
+    assert saved['index']==0 and 150<saved['size']<=235000,saved
+
+    focus(0)
+    page.locator('#jfEpubSelectionMenu [data-color="blue"]').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+      m.type==='epub-image'&&m.imageIndex===0&&m.color===undefined)""")
+    focus(1)
+    page.locator('#jfEpubSelectionMenu [data-color="rose"]').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+      m.type==='epub-image'&&m.imageIndex===1&&m.color==='rose')""")
+    independent=page.evaluate("""()=>jfDeskWorkspace.marks.filter(m=>
+      m.bookId===jfDeskBook.id&&m.type==='epub-image')
+      .map(m=>[m.imageIndex,m.color||'blue']).sort((a,b)=>a[0]-b[0])""")
+    assert independent==[[0,'blue'],[1,'rose']],independent
+
+    page.evaluate("""()=>{
+      Object.defineProperty(navigator,'clipboard',{configurable:true,
+        value:{write:async items=>{window.__jfCopiedImageTypes=items[0].types;}}});
+    }""")
+    focus(1)
+    page.locator('#jfEpubSelectionMenu [data-action="copy"]').click()
+    page.wait_for_function("""()=>window.__jfCopiedImageTypes?.includes('image/png')&&
+      document.getElementById('jfEpubSelectionMenu').hidden""")
+    page.locator('#jfPdfMarksListToggle').click()
+    page.wait_for_function("""()=>!document.getElementById('jfPdfMarksList').hidden&&
+      document.getElementById('jfPdfMarksListItems').textContent.includes('图片标记')""")
+    row=page.locator('#jfPdfMarksListItems .jfPdfMarkItem').filter(
+        has_text='第二幅测试插图').first
+    row.click()
+    page.wait_for_function("""()=>document.getElementById('jfPdfMarksList').hidden&&
+      !!document.querySelector('#jfSheetLeft img[data-jf-epub-image-index="1"],'+
+      '#jfSheetRight img[data-jf-epub-image-index="1"]')""")
+    page.evaluate('()=>{JFEpubSelection.reset();JFEpubSelection.restoreReady();}')
+    page.wait_for_function("""()=>!!document.querySelector(
+      '#jfSheetLeft img[data-jf-epub-image-color="rose"],'+
+      '#jfSheetRight img[data-jf-epub-image-color="rose"]')""")
+    focus(1)
+    page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+    page.wait_for_function("""()=>!jfDeskWorkspace.marks.some(m=>
+      m.bookId===jfDeskBook.id&&m.type==='epub-image'&&m.imageIndex===1)""")
+    assert page.evaluate("""()=>jfDeskWorkspace.marks.some(m=>
+      m.bookId===jfDeskBook.id&&m.type==='epub-image'&&m.imageIndex===0)""")
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -406,6 +562,7 @@ def main():
         library = work / 'library'
         library.mkdir()
         make_epub(library / 'selection.epub')
+        make_epub_images(library / 'illustrations.epub')
         proc = log = None
         try:
             proc, port, log = launch(ROOT / 'dist/douyin.js', library,
@@ -413,8 +570,9 @@ def main():
             origin = f'http://127.0.0.1:{port}'
             with urllib.request.urlopen(origin+'/api/books?refresh=1',
                                         timeout=30) as response:
-                book = next(b for b in json.load(response)['books']
-                            if b['name'] == 'selection.epub')
+                books=json.load(response)['books']
+                book=next(b for b in books if b['name']=='selection.epub')
+                image_book=next(b for b in books if b['name']=='illustrations.epub')
             with sync_playwright() as pw:
                 browser = pw.chromium.launch(
                     executable_path='/usr/bin/chromium',
@@ -762,8 +920,9 @@ def main():
                 assert_corner_dwell(page, 1, 'mouse')
                 assert_corner_dwell(page, -1, 'touch')
                 assert_real_forward_mouse(page)
+                assert_epub_images(page,image_book['id'])
                 assert not errors, errors
-                print('PASS v7.136 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.137 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

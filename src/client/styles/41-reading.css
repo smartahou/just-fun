@@ -4226,6 +4226,35 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader .jfEpubColorPalette [data-color=mint]{--mark-color:#86a38b}
 .jfReader .jfEpubColorPalette [data-color=rose]{--mark-color:#be9390}
 .jfReader .jfEpubColorPalette [data-color=violet]{--mark-color:#a295b5}
+/* v7.137 · EPUB image annotation is a paint-only frame, never a DOM
+   wrapper or an overlay covering the original pixels. Source glyph images
+   remain plain text-like ink and do not present a picture toolbar. */
+.jfReader #jfSheetLeft img[data-jf-epub-image-index]:not(.jfInlineGlyph),
+.jfReader #jfSheetRight img[data-jf-epub-image-index]:not(.jfInlineGlyph),
+.jfReader #jfReadText img[data-jf-epub-image-index]:not(.jfInlineGlyph){
+  cursor:pointer;
+  -webkit-user-drag:none;
+}
+.jfReader img[data-jf-epub-image-color="amber"]{--jf-epub-img-ink:#947349;--jf-epub-img-halo:rgba(148,115,73,.11)}
+.jfReader img[data-jf-epub-image-color="blue"]{--jf-epub-img-ink:#668b9c;--jf-epub-img-halo:rgba(102,139,156,.11)}
+.jfReader img[data-jf-epub-image-color="mint"]{--jf-epub-img-ink:#698c72;--jf-epub-img-halo:rgba(105,140,114,.11)}
+.jfReader img[data-jf-epub-image-color="rose"]{--jf-epub-img-ink:#ad7c7b;--jf-epub-img-halo:rgba(173,124,123,.11)}
+.jfReader img[data-jf-epub-image-color="violet"]{--jf-epub-img-ink:#8474a1;--jf-epub-img-halo:rgba(132,116,161,.11)}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText) img[data-jf-epub-image-color]{
+  outline:1.5px solid var(--jf-epub-img-ink);
+  outline-offset:3px;
+  box-shadow:0 0 0 4px var(--jf-epub-img-halo);
+}
+.jfReader.jfEpubSelecting :is(#jfSheetLeft,#jfSheetRight,#jfReadText)
+  img[data-jf-epub-image-color]:not([data-jf-epub-image-active]){
+  outline-color:transparent;box-shadow:none;
+}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText)
+  img[data-jf-epub-image-active]{
+  outline:2px solid #6b8b7b;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(107,139,123,.16);
+}
 /* v7.136 · saved ink keeps its thin underline and adds a barely visible
    same-hue tint; temporary selection still hides archived ink. */
 .jfReader.jfEpubSelecting ::highlight(jf-epub-mark-amber),

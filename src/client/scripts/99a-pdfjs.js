@@ -402,7 +402,8 @@ function jfPdfJsMarkUnits(){
 function jfPdfJsSameMark(a,b){
   return a===b||(!!a&&!!b&&a.bookId===b.bookId&&a.chapter===b.chapter&&a.type===b.type&&
     (a.type==='area'?JSON.stringify(a.area)===JSON.stringify(b.area):
-     a.type==='text'?a.anchorStart===b.anchorStart&&a.text===b.text:true));
+     a.type==='text'?a.anchorStart===b.anchorStart&&a.text===b.text:
+     a.type==='epub-image'?a.imageIndex===b.imageIndex:true));
 }
 function jfPdfJsNeighborUnit(mark,direction){
   const units=jfPdfJsMarkUnits(),pos=units.findIndex(unit=>unit.some(m=>jfPdfJsSameMark(m,mark)));
@@ -561,7 +562,8 @@ function jfPdfJsMarksListRender(){
     }else{
       const content=document.createElement('span');content.className='jfPdfMarkText';
       const record=jfPdfJsState.pages.get(mark.chapter);
-      const body=mark.type==='text'?mark.text:record?.el.querySelector('.jfPdfTextLayer')?.textContent||'';
+      const body=mark.type==='text'?mark.text:mark.type==='epub-image'?
+        (mark.label||'图片 '+(mark.imageIndex+1)):record?.el.querySelector('.jfPdfTextLayer')?.textContent||'';
       content.textContent=(body||(mark.type==='area'?'图片区域 · 正在准备预览':'正在读取该页内容…')).slice(0,180);
       button.append(content);
       if(isPdf&&mark.type==='page'&&!body){
@@ -572,7 +574,7 @@ function jfPdfJsMarksListRender(){
     }
     const meta=document.createElement('span');meta.className='jfPdfMarkPage';
     const pages=mark.chapter===last.chapter?'第 '+(mark.chapter+1)+' 页':'第 '+(mark.chapter+1)+'–'+(last.chapter+1)+' 页';
-    meta.textContent=(isPdf?pages:'第 '+(mark.chapter+1)+' 章')+' · '+(unit.length>1?'组合标记 · '+unit.length+' 处':({text:'原文标记',area:'图片区域',page:'页面标记'}[mark.type]||'标记'));
+    meta.textContent=(isPdf?pages:'第 '+(mark.chapter+1)+' 章')+' · '+(unit.length>1?'组合标记 · '+unit.length+' 处':({text:'原文标记',area:'图片区域',page:'页面标记','epub-image':'图片标记'}[mark.type]||'标记'));
     button.append(meta);
     button.addEventListener('click',async()=>{
       jfPdfMarkMenuClose();jfPdfJsMarksListClose();
@@ -580,6 +582,7 @@ function jfPdfJsMarksListRender(){
         // Navigate via original source offset, not a DOM-mutating <mark>.
         await jfDeskShowChapter(mark.chapter,0,
           mark.type==='text'&&Number.isSafeInteger(mark.anchorStart)?mark.anchorStart:null);
+        if(mark.type==='epub-image')window.JFEpubSelection?.jumpImage?.(mark);
         return;
       }
       await jfPdfJsPage(mark.chapter);

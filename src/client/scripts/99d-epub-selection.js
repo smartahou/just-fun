@@ -14,7 +14,7 @@ const menu=document.createElement('div');
 menu.id='jfEpubSelectionMenu';
 menu.className='jfEpubSelectionMenu';
 menu.setAttribute('role','toolbar');
-menu.setAttribute('aria-label','选中文字操作');
+menu.setAttribute('aria-label','选中内容操作');
 menu.hidden=true;
 for(const [action,label] of [['copy','复制'],['mark','标记'],['note','加入笔记']]){
   const button=document.createElement('button');
@@ -77,8 +77,32 @@ function sourceFor(chapter){
 function clearTransient(){
   if(supported())CSS.highlights.delete(transient);
 }
+function visibleImages(){
+  const roots=jfDeskPaged?[
+    document.getElementById('jfSheetLeft'),
+    document.getElementById('jfSheetRight')
+  ]:[jfReadText];
+  return roots.flatMap(root=>Array.from(
+    root?.querySelectorAll('img[data-jf-epub-image-index]')||[]));
+}
+function imageMarkRef(img){
+  if(!img||img.tagName!=='IMG'||img.classList.contains('jfInlineGlyph')||
+     (!jfReadText.contains(img)&&!document.getElementById('jfPageView')?.contains(img)))
+    return null;
+  const chapter=Number(img.dataset.jfEpubImageChapter);
+  const imageIndex=Number(img.dataset.jfEpubImageIndex);
+  if(!Number.isSafeInteger(chapter)||chapter<0||!Number.isSafeInteger(imageIndex)||
+     imageIndex<0||!img.hasAttribute('data-jf-epub-image-index')||
+     !img.hasAttribute('data-jf-epub-image-chapter'))return null;
+  return {type:'epub-image',bookId:jfDeskBook.id,chapter,imageIndex,
+    label:String(img.alt||'').trim().slice(0,120)};
+}
+function clearImageFocus(){
+  active?.imageElement?.removeAttribute('data-jf-epub-image-active');
+}
 function clearPaint(){
   if(supported())for(const c of colors)CSS.highlights.delete(key(c));
+  for(const img of visibleImages())img.removeAttribute('data-jf-epub-image-color');
   paintedMarks=[];lastPaintKey=null;
 }
 function invalidate(){
@@ -223,6 +247,7 @@ function virtualReference(){
 }
 function reference(){
   if(!ready())return null;
+  if(active?.imageElement)return active;
   if(virtual)return virtualReference();
   const sel=current();
   if(!sel||sel.isCollapsed||sel.rangeCount!==1)return null;
@@ -256,8 +281,9 @@ function reference(){
 }
 function savedFor(ref){
   return (jfDeskWorkspace?.marks||[]).find(m=>
-    m.type==='text'&&m.bookId===ref.bookId&&m.chapter===ref.chapter&&
-    m.anchorStart===ref.anchorStart&&m.text===ref.text)||null;
+    m.type===(ref.type||'text')&&m.bookId===ref.bookId&&m.chapter===ref.chapter&&
+    (ref.type==='epub-image'?m.imageIndex===ref.imageIndex:
+      m.anchorStart===ref.anchorStart&&m.text===ref.text))||null;
 }
 function markOffset(mark){
   const source=sourceFor(mark.chapter);
@@ -277,16 +303,26 @@ function paint(){
   if(!ready()||!supported()||selecting())return;
   const now=performance.now();
   const present=blocks();
+  const images=visibleImages();
   const chapters=new Set(present.map(b=>b.chapter));
+  for(const img of images)chapters.add(Number(img.dataset.jfEpubImageChapter));
   const marks=(jfDeskWorkspace?.marks||[]).filter(m=>
-    m.type==='text'&&m.bookId===jfDeskBook.id&&chapters.has(m.chapter));
+    (m.type==='text'||m.type==='epub-image')&&
+    m.bookId===jfDeskBook.id&&chapters.has(m.chapter));
   const sig=viewGeneration+'|'+jfDeskBook.id+'|'+marks.map(m=>
-    m.chapter+':'+m.anchorStart+':'+m.text+':'+(m.color||'blue')).join('\x1f');
+    m.type+':'+m.chapter+':'+(m.type==='epub-image'?m.imageIndex:
+      m.anchorStart+':'+m.text)+':'+(m.color||'blue')).join('\x1f');
   if(sig===lastPaintKey)return;
   const output=new Map(colors.map(c=>[c,[]]));
   const visible=[];
   const reasons={};
+  const imageColors=new Map();
   for(const mark of marks){
+    if(mark.type==='epub-image'){
+      imageColors.set(mark.chapter+':'+mark.imageIndex,
+        colors.includes(mark.color)?mark.color:'blue');
+      continue;
+    }
     const from=markOffset(mark);
     if(from===null){
       reasons.unresolved=(reasons.unresolved||0)+1;continue;
@@ -308,6 +344,12 @@ function paint(){
     if(ranges.length)CSS.highlights.set(key(col),new Highlight(...ranges));
     else CSS.highlights.delete(key(col));
   }
+  for(const img of images){
+    const saved=imageColors.get(img.dataset.jfEpubImageChapter+':'+
+      img.dataset.jfEpubImageIndex);
+    if(saved)img.dataset.jfEpubImageColor=saved;
+    else img.removeAttribute('data-jf-epub-image-color');
+  }
   paintedMarks=visible;lastPaintKey=sig;
   metrics.redraws++;metrics.skipped+=Object.values(reasons).reduce((a,b)=>a+b,0);
   metrics.lastReasons=reasons;metrics.lastVisible=visible.length;
@@ -320,6 +362,7 @@ function schedulePaint(force=false){
 }
 function resetSelection(removeNative){
   cancelTimer();stopVirtual();dismissOnClick=false;
+  clearImageFocus();
   active=null;menu.hidden=true;
   reader.classList.remove('jfEpubSelecting');
   clearTransient();
@@ -328,6 +371,7 @@ function resetSelection(removeNative){
 }
 function placeMenu(snap,near=null){
   const mark=snap.savedMark||savedFor(snap.ref);
+  menu.querySelector('[data-action=copy]').textContent=snap.imageElement?'复制图片':'复制';
   menu.querySelector('[data-action=mark]').textContent=mark?'取消标记':'标记';
   for(const button of palette.querySelectorAll('[data-color]')){
     button.setAttribute('aria-pressed',String(
@@ -511,6 +555,54 @@ function scheduleSettle(delay=0){
   },delay);
   else settleFrame=requestAnimationFrame(settle);
 }
+function selectImage(img){
+  if(!ready()||!imageMarkRef(img))return false;
+  const ref=imageMarkRef(img);
+  const rect=img.getBoundingClientRect();
+  if(!rect.width||!rect.height)return false;
+  cancelTimer();
+  if(active?.imageElement!==img)clearImageFocus();
+  stopVirtual();dragging=false;pointerAt=null;dismissOnClick=false;
+  reader.classList.remove('jfEpubDragging');
+  current()?.removeAllRanges();
+  clearTransient();
+  active={ref,session:jfDeskSession,imageElement:img,
+    rects:[rect],image:true};
+  img.dataset.jfEpubImageActive='1';
+  reader.classList.add('jfEpubSelecting');
+  placeMenu(active,rect);
+  return true;
+}
+function imageCanvas(img,maxSide=1440){
+  if(!img?.complete||!img.naturalWidth||!img.naturalHeight)
+    throw Error('图片尚未完成加载');
+  const scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+  canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+  const ctx=canvas.getContext('2d');
+  if(!ctx)throw Error('无法处理图片');
+  ctx.fillStyle='#f3eee3';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  return canvas;
+}
+function quoteImageJpeg(img){
+  let canvas=imageCanvas(img,1400);
+  for(let step=0;step<11;step++){
+    const quality=Math.max(.4,.86-step*.047);
+    const jpeg=canvas.toDataURL('image/jpeg',quality);
+    if(jpeg.length<=225000&&jpeg.length>=150)return jpeg;
+    // Size limits are imposed by the note vault; downsample in memory only.
+    if(step%2===1){
+      const smaller=document.createElement('canvas');
+      smaller.width=Math.max(1,Math.floor(canvas.width*.82));
+      smaller.height=Math.max(1,Math.floor(canvas.height*.82));
+      smaller.getContext('2d').drawImage(canvas,0,0,smaller.width,smaller.height);
+      canvas=smaller;
+    }
+  }
+  throw Error('图片过大，暂时无法保存为笔记摘录');
+}
 async function applyColor(color){
   const snap=active;
   if(!colors.includes(color)||!snap||snap.ref.bookId!==jfDeskBook?.id||
@@ -520,8 +612,9 @@ async function applyColor(color){
   if(saved&&(saved.color||'blue')===color)return;
   try{
     if(saved)await jfDeskMutate({action:'recolor-mark',mark:saved,color});
-    else await jfDeskMutate({action:'mark',mark:{...snap.ref,type:'text',
-      length:snap.ref.text.length,color}});
+    else await jfDeskMutate({action:'mark',mark:snap.imageElement?
+      {...snap.ref,color}:{...snap.ref,type:'text',
+        length:snap.ref.text.length,color}});
     jfDeskMessage(saved?'已更换划线颜色':'已标记原文');
   }catch(error){jfDeskMessage('划线保存失败：'+error.message,true);}
 }
@@ -538,6 +631,18 @@ function legacyCopy(text){
 async function copy(){
   const snap=active;
   if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
+  if(snap.imageElement){
+    try{
+      if(!navigator.clipboard?.write||typeof ClipboardItem!=='function')
+        throw Error('当前浏览器未开放图片剪贴板');
+      const canvas=imageCanvas(snap.imageElement,2048);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+      if(!blob)throw Error('图片编码失败');
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      resetSelection(true);jfDeskMessage('已复制图片');
+    }catch(error){jfDeskMessage('图片复制失败：'+error.message,true);}
+    return;
+  }
   const text=snap.quoteText||snap.ref.text;
   if(!text)return;
   try{
@@ -558,14 +663,25 @@ async function mark(){
   resetSelection(true);
   try{
     await jfDeskMutate(saved?{action:'delete-mark',mark:saved}:
-      {action:'mark',mark:{...snap.ref,type:'text',
-        length:snap.ref.text.length,color:'amber'}});
+      {action:'mark',mark:snap.imageElement?
+        {...snap.ref,color:'amber'}:{...snap.ref,type:'text',
+          length:snap.ref.text.length,color:'amber'}});
     jfDeskMessage(saved?'已取消标记':'已标记原文');
   }catch(error){jfDeskMessage('标记保存失败：'+error.message,true);}
 }
 function quote(){
   const snap=active;
   if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return false;
+  if(snap.imageElement){
+    try{
+      const image=quoteImageJpeg(snap.imageElement);
+      resetSelection(true);
+      jfDeskChooseQuote({type:'image',image,text:snap.ref.label,
+        bookId:snap.ref.bookId,chapter:snap.ref.chapter,anchorStart:null,
+        epubImageIndex:snap.ref.imageIndex});
+    }catch(error){jfDeskMessage('图片摘录失败：'+error.message,true);}
+    return true;
+  }
   resetSelection(true);
   jfDeskChooseQuote({...snap.ref,text:snap.quoteText||snap.ref.text,
     sourceText:snap.ref.text});
@@ -590,6 +706,7 @@ function pageRendered(){
     return;
   }
   stopVirtual();
+  clearImageFocus();
   active=null;menu.hidden=true;dragging=false;pointerAt=null;dismissOnClick=false;
   reader.classList.remove('jfEpubDragging','jfEpubSelecting');
   current()?.removeAllRanges();
@@ -601,6 +718,7 @@ function reset(){
   if(paintFrame)cancelAnimationFrame(paintFrame);paintFrame=0;
   if(observerFrame)cancelAnimationFrame(observerFrame);observerFrame=0;
   stopVirtual();
+  clearImageFocus();
   active=null;dragging=false;pointerAt=null;dismissOnClick=false;blockCache=null;
   sourceCache=new WeakMap();resolvedLegacy=new WeakMap();
   reader.classList.remove('jfEpubSelecting','jfEpubDragging');
@@ -626,6 +744,7 @@ document.addEventListener('pointerdown',event=>{
   lastDragPoint={x:event.clientX,y:event.clientY};
   dragOriginInText=!!textPointAt(event.clientX,event.clientY);
   reader.classList.add('jfEpubDragging');
+  clearImageFocus();
   menu.hidden=true;active=null;clearTransient();cancelTimer();
 },{capture:true,passive:true});
 document.addEventListener('pointermove',event=>{
@@ -727,6 +846,11 @@ function textPointAt(x,y){
 }
 center.addEventListener('click',event=>{
   if(!ready())return;
+  const img=event.target.closest?.('img[data-jf-epub-image-index]');
+  if(img&&!moved&&selectImage(img)){
+    event.preventDefault();event.stopImmediatePropagation();
+    return;
+  }
   if(dismissOnClick){
     dismissOnClick=false;
     if(!moved){
@@ -755,6 +879,30 @@ document.addEventListener('pointerdown',event=>{
   if(active||!menu.hidden||virtual)resetSelection(true);
 },true);
 window.addEventListener('resize',()=>{invalidate();schedulePaint(true);});
+center.addEventListener('dragstart',event=>{
+  // Native image dragging creates a browser thumbnail instead of a reader
+  // selection, and can accidentally trigger a page turn on drop.
+  if(event.target.closest?.('img[data-jf-epub-image-index]'))event.preventDefault();
+},true);
+function jumpImage(mark){
+  if(!ready()||!mark||mark.bookId!==jfDeskBook?.id||
+     !Number.isSafeInteger(mark.imageIndex))return false;
+  const selector='img[data-jf-epub-image-chapter="'+mark.chapter+
+    '"][data-jf-epub-image-index="'+mark.imageIndex+'"]';
+  if(jfDeskPaged){
+    const at=jfDeskPages.findIndex(page=>page.some(item=>
+      item.node?.matches?.(selector)||item.node?.querySelector?.(selector)));
+    if(at<0)return false;
+    const step=jfDeskPagedGeometry().two?2:1;
+    jfDeskPageIndex=Math.floor(at/step)*step;
+    jfDeskPagedRender();
+  }
+  const img=(jfDeskPaged?document.getElementById('jfPageView'):jfReadText)
+    ?.querySelector(selector);
+  if(!img)return false;
+  if(!jfDeskPaged)img.scrollIntoView({block:'center'});
+  return true;
+}
 center.addEventListener('scroll',()=>{
   if(active&&!active.savedMark)resetSelection(true);
 },{passive:true});
@@ -766,7 +914,7 @@ const observer=new MutationObserver(()=>{
 });
 observer.observe(jfReadText,{subtree:true,childList:true,characterData:true});
 window.JFEpubSelection={
-  reference,quote,refresh,reset,pageRendered,restoreReady,
+  reference,quote,refresh,reset,pageRendered,restoreReady,jumpImage,
   metrics,diagnostics:()=>({...metrics,book:jfDeskBook?.id,
     chapter:jfDeskChapter,page:jfDeskPageIndex,visibleBlocks:blocks().length,
     selected:selecting(),painted:paintedMarks.length,

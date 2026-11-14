@@ -128,7 +128,7 @@ function jfReadingIntegrity(){
 }
 function jfReadingAddMark(d,value){
   if(!value||typeof value!=='object')throw jfReaderError(400,'标记无效');
-  const bookId=String(value.bookId||''),kind=['area','page'].includes(value.type)?value.type:'text';
+  const bookId=String(value.bookId||''),kind=['area','page','epub-image'].includes(value.type)?value.type:'text';
   const chapter=value.chapter,anchorStart=value.anchorStart,len=value.length;
   const text=String(value.text||'').slice(0,5000);
   if(!/^[a-f0-9]{16}$/.test(bookId)||!Number.isSafeInteger(chapter)||chapter<0||chapter>5000)
@@ -139,6 +139,11 @@ function jfReadingAddMark(d,value){
     if(!text||!Number.isSafeInteger(anchorStart)||anchorStart<0||anchorStart>12000000||
       !Number.isSafeInteger(len)||len<1||len>5000)throw jfReaderError(400,'文字标记位置无效');
     Object.assign(record,{text,anchorStart,length:len});
+  }else if(kind==='epub-image'){
+    if(!Number.isSafeInteger(value.imageIndex)||value.imageIndex<0||
+       value.imageIndex>100000)throw jfReaderError(400,'EPUB 图片编号无效');
+    record.imageIndex=value.imageIndex;
+    record.label=String(value.label||'').trim().slice(0,120);
   }else if(kind==='area'){
     const area=value.area;
     if(!Array.isArray(area)||area.length!==4||area.some(v=>typeof v!=='number'||!Number.isFinite(v)||v<0||v>1)||area[2]<=0||area[3]<=0||area[0]+area[2]>1.001||area[1]+area[3]>1.001)
@@ -156,7 +161,9 @@ function jfReadingAddMark(d,value){
   }
   if(!Array.isArray(d.marks))d.marks=[];
   const duplicate=d.marks.some(m=>m.bookId===bookId&&m.chapter===chapter&&m.type===kind&&
-    (kind==='text'?m.anchorStart===anchorStart&&m.text===text:kind==='page'?true:JSON.stringify(m.area)===JSON.stringify(record.area)));
+    (kind==='text'?m.anchorStart===anchorStart&&m.text===text:
+     kind==='page'?true:kind==='epub-image'?m.imageIndex===record.imageIndex:
+       JSON.stringify(m.area)===JSON.stringify(record.area)));
   if(!duplicate){if(d.marks.length>=10000)throw jfReaderError(413,'标记数量达到上限');d.marks.push(record);}
 }
 // Mark identity is its immutable source anchor, not a mutable visual color.
@@ -169,14 +176,18 @@ function jfReadingMarkColor(color){
 function jfReadingMarkIndex(d,identity){
   if(!identity||typeof identity!=='object')throw jfReaderError(400,'标记定位无效');
   const {bookId,chapter,type}=identity;
-  if(!/^[a-f0-9]{16}$/.test(String(bookId||''))||!Number.isSafeInteger(chapter)||chapter<0||chapter>5000||!['text','area','page'].includes(type))
+  if(!/^[a-f0-9]{16}$/.test(String(bookId||''))||!Number.isSafeInteger(chapter)||chapter<0||chapter>5000||!['text','area','page','epub-image'].includes(type))
     throw jfReaderError(400,'标记定位无效');
   if(type==='text'&&(!Number.isSafeInteger(identity.anchorStart)||identity.anchorStart<0||identity.anchorStart>12000000||typeof identity.text!=='string'||!identity.text||identity.text.length>5000))
     throw jfReaderError(400,'文字标记定位无效');
+  if(type==='epub-image'&&(!Number.isSafeInteger(identity.imageIndex)||
+     identity.imageIndex<0||identity.imageIndex>100000))
+    throw jfReaderError(400,'EPUB 图片标记定位无效');
   if(type==='area'&&(!Array.isArray(identity.area)||identity.area.length!==4||identity.area.some(v=>typeof v!=='number'||!Number.isFinite(v)||v<0||v>1)))
     throw jfReaderError(400,'区域标记定位无效');
   const index=(d.marks||[]).findIndex(m=>m.bookId===bookId&&m.chapter===chapter&&m.type===type&&
     (type==='page'||(type==='text'&&m.anchorStart===identity.anchorStart&&m.text===identity.text)||
+     (type==='epub-image'&&m.imageIndex===identity.imageIndex)||
      (type==='area'&&JSON.stringify(m.area)===JSON.stringify(identity.area))));
   if(index<0)throw jfReaderError(404,'标记已不存在，请刷新');
   return index;
@@ -233,6 +244,10 @@ function jfReadingUpdate(body){
       const position=q.anchorStart==null?null:q.anchorStart;
       const isImage=q.type==='image';
       const image=isImage?String(q.image||''):'';
+      const epubImageIndex=isImage?q.epubImageIndex:undefined;
+      if(epubImageIndex!==undefined&&(!Number.isSafeInteger(epubImageIndex)||
+         epubImageIndex<0||epubImageIndex>100000))
+        throw jfReaderError(400,'摘录图片来源编号无效');
       // Embedded note excerpts are strictly bounded and travel with the encrypted
       // workspace/backup. Never persist unbounded source PDF page bitmaps.
       if(text.length>6000||(!text&&!isImage)||!/^[a-f0-9]{16}$/.test(reference)||
@@ -264,7 +279,9 @@ function jfReadingUpdate(body){
       }
       const width=isImage&&Number.isInteger(q.imageWidth)&&q.imageWidth>=20&&q.imageWidth<=100?q.imageWidth:100;
       const align=isImage&&['left','center','right'].includes(q.imageAlign)?q.imageAlign:'left';
-      return {...(isImage?{type:'image',image,imageWidth:width,imageAlign:align,...(pages?{pages}:{})}:{}),text,bookId:reference,chapter:q.chapter,anchorStart:position};
+      return {...(isImage?{type:'image',image,imageWidth:width,imageAlign:align,
+        ...(epubImageIndex===undefined?{}:{epubImageIndex}),...(pages?{pages}:{})}:{}),
+        text,bookId:reference,chapter:q.chapter,anchorStart:position};
     });
     if(cleanQuotes.reduce((sum,q)=>sum+(q.pages?q.pages.reduce((n,p)=>n+p.image.length,0):(q.image?.length||0)),0)>1500000)throw jfReaderError(413,'单篇笔记图片总量超限');
     // v6.75: ordered writing/excerpt flow. Keep legacy content and quote fields

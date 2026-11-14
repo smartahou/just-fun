@@ -580,7 +580,18 @@ function jfDeskFlowSection(n,html){
   sec.className='jfEpubChapter';
   sec.dataset.chapter=String(n);
   sec.innerHTML=html||'<p></p>';
+  jfDeskTagSourceImages(sec,n);
   return sec;
+}
+function jfDeskTagSourceImages(section,chapter){
+  // Stable source-order identities survive cloned facing leaves, resizes and
+  // the original EPUB image URL being replaced by optional plate processing.
+  // Metadata only: no change to the text stream, dimensions or node ordering.
+  let i=0;
+  for(const img of section.querySelectorAll('img')){
+    img.dataset.jfEpubImageChapter=String(chapter);
+    img.dataset.jfEpubImageIndex=String(i++);
+  }
 }
 async function jfDeskFlowFetch(n){
   const data=await jfDeskApi('chapter?id='+encodeURIComponent(jfDeskBook.id)+'&chapter='+n);
@@ -760,6 +771,7 @@ async function jfDeskShowChapterFlow(number,ratio=0,offset=null,scroll=null,anch
     const html=await jfDeskFlowFetch(number);
     if(!alive())return;
     first.innerHTML=html||'<p></p>';
+    jfDeskTagSourceImages(first,number);
   }catch(e){
     if(!alive())return;
     first.innerHTML='<p class="jfEpubPending">章节无法打开：'+String(e.message||e)+'</p>';
@@ -1432,7 +1444,12 @@ async function jfDeskQuoteCommit(){
     const blocks=[...jfDeskNoteBlocks(note),{kind:'quote',index:quotes.length-1},{kind:'text',text:''}];
     if(quotes.length>40)throw Error('目标笔记摘录已达上限');
     let mark=null;
-    if(quote.type==='image'&&Array.isArray(quote.area)&&!quote.pages?.length)mark={bookId:quote.bookId,chapter:quote.chapter,type:'area',area:quote.area,...(quote.segments?{segments:quote.segments}:{})};
+    if(quote.type==='image'&&Number.isSafeInteger(quote.epubImageIndex))
+      mark={type:'epub-image',bookId:quote.bookId,chapter:quote.chapter,
+        imageIndex:quote.epubImageIndex,label:quote.text||'' ,color:'amber'};
+    else if(quote.type==='image'&&Array.isArray(quote.area)&&!quote.pages?.length)
+      mark={bookId:quote.bookId,chapter:quote.chapter,type:'area',area:quote.area,
+        ...(quote.segments?{segments:quote.segments}:{})};
     else if(quote.text&&Number.isSafeInteger(quote.anchorStart)){
       const sourceText=typeof quote.sourceText==='string'&&quote.sourceText?quote.sourceText:quote.text;
       mark={type:'text',text:sourceText.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(sourceText.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:'amber'})};
@@ -1556,7 +1573,13 @@ async function jfDeskJumpToQuote(quote){
   if(!quote?.bookId)return;
   if(!await jfDeskCloseNotes())return;
   await jfDeskOpenReader(quote.bookId,quote.chapter);
-  if(jfDeskBook?.id!==quote.bookId||!quote.text)return;
+  if(jfDeskBook?.id!==quote.bookId)return;
+  if(quote.type==='image'&&Number.isSafeInteger(quote.epubImageIndex)){
+    window.JFEpubSelection?.jumpImage?.({bookId:quote.bookId,chapter:quote.chapter,
+      imageIndex:quote.epubImageIndex});
+    return;
+  }
+  if(!quote.text)return;
   if(jfDeskOutline?.nativePdf){jfPdfJsJumpToQuote(quote);return;}
   const targetChapter=Number.isSafeInteger(quote.chapter)?quote.chapter:jfDeskChapter;
   const owner=jfDeskFlow.find(x=>x.n===targetChapter)?.el||null;
