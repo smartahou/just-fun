@@ -65,5 +65,19 @@ assert(source.includes('jfDeskChooseQuote({...snap.ref,')&&
 assert(css.includes('::highlight(jf-epub-selection)')&&
   css.includes('text-decoration-line:underline')&&
   css.includes('background-color:transparent!important'),'single legible thin line');
+assert(source.includes('const EDGE_DWELL_MS=720')&&
+  source.includes('function cornerDirection(')&&source.includes('function edgeTurn(')&&
+  source.includes('function adjacentSource('),
+  'corner dwell auto-turn uses existing prepared spreads only');
+assert(source.includes('if(virtual)return virtualReference()')&&
+  source.includes('if(virtual&&virtual.session===jfDeskSession')&&
+  source.includes('virtual.focus=virtual.pending.focus'),
+  'page render retains immutable source coordinates for cross-page selection');
+assert(source.includes('if(!direction)extendVirtual(caretAt(')&&
+  source.includes('if(virtual)scheduleSettle(0)'),
+  'continued pointer dragging extends the original span and commits on release');
+assert(source.includes('if(dragging||virtual)return;')&&
+  source.includes('else if(selecting())armEdge(direction);'),
+  'normal native selection avoids eager expensive redraws');
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.130 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.133 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

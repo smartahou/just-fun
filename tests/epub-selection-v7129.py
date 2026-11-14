@@ -178,6 +178,87 @@ def assert_drag_stays_native(page):
     assert report['whileDragging']['maps']==0 and report['whileDragging']['redraws']==0, report
 
 
+
+def assert_corner_dwell(page, direction, pointer_type='mouse'):
+    """Held pointer near outer upper corner flips without losing source span."""
+    started = page.evaluate("""({direction,pointerType})=>{
+      JFEpubSelection.reset();
+      const step=jfDeskPagedGeometry().two?2:1;
+      if(step!==2)return {ok:false,reason:'not a two-page spread'};
+      let index=-1;
+      for(let i=0;i+3<jfDeskPages.length;i+=2){
+        const current=jfDeskPages[i],next=jfDeskPages[i+2];
+        if(!current?.length||!next?.length||
+           current[0].chapter!==next[0].chapter)continue;
+        if(direction<0){if(i<2)continue;index=i;break;}
+        if(i+2>=jfDeskPages.length)continue;
+        index=i;break;
+      }
+      if(direction<0){
+        for(let i=2;i+1<jfDeskPages.length;i+=2){
+          if(jfDeskPages[i]?.length&&jfDeskPages[i-2]?.length&&
+             jfDeskPages[i][0].chapter===jfDeskPages[i-2][0].chapter){
+            index=i;break;
+          }
+        }
+      }
+      if(index<0)return {ok:false,reason:'no same-chapter adjacent spread'};
+      jfDeskPageIndex=index;jfDeskPagedRender();
+      const id=direction<0?'jfSheetLeft':'jfSheetRight';
+      const sheet=document.getElementById(id);
+      const walker=document.createTreeWalker(sheet,NodeFilter.SHOW_TEXT);
+      let node;
+      while((node=walker.nextNode())){
+        if(node.nodeValue.trim().length>15)break;
+      }
+      if(!node)return {ok:false,reason:'no anchor text'};
+      const range=document.createRange();
+      range.setStart(node,1);range.setEnd(node,7);
+      const root=node.parentElement,box=root.getBoundingClientRect();
+      root.dispatchEvent(new PointerEvent('pointerdown',{
+        bubbles:true,pointerType,pointerId:73,buttons:1,button:0,
+        clientX:box.left+24,clientY:box.top+12}));
+      const native=getSelection();
+      native.removeAllRanges();native.addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+      const shell=sheet.parentElement.getBoundingClientRect();
+      const x=direction<0?shell.left+18:shell.right-18;
+      const y=shell.top+20;
+      document.dispatchEvent(new PointerEvent('pointermove',{
+        bubbles:true,pointerType,pointerId:73,buttons:1,
+        clientX:x,clientY:y}));
+      return {ok:true,index,chapter:jfDeskChapter,
+        before:node.nodeValue.slice(1,7),target:index+direction*2,
+        x,y,sourceIndex:positionDummy()};
+      function positionDummy(){return JFEpubSelection.reference()?.ref.anchorStart;}
+    }""", {'direction': direction, 'pointerType': pointer_type})
+    assert started['ok'], started
+    page.wait_for_function("""(target)=>
+      jfDeskPageIndex===target && JFEpubSelection.diagnostics().crossPage""",
+                           arg=started['target'], timeout=6000)
+    # The anchor survives replacement of all printed DOM nodes.
+    after = page.evaluate("""()=>{
+      const snap=JFEpubSelection.reference();
+      const source=jfDeskFlow.find(x=>x.n===snap?.ref.chapter)?.el.textContent;
+      return {ref:snap?.ref,exact:!!snap?.ref&&
+        source.slice(snap.ref.anchorStart,
+          snap.ref.anchorStart+snap.ref.text.length)===snap.ref.text,
+        index:jfDeskPageIndex};
+    }""")
+    assert after['ref'] and after['exact'], (started,after)
+    assert len(after['ref']['text'])>len(started['before']), (started,after)
+    page.evaluate("""({pointerType,x,y})=>{
+      document.dispatchEvent(new PointerEvent('pointerup',{
+        bubbles:true,pointerType,pointerId:73,button:0,buttons:0,
+        clientX:x,clientY:y}));
+    }""", {'pointerType': pointer_type,'x':started['x'],'y':started['y']})
+    page.wait_for_function("""()=>!document.getElementById(
+      'jfEpubSelectionMenu').hidden && !!JFEpubSelection.reference()""")
+    assert page.evaluate("""()=>[...(CSS.highlights.get(
+      'jf-epub-selection')||[])].length>0""")
+    page.evaluate('()=>JFEpubSelection.reset()')
+    return after
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -533,6 +614,11 @@ def main():
                   document.getElementById('jfPdfMarksList').hidden""")
                 assert page.evaluate("""()=>!document.querySelector(
                   '#jfReadText mark.jfReadCitation')""")
+                # Separate synthetic held-pointer cases cover both directions.
+                # A synthetic touch pointer verifies the JS gesture contract,
+                # not iOS native selection-handle behavior.
+                assert_corner_dwell(page, 1, 'mouse')
+                assert_corner_dwell(page, -1, 'touch')
                 assert not errors, errors
                 print('PASS v7.132 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '

@@ -39,6 +39,9 @@ const key=color=>'jf-epub-mark-'+color;
 const transient='jf-epub-selection';
 let active=null,dragging=false,moved=false,pointerAt=null,dragEnded=0;
 let dismissOnClick=false;
+// Only a held text drag in the outer upper corner enters the cross-page path.
+const EDGE_DWELL_MS=720;
+let edgeTimer=0,edgeDirection=0,virtual=null,virtualFrame=0,lastDragPoint=null;
 let settleTimer=0,settleFrame=0,paintFrame=0,observerFrame=0;
 let blockCache=null,sourceCache=new WeakMap(),resolvedLegacy=new WeakMap();
 let viewGeneration=0,paintedMarks=[],lastPaintKey=null;
@@ -49,6 +52,15 @@ const canRead=()=>!reader.hidden&&!!jfDeskBook&&!jfDeskOutline?.nativePdf;
 const ready=()=>canRead()&&!jfDeskRestoring;
 const current=()=>window.getSelection();
 const selecting=()=>{const s=current();return !!s&&!s.isCollapsed;};
+function stopEdge(){
+  if(edgeTimer)clearTimeout(edgeTimer);
+  edgeTimer=0;edgeDirection=0;
+}
+function stopVirtual(){
+  stopEdge();
+  if(virtualFrame)cancelAnimationFrame(virtualFrame);
+  virtualFrame=0;virtual=null;lastDragPoint=null;
+}
 const cancelTimer=()=>{
   if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
   if(settleFrame)cancelAnimationFrame(settleFrame);settleFrame=0;
@@ -188,8 +200,25 @@ function rangesFor(chapter,start,end){
   }
   return output;
 }
+function virtualReference(){
+  if(!virtual||!ready()||virtual.bookId!==jfDeskBook?.id||
+     virtual.session!==jfDeskSession)return null;
+  const source=sourceFor(virtual.chapter);
+  if(typeof source!=='string')return null;
+  const start=Math.min(virtual.anchor,virtual.focus);
+  const end=Math.max(virtual.anchor,virtual.focus);
+  if(end<=start||end-start>5000)return null;
+  const span=source.slice(start,end),text=span.trim();
+  if(!text)return null;
+  const leading=span.length-span.trimStart().length;
+  return {ref:{bookId:virtual.bookId,chapter:virtual.chapter,
+      anchorStart:start+leading,text},
+    quoteText:text,rects:virtual.lastRect?[virtual.lastRect]:[],
+    session:virtual.session};
+}
 function reference(){
   if(!ready())return null;
+  if(virtual)return virtualReference();
   const sel=current();
   if(!sel||sel.isCollapsed||sel.rangeCount!==1)return null;
   const range=sel.getRangeAt(0);
@@ -285,7 +314,7 @@ function schedulePaint(force=false){
   paintFrame=requestAnimationFrame(paint);
 }
 function resetSelection(removeNative){
-  cancelTimer();dismissOnClick=false;
+  cancelTimer();stopVirtual();dismissOnClick=false;
   active=null;menu.hidden=true;
   reader.classList.remove('jfEpubSelecting');
   clearTransient();
@@ -310,10 +339,115 @@ function placeMenu(snap,near=null){
   const y=above>=header+6?above:Math.min(innerHeight-height-8,rect.bottom+12);
   menu.style.left=x+'px';menu.style.top=Math.max(header+5,y)+'px';
 }
+
+/* Source-addressed cross-spread drag. Normal dragging never visits this code
+ * until the user dwells in an outer upper corner with a nonempty Selection. */
+function drawVirtual(){
+  virtualFrame=0;
+  if(!virtual||!ready()||!supported())return;
+  const snap=virtualReference();
+  if(!snap){clearTransient();return;}
+  const spans=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
+    snap.ref.anchorStart+snap.ref.text.length);
+  if(spans.length){
+    const first=virtual.focus<virtual.anchor;
+    const focusRange=first?spans[0]:spans[spans.length-1];
+    const rects=focusRange.getClientRects();
+    virtual.lastRect=rects.length?(first?rects[0]:rects[rects.length-1]):null;
+    CSS.highlights.set(transient,new Highlight(...spans));
+  }else{virtual.lastRect=null;clearTransient();}
+}
+function scheduleVirtual(){
+  if(virtualFrame)cancelAnimationFrame(virtualFrame);
+  virtualFrame=requestAnimationFrame(drawVirtual);
+}
+function cornerDirection(x,y){
+  if(!ready()||!jfDeskPaged||!jfDeskPagedGeometry().two)return 0;
+  const left=document.getElementById('jfSheetLeft')?.parentElement?.getBoundingClientRect();
+  const right=document.getElementById('jfSheetRight')?.parentElement?.getBoundingClientRect();
+  if(!left||!right)return 0;
+  const nearTop=r=>Math.min(88,r.height*.14);
+  const nearSide=r=>Math.min(94,r.width*.22);
+  if(x>=left.left-5&&x<=left.left+nearSide(left)&&
+     y>=left.top-5&&y<=left.top+nearTop(left))return -1;
+  if(x<=right.right+5&&x>=right.right-nearSide(right)&&
+     y>=right.top-5&&y<=right.top+nearTop(right))return 1;
+  return 0;
+}
+function adjacentSource(direction,chapter,anchor){
+  const step=jfDeskPagedGeometry().two?2:1;
+  const index=jfDeskPageIndex+direction*step;
+  // Unprepared and chapter-crossing spreads are not auto-turned: never lose
+  // a real native selection to a pending fetch or an unsupported text anchor.
+  if(index<0||index>=jfDeskPages.length||
+     !jfDeskSpreadReady(index,step))return null;
+  const source=sourceFor(chapter);
+  if(typeof source!=='string')return null;
+  const items=(jfDeskPages[index]||[]).concat(step===2?
+    jfDeskPages[index+1]||[]:[]);
+  let low=Infinity,high=-Infinity;
+  for(const item of items){
+    if(item.chapter!==chapter||item.comic||
+       !Number.isSafeInteger(item.sourceOffset)||!item.node)continue;
+    const from=item.sourceOffset,to=from+item.node.textContent.length;
+    if(source.slice(from,to)!==item.node.textContent)continue;
+    low=Math.min(low,from);high=Math.max(high,to);
+  }
+  if(!Number.isFinite(low)||!Number.isFinite(high)||high<=low)return null;
+  const focus=direction<0?low:high;
+  if(Math.abs(focus-anchor)>5000||focus===anchor)return null;
+  return {index,focus};
+}
+function edgeTurn(direction){
+  edgeTimer=0;
+  if(!dragging||!ready()||edgeDirection!==direction||!lastDragPoint||
+     cornerDirection(lastDragPoint.x,lastDragPoint.y)!==direction)return;
+  let original=virtual;
+  if(!original){
+    const sel=current();
+    if(!sel||sel.isCollapsed||sel.rangeCount!==1)return;
+    const a=position(sel.anchorNode,sel.anchorOffset);
+    const b=position(sel.focusNode,sel.focusOffset);
+    if(!a||!b||a.chapter!==b.chapter||a.offset===b.offset)return;
+    original={bookId:jfDeskBook.id,session:jfDeskSession,
+      chapter:a.chapter,anchor:a.offset,focus:b.offset,
+      index:jfDeskPageIndex,lastRect:null,pending:null};
+  }
+  if(original.pending)return;
+  const target=adjacentSource(direction,original.chapter,original.anchor);
+  if(!target)return;
+  // A second dwell on the newly shown spread must start a fresh timer.
+  edgeDirection=0;
+  virtual=original;virtual.pending=target;
+  // The native Range points into the leaves that the paginator will replace.
+  // Only clear it AFTER storing its exact source coordinates.
+  current()?.removeAllRanges();
+  reader.classList.add('jfEpubSelecting');
+  menu.hidden=true;active=null;cancelTimer();
+  if(!jfDeskPageTurn(direction)){
+    virtual.pending=null;
+    scheduleVirtual();
+  }
+}
+function armEdge(direction){
+  if(direction===edgeDirection)return;
+  stopEdge();
+  if(!direction)return;
+  edgeDirection=direction;
+  edgeTimer=setTimeout(()=>edgeTurn(direction),EDGE_DWELL_MS);
+}
+function extendVirtual(point){
+  if(!virtual||virtual.pending||point.chapter!==virtual.chapter||
+     Math.abs(point.offset-virtual.anchor)>5000||
+     point.offset===virtual.focus)return;
+  virtual.focus=point.offset;
+  scheduleVirtual();
+}
 function settle(){
   settleFrame=0;
   if(dragging||!ready())return;
   metrics.settles++;
+  if(virtual&&!virtual.lastRect)drawVirtual();
   const snap=reference();
   if(!snap){
     if(active?.savedMark&&!selecting())return;
@@ -400,6 +534,20 @@ function quote(){
 function refresh(){schedulePaint(true);}
 function pageRendered(){
   cancelTimer();
+  if(virtual&&virtual.session===jfDeskSession&&
+     virtual.bookId===jfDeskBook?.id&&jfDeskPaged){
+    if(virtual.pending&&jfDeskPageIndex===virtual.pending.index){
+      virtual.focus=virtual.pending.focus;
+      virtual.index=jfDeskPageIndex;virtual.pending=null;
+    }
+    current()?.removeAllRanges();
+    invalidate();schedulePaint();scheduleVirtual();
+    if(dragging&&lastDragPoint&&!virtual.pending)
+      armEdge(cornerDirection(lastDragPoint.x,lastDragPoint.y));
+    else if(!dragging)scheduleSettle();
+    return;
+  }
+  stopVirtual();
   active=null;menu.hidden=true;dragging=false;pointerAt=null;dismissOnClick=false;
   reader.classList.remove('jfEpubDragging','jfEpubSelecting');
   current()?.removeAllRanges();
@@ -410,6 +558,7 @@ function reset(){
   cancelTimer();
   if(paintFrame)cancelAnimationFrame(paintFrame);paintFrame=0;
   if(observerFrame)cancelAnimationFrame(observerFrame);observerFrame=0;
+  stopVirtual();
   active=null;dragging=false;pointerAt=null;dismissOnClick=false;blockCache=null;
   sourceCache=new WeakMap();resolvedLegacy=new WeakMap();
   reader.classList.remove('jfEpubSelecting','jfEpubDragging');
@@ -430,37 +579,52 @@ document.addEventListener('pointerdown',event=>{
   // Preserve whether this pointer-down began with an open selection. The
   // following click must dismiss it before the reader's page-turn handler.
   dismissOnClick=!!active||!menu.hidden||selecting();
+  stopVirtual();
   dragging=true;moved=false;pointerAt={x:event.clientX,y:event.clientY};
+  lastDragPoint={x:event.clientX,y:event.clientY};
   reader.classList.add('jfEpubDragging');
   menu.hidden=true;active=null;clearTransient();cancelTimer();
 },{capture:true,passive:true});
 document.addEventListener('pointermove',event=>{
   if(!dragging||!pointerAt)return;
-  metrics.dragEvents++;
+  metrics.dragEvents++;lastDragPoint={x:event.clientX,y:event.clientY};
   if(Math.hypot(event.clientX-pointerAt.x,event.clientY-pointerAt.y)>6)
     moved=true;
-},{passive:true});
+  if(!moved||!jfDeskPaged)return;
+  const direction=cornerDirection(event.clientX,event.clientY);
+  if(virtual){
+    if(event.cancelable)event.preventDefault();
+    if(!direction)extendVirtual(caretAt(event.clientX,event.clientY)||{});
+    armEdge(direction);
+  }else if(selecting())armEdge(direction);
+  else stopEdge();
+},{passive:false});
 function endPointer(event){
   if(!dragging)return;
-  dragging=false;pointerAt=null;reader.classList.remove('jfEpubDragging');
+  dragging=false;pointerAt=null;stopEdge();
+  reader.classList.remove('jfEpubDragging');
   if(moved){dragEnded=Date.now();dismissOnClick=false;}
-  scheduleSettle(event.pointerType==='touch'?110:25);
+  if(virtual)scheduleSettle(0);
+  else scheduleSettle(event.pointerType==='touch'?110:25);
 }
 document.addEventListener('pointerup',endPointer,{passive:true});
 document.addEventListener('pointercancel',endPointer,{passive:true});
 document.addEventListener('selectionchange',()=>{
   if(!canRead())return;
   metrics.selectEvents++;
-  if(dragging)return;
+  if(dragging||virtual)return;
   if(!selecting()&&!active&&menu.hidden)return;
   scheduleSettle(120);
   if(!selecting())schedulePaint();
 });
+center.addEventListener('selectstart',event=>{
+  if(virtual)event.preventDefault();
+},true);
 document.addEventListener('keyup',event=>{
   if(event.shiftKey&&canRead())scheduleSettle(20);
 });
 document.addEventListener('keydown',event=>{
-  if(event.key==='Escape'&&!menu.hidden){
+  if(event.key==='Escape'&&(!menu.hidden||virtual)){
     event.preventDefault();event.stopImmediatePropagation();resetSelection(true);
   }
 },true);
@@ -482,7 +646,7 @@ center.addEventListener('click',event=>{
       return;
     }
   }
-  if(selecting()||!paintedMarks.length)return;
+  if(virtual||selecting()||!paintedMarks.length)return;
   // One caret hit-test, not getClientRects() on every stored mark.
   const point=caretAt(event.clientX,event.clientY);
   if(!point)return;
@@ -499,7 +663,7 @@ center.addEventListener('click',event=>{
 // actual header/footer controls. Pointer actions on the toolbar are exempt.
 document.addEventListener('pointerdown',event=>{
   if(!ready()||center.contains(event.target)||menu.contains(event.target))return;
-  if(active||!menu.hidden)resetSelection(true);
+  if(active||!menu.hidden||virtual)resetSelection(true);
 },true);
 window.addEventListener('resize',()=>{invalidate();schedulePaint(true);});
 center.addEventListener('scroll',()=>{
@@ -516,7 +680,8 @@ window.JFEpubSelection={
   reference,quote,refresh,reset,pageRendered,restoreReady,
   metrics,diagnostics:()=>({...metrics,book:jfDeskBook?.id,
     chapter:jfDeskChapter,page:jfDeskPageIndex,visibleBlocks:blocks().length,
-    selected:selecting(),painted:paintedMarks.length}),
+    selected:selecting(),painted:paintedMarks.length,
+    crossPage:!!virtual,edgeDirection}),
   suppressTurn:()=>moved&&Date.now()-dragEnded<480
 };
 })();
