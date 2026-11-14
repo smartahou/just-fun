@@ -657,8 +657,10 @@ def assert_epub_images(page,book_id):
     page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
     page.wait_for_function("""()=>!jfDeskWorkspace.marks.some(m=>
       m.type==='epub-image'&&m.imageIndex===1)""")
-    assert page.evaluate("""()=>!jfDeskWorkspace.marks.some(m=>m.type==='text')&&
-      jfDeskWorkspace.marks.some(m=>m.type==='epub-image'&&m.imageIndex===0)""")
+    assert page.evaluate("""()=>!jfDeskWorkspace.marks.some(m=>
+      m.bookId===jfDeskBook.id&&m.type==='text')&&
+      jfDeskWorkspace.marks.some(m=>m.bookId===jfDeskBook.id&&
+        m.type==='epub-image'&&m.imageIndex===0)""")
 
 
     # Browser pointer events, rather than only a constructed Range:
