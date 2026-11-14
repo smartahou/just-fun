@@ -1142,6 +1142,9 @@ def main():
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='分页后精确标记辛壬癸甲乙丙丁')""")
+                page.wait_for_function("""()=>[...(CSS.highlights.get(
+                  'jf-epub-mark-amber')||[])].some(r=>
+                    r.toString()==='分页后精确标记辛壬癸甲乙丙丁')""")
                 split_paint = page.evaluate("""()=>{
                   return [...(CSS.highlights.get('jf-epub-mark-amber')||[])]
                     .map(r=>r.toString()).join('');
