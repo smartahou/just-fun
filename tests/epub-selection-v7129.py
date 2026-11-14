@@ -69,8 +69,8 @@ def make_epub_images(path):
                    '<item id="a" href="chapter.xhtml" media-type="application/xhtml+xml"/>'
                    '<item id="photo" href="media/photo.png" media-type="image/png"/>'
                    '</manifest><spine><itemref idref="a"/></spine></package>')
-        text='<p>'+'这是含有图片的旧书章节，图片前后的正文应保持原有分页行为。'*6+'</p>'
-        middle='<p>'+'图文并茂，原文照旧，重复图片的标记必须分别保存。'*9+'</p>'
+        text='<p>'+'这是含有图片的旧书章节，图片前后的正文应保持原有分页行为。'*2+'</p>'
+        middle='<p>'+'图文并茂，原文照旧，重复图片的标记必须分别保存。'*2+'</p>'
         z.writestr('OEBPS/chapter.xhtml',
                    '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
                    '<h2>插图标记验收</h2>'+text+
@@ -559,6 +559,187 @@ def assert_epub_images(page,book_id):
     assert page.evaluate("""()=>jfDeskWorkspace.marks.some(m=>
       m.bookId===jfDeskBook.id&&m.type==='epub-image'&&m.imageIndex===0)""")
 
+
+    # A native text Range which crosses an EPUB <img> must select both
+    # text and the image at its immutable chapter/text offset.
+    def select_mixed():
+        state=page.evaluate("""()=>{
+          JFEpubSelection.reset();
+          const image=document.querySelector(
+            '#jfSheetLeft img[data-jf-epub-image-index="1"],'+
+            '#jfSheetRight img[data-jf-epub-image-index="1"]');
+          if(!image)return {ok:false,reason:'image 1 not printed'};
+          const body=document.getElementById('jfPageView');
+          const walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
+          let node,prior=null,after=null;
+          while((node=walker.nextNode())){
+            if(!node.nodeValue.trim()||!node.parentElement?.closest(
+               '#jfSheetLeft,#jfSheetRight'))continue;
+            if(node.compareDocumentPosition(image)&
+               Node.DOCUMENT_POSITION_FOLLOWING)prior=node;
+            if(node.compareDocumentPosition(image)&
+               Node.DOCUMENT_POSITION_PRECEDING){
+              after=node;break;
+            }
+          }
+          if(!prior||!after)return {ok:false,
+            reason:'image lacks visible text before/after in this spread'};
+          const range=document.createRange();
+          range.setStart(prior,Math.max(0,prior.length-7));
+          range.setEnd(after,Math.min(7,after.length));
+          const selection=getSelection();
+          selection.removeAllRanges();selection.addRange(range);
+          document.dispatchEvent(new Event('selectionchange'));
+          return {ok:true,start:range.toString().slice(0,25),
+            nativeImage:range.intersectsNode(image),
+            previousSaved:jfDeskWorkspace.marks.filter(m=>
+              m.bookId===jfDeskBook.id).length};
+        }""")
+        assert state['ok'] and state['nativeImage'],state
+        page.wait_for_function("""()=>!document.getElementById(
+          'jfEpubSelectionMenu').hidden&&
+          JFEpubSelection.reference()?.images?.some(i=>i.imageIndex===1)&&
+          !!document.querySelector(
+            '#jfSheetLeft img[data-jf-epub-image-preview="amber"],'+
+            '#jfSheetRight img[data-jf-epub-image-preview="amber"]')""",
+                               timeout=4000)
+        look=page.evaluate("""()=>{
+          const ref=JFEpubSelection.reference();
+          const ink=document.querySelector(
+            '#jfSheetLeft img[data-jf-epub-image-preview="amber"],'+
+            '#jfSheetRight img[data-jf-epub-image-preview="amber"]');
+          const p=document.querySelector('#jfSheetLeft p,#jfSheetRight p');
+          const css=getComputedStyle(p,'::highlight(jf-epub-selection)');
+          return {images:ref.images.map(m=>m.imageIndex),
+            text:ref.ref.text,back:css.backgroundColor,
+            line:css.textDecorationColor,
+            imageOutline:getComputedStyle(ink).outlineStyle,
+            group:jfDeskWorkspace.marks.filter(m=>m.groupId).length};
+        }""")
+        assert look['images']==[1] and look['text'] and (
+            look['back']=='rgba(148, 115, 73, 0.09)') and (
+            look['imageOutline']=='solid'),look
+        return look
+
+    # Bring image 1 back after deleting its earlier stand-alone marker.
+    target=page.evaluate("""()=>{
+      const sel='img[data-jf-epub-image-index="1"]';
+      const at=jfDeskPages.findIndex(page=>page.some(b=>
+        b.node?.matches?.(sel)||b.node?.querySelector?.(sel)));
+      const step=jfDeskPagedGeometry().two?2:1;
+      jfDeskPageIndex=Math.floor(at/step)*step;jfDeskPagedRender();
+      return {at,step};
+    }""")
+    assert target['at']>=0,target
+    selected=select_mixed()
+    page.locator('#jfEpubSelectionMenu [data-color="violet"]').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+      m.type==='epub-image'&&m.imageIndex===1&&m.color==='violet'&&m.groupId)&&
+      jfDeskWorkspace.marks.some(m=>m.type==='text'&&m.groupId)""")
+    grouped=page.evaluate("""()=>{
+      const img=jfDeskWorkspace.marks.find(m=>m.type==='epub-image'&&
+        m.imageIndex===1);
+      const text=jfDeskWorkspace.marks.find(m=>m.type==='text'&&
+        m.groupId===img.groupId);
+      return {groupId:img.groupId,image:img.imageIndex,
+        sameGroup:text?.groupId===img.groupId,text:text?.text,
+        color:text?.color};
+    }""")
+    assert grouped['groupId'] and grouped['sameGroup'] and (
+        grouped['color']=='violet'),grouped
+
+    select_mixed()
+    page.locator('#jfEpubSelectionMenu [data-color="mint"]').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+      m.type==='epub-image'&&m.imageIndex===1&&m.color==='mint')&&
+      jfDeskWorkspace.marks.some(m=>m.type==='text'&&m.color==='mint'&&m.groupId)""")
+    select_mixed()
+    page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
+    page.wait_for_function("""()=>!jfDeskWorkspace.marks.some(m=>
+      m.type==='epub-image'&&m.imageIndex===1)""")
+    assert page.evaluate("""()=>!jfDeskWorkspace.marks.some(m=>m.type==='text')&&
+      jfDeskWorkspace.marks.some(m=>m.type==='epub-image'&&m.imageIndex===0)""")
+
+
+    # Browser pointer events, rather than only a constructed Range:
+    # start with genuine text and drag into the plate. The plate must join
+    # the still-active selection instead of being mistaken for blank paper.
+    drag=page.evaluate("""()=>{
+      JFEpubSelection.reset();
+      const img=document.querySelector(
+        '#jfSheetLeft img[data-jf-epub-image-index="1"],'+
+        '#jfSheetRight img[data-jf-epub-image-index="1"]');
+      if(!img)return {ok:false,reason:'missing image for pointer drag'};
+      const walker=document.createTreeWalker(document.getElementById('jfPageView'),
+        NodeFilter.SHOW_TEXT);
+      let node,prior=null;
+      while((node=walker.nextNode())){
+        if(!node.nodeValue.trim()||!node.parentElement?.closest(
+          '#jfSheetLeft,#jfSheetRight'))continue;
+        if(node.compareDocumentPosition(img)&
+           Node.DOCUMENT_POSITION_FOLLOWING)prior=node;
+      }
+      if(!prior||prior.length<10)return {ok:false,reason:'missing drag start'};
+      const coord=at=>{
+        const r=document.createRange();r.setStart(prior,at);r.setEnd(prior,at+1);
+        const rect=r.getBoundingClientRect();
+        return {x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+      };
+      const r=img.getBoundingClientRect();
+      return {ok:true,start:coord(prior.length-10),
+        textEnd:coord(prior.length-2),picture:{x:r.left+r.width/2,y:r.top+r.height/2}};
+    }""")
+    assert drag['ok'],drag
+    page.mouse.move(drag['start']['x'],drag['start']['y'])
+    page.mouse.down()
+    try:
+        page.mouse.move(drag['textEnd']['x'],drag['textEnd']['y'],steps=6)
+        page.wait_for_function("""()=>getSelection()?.toString().length>=2""")
+        page.mouse.move(drag['picture']['x'],drag['picture']['y'],steps=6)
+        page.wait_for_function("""()=>JFEpubSelection.reference()?.images?.some(
+          i=>i.imageIndex===1)""",timeout=3000)
+        page.wait_for_function("""()=>!!document.querySelector(
+          '#jfSheetLeft img[data-jf-epub-image-preview="amber"],'+
+          '#jfSheetRight img[data-jf-epub-image-preview="amber"]')""")
+    finally:
+        page.mouse.up()
+    page.wait_for_function("""()=>!document.getElementById(
+      'jfEpubSelectionMenu').hidden&&
+      JFEpubSelection.reference()?.images?.some(i=>i.imageIndex===1)""")
+    page.evaluate('()=>JFEpubSelection.reset()')
+
+    # Mixed clipboard must carry actual image HTML as well as plain text.
+    page.evaluate("""()=>{
+      Object.defineProperty(navigator,'clipboard',{configurable:true,
+        value:{write:async items=>{
+          window.__jfMixedCopiedTypes=items[0].types;
+          window.__jfMixedCopiedHtml=await (await items[0].getType('text/html')).text();
+        }}});
+    }""")
+    select_mixed()
+    page.locator('#jfEpubSelectionMenu [data-action="copy"]').click()
+    page.wait_for_function("""()=>window.__jfMixedCopiedTypes?.includes('text/html')&&
+      window.__jfMixedCopiedTypes?.includes('text/plain')&&
+      window.__jfMixedCopiedHtml?.includes('<img src="data:image/jpeg;base64,')""")
+    # Mixed note keeps both a precise text quote and the actual picture,
+    # while also atomically saving the two corresponding source highlights.
+    select_mixed()
+    page.locator('#jfEpubSelectionMenu [data-action="note"]').click()
+    page.locator('#jfPdfQuoteChooser').wait_for(state='visible')
+    page.locator('#jfPdfQuoteOptions button[data-note-id="new"]').click()
+    page.locator('#jfPdfQuoteNewTitle').fill('图文组合摘录')
+    page.locator('#jfPdfQuoteCommit').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.notes.some(n=>
+      n.title==='图文组合摘录'&&
+      n.quotes.some(q=>q.type==='image'&&q.epubImageIndex===1)&&
+      n.quotes.some(q=>q.anchorStart!==null&&q.text))&&
+      jfDeskWorkspace.marks.some(m=>m.type==='epub-image'&&
+        m.imageIndex===1&&m.groupId)""",timeout=12000)
+    assert page.evaluate("""()=>jfDeskWorkspace.marks.some(m=>
+      m.type==='text'&&m.groupId&&
+      jfDeskWorkspace.marks.some(i=>i.type==='epub-image'&&
+        i.imageIndex===1&&i.groupId===m.groupId))""")
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -927,7 +1108,7 @@ def main():
                 assert_real_forward_mouse(page)
                 assert_epub_images(page,image_book['id'])
                 assert not errors, errors
-                print('PASS v7.137 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.138 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

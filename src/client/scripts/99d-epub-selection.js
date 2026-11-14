@@ -38,6 +38,7 @@ reader.append(menu);
 const key=color=>'jf-epub-mark-'+color;
 const transient='jf-epub-selection';
 let active=null,dragging=false,moved=false,pointerAt=null,dragEnded=0;
+let liveFrame=0,liveSelectedImages=[];
 let dismissOnClick=false;
 // Only a held text drag in the outer upper corner enters the cross-page path.
 const EDGE_DWELL_MS=720;
@@ -45,6 +46,7 @@ let edgeTimer=0,edgeDirection=0,virtual=null,virtualFrame=0,lastDragPoint=null;
 let dragSeed=null,edgeLocked=false,dragOriginInText=false;
 let settleTimer=0,settleFrame=0,paintFrame=0,observerFrame=0;
 let blockCache=null,sourceCache=new WeakMap(),resolvedLegacy=new WeakMap();
+let imageCatalogCache=new WeakMap();
 let viewGeneration=0,paintedMarks=[],lastPaintKey=null;
 const metrics={selectEvents:0,dragEvents:0,settles:0,
   maps:0,redraws:0,skipped:0,paintMs:0,lastReasons:{},lastVisible:0};
@@ -75,7 +77,11 @@ function sourceFor(chapter){
   return text;
 }
 function clearTransient(){
+  if(liveFrame)cancelAnimationFrame(liveFrame);
+  liveFrame=0;
   if(supported())CSS.highlights.delete(transient);
+  for(const img of liveSelectedImages)img.removeAttribute('data-jf-epub-image-preview');
+  liveSelectedImages=[];
 }
 function visibleImages(){
   const roots=jfDeskPaged?[
@@ -84,6 +90,55 @@ function visibleImages(){
   ]:[jfReadText];
   return roots.flatMap(root=>Array.from(
     root?.querySelectorAll('img[data-jf-epub-image-index]')||[]));
+}
+function sourceImages(chapter){
+  const sec=jfDeskFlow.find(x=>x.n===chapter)?.el;
+  if(!sec)return [];
+  let catalog=imageCatalogCache.get(sec);
+  if(!catalog){
+    catalog=Array.from(sec.querySelectorAll('img[data-jf-epub-image-index]'))
+      .filter(img=>!img.classList.contains('jfInlineGlyph')&&
+        img.hasAttribute('data-jf-epub-image-offset'))
+      .map(img=>({chapter,imageIndex:Number(img.dataset.jfEpubImageIndex),
+        offset:Number(img.dataset.jfEpubImageOffset),
+        label:String(img.alt||'').trim().slice(0,120),original:img}))
+      .filter(entry=>Number.isSafeInteger(entry.offset)&&entry.offset>=0);
+    imageCatalogCache.set(sec,catalog);
+  }
+  return catalog;
+}
+function imageAt(x,y){
+  const target=document.elementFromPoint(x,y);
+  const img=target?.closest?.('img[data-jf-epub-image-index]');
+  return img&&!img.classList.contains('jfInlineGlyph')&&imageMarkRef(img)?img:null;
+}
+function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null){
+  // The image has zero textContent length, so its immutable source offset
+  // sits BETWEEN two text characters. An endpoint touching the image itself
+  // is included explicitly; ordinary text ranges include interior pictures.
+  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end))return [];
+  const contained=[];
+  const nativeIds=new Set();
+  if(nativeRange){
+    for(const img of visibleImages()){
+      if(Number(img.dataset.jfEpubImageChapter)===chapter&&
+         nativeRange.intersectsNode(img))
+        nativeIds.add(Number(img.dataset.jfEpubImageIndex));
+    }
+  }
+  for(const entry of sourceImages(chapter)){
+    const inside=entry.offset>start&&entry.offset<end;
+    const focused=focusImage?.chapter===chapter&&
+      focusImage.imageIndex===entry.imageIndex;
+    const native=entry.offset>=start&&entry.offset<=end&&
+      nativeIds.has(entry.imageIndex);
+    if(inside||focused||native){
+      contained.push({type:'epub-image',bookId:jfDeskBook.id,
+        chapter,imageIndex:entry.imageIndex,label:entry.label});
+    }
+    if(contained.length>=24)break;
+  }
+  return contained;
 }
 function imageMarkRef(img){
   if(!img||img.tagName!=='IMG'||img.classList.contains('jfInlineGlyph')||
@@ -237,12 +292,13 @@ function virtualReference(){
   const span=source.slice(start,end),text=span.trim();
   if(!text)return null;
   const leading=span.length-span.trimStart().length;
+  const images=imagesInSelection(virtual.chapter,start,end,null,virtual.imageFocus);
   const point=virtual.lastRect||(lastDragPoint?{
     left:lastDragPoint.x,top:lastDragPoint.y,bottom:lastDragPoint.y,
     width:0,height:0}:null);
   return {ref:{bookId:virtual.bookId,chapter:virtual.chapter,
       anchorStart:start+leading,text},
-    quoteText:text,rects:point?[point]:[],
+    images,quoteText:text,rects:point?[point]:[],
     session:virtual.session};
 }
 function reference(){
@@ -276,8 +332,9 @@ function reference(){
   last.setEnd(range.endContainer,range.endOffset);
   const rects=[first.getBoundingClientRect(),last.getBoundingClientRect()]
     .filter(r=>r.width>0&&r.height>0);
+  const images=imagesInSelection(a.chapter,a.offset,z.offset,range);
   return {ref:{bookId:jfDeskBook.id,chapter:a.chapter,anchorStart:start,text},
-    quoteText,rects,session:jfDeskSession};
+    images,quoteText,rects,session:jfDeskSession};
 }
 function savedFor(ref){
   return (jfDeskWorkspace?.marks||[]).find(m=>
@@ -371,7 +428,8 @@ function resetSelection(removeNative){
 }
 function placeMenu(snap,near=null){
   const mark=snap.savedMark||savedFor(snap.ref);
-  menu.querySelector('[data-action=copy]').textContent=snap.imageElement?'复制图片':'复制';
+  menu.querySelector('[data-action=copy]').textContent=snap.imageElement?
+    '复制图片':snap.images?.length?'复制图文':'复制';
   menu.querySelector('[data-action=mark]').textContent=mark?'取消标记':'标记';
   for(const button of palette.querySelectorAll('[data-color]')){
     button.setAttribute('aria-pressed',String(
@@ -404,11 +462,47 @@ function drawVirtual(){
     const rects=focusRange.getClientRects();
     virtual.lastRect=rects.length?(first?rects[0]:rects[rects.length-1]):null;
     CSS.highlights.set(transient,new Highlight(...spans));
-  }else{virtual.lastRect=null;clearTransient();}
+  }else{
+    virtual.lastRect=null;
+    if(supported())CSS.highlights.delete(transient);
+  }
+  drawLive(snap);
 }
 function scheduleVirtual(){
   if(virtualFrame)cancelAnimationFrame(virtualFrame);
   virtualFrame=requestAnimationFrame(drawVirtual);
+}
+function drawLive(snap){
+  if(!snap||!ready())return;
+  if(supported()&&snap.ref?.type!=='epub-image'){
+    const spans=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
+      snap.ref.anchorStart+snap.ref.text.length);
+    if(spans.length)CSS.highlights.set(transient,new Highlight(...spans));
+    else CSS.highlights.delete(transient);
+  }
+  const selected=new Set((snap.images||[]).map(i=>i.chapter+':'+i.imageIndex));
+  const currentImages=[];
+  for(const img of visibleImages()){
+    const id=img.dataset.jfEpubImageChapter+':'+img.dataset.jfEpubImageIndex;
+    if(selected.has(id)){
+      img.dataset.jfEpubImagePreview='amber';
+      currentImages.push(img);
+    }else img.removeAttribute('data-jf-epub-image-preview');
+  }
+  for(const old of liveSelectedImages){
+    if(!currentImages.includes(old))old.removeAttribute('data-jf-epub-image-preview');
+  }
+  liveSelectedImages=currentImages;
+  reader.classList.add('jfEpubSelecting');
+}
+function livePreview(){
+  liveFrame=0;
+  if(!dragging||!ready()||active?.imageElement)return;
+  const snap=reference();
+  if(snap)drawLive(snap);
+}
+function scheduleLivePreview(){
+  if(!liveFrame)liveFrame=requestAnimationFrame(livePreview);
 }
 function cornerDirection(x,y){
   if(!ready()||!jfDeskPaged||!jfDeskPagedGeometry().two)return 0;
@@ -522,9 +616,20 @@ function armEdge(direction){
 }
 function extendVirtual(point){
   if(!virtual||virtual.pending||point.chapter!==virtual.chapter||
-     Math.abs(point.offset-virtual.anchor)>5000||
-     point.offset===virtual.focus)return;
+     Math.abs(point.offset-virtual.anchor)>5000)return;
+  if(virtual.focus===point.offset&&!virtual.imageFocus)return;
   virtual.focus=point.offset;
+  virtual.imageFocus=null;
+  scheduleVirtual();
+}
+function extendVirtualImage(img){
+  if(!virtual||virtual.pending)return;
+  const ref=imageMarkRef(img);
+  if(!ref||ref.chapter!==virtual.chapter)return;
+  const picture=sourceImages(ref.chapter).find(x=>x.imageIndex===ref.imageIndex);
+  if(!picture||Math.abs(picture.offset-virtual.anchor)>5000)return;
+  virtual.focus=picture.offset;
+  virtual.imageFocus={chapter:ref.chapter,imageIndex:ref.imageIndex};
   scheduleVirtual();
 }
 function settle(){
@@ -539,11 +644,7 @@ function settle(){
   }
   active=snap;
   reader.classList.add('jfEpubSelecting');
-  if(supported()){
-    const ranges=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
-      snap.ref.anchorStart+snap.ref.text.length);
-    if(ranges.length)CSS.highlights.set(transient,new Highlight(...ranges));
-  }
+  drawLive(snap);
   placeMenu(snap);
 }
 function scheduleSettle(delay=0){
@@ -554,6 +655,24 @@ function scheduleSettle(delay=0){
     settleTimer=0;settleFrame=requestAnimationFrame(settle);
   },delay);
   else settleFrame=requestAnimationFrame(settle);
+}
+function selectionMarkParts(snap,color='amber'){
+  if(!snap?.ref||snap.ref.type==='epub-image')return [];
+  return [{...snap.ref,type:'text',length:snap.ref.text.length,color},
+    ...(snap.images||[]).map(img=>({...img,color}))];
+}
+async function persistMark(snap,color){
+  const saved=snap.savedMark||savedFor(snap.ref);
+  if(saved){
+    if((saved.color||'blue')===color)return false;
+    await jfDeskMutate({action:'recolor-mark',mark:saved,color});
+    return 'recolored';
+  }
+  const parts=selectionMarkParts(snap,color);
+  if(parts.length>1)await jfDeskMutate({action:'mark-group',marks:parts});
+  else await jfDeskMutate({action:'mark',mark:snap.imageElement?
+    {...snap.ref,color}:parts[0]});
+  return 'added';
 }
 function selectImage(img){
   if(!ready()||!imageMarkRef(img))return false;
@@ -611,11 +730,8 @@ async function applyColor(color){
   resetSelection(true);
   if(saved&&(saved.color||'blue')===color)return;
   try{
-    if(saved)await jfDeskMutate({action:'recolor-mark',mark:saved,color});
-    else await jfDeskMutate({action:'mark',mark:snap.imageElement?
-      {...snap.ref,color}:{...snap.ref,type:'text',
-        length:snap.ref.text.length,color}});
-    jfDeskMessage(saved?'已更换划线颜色':'已标记原文');
+    await persistMark(snap,color);
+    jfDeskMessage(saved?'已更换标记颜色':'已标记选中内容');
   }catch(error){jfDeskMessage('划线保存失败：'+error.message,true);}
 }
 function legacyCopy(text){
@@ -631,6 +747,41 @@ function legacyCopy(text){
 async function copy(){
   const snap=active;
   if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
+  if(snap.images?.length){
+    try{
+      if(!navigator.clipboard?.write||typeof ClipboardItem!=='function')
+        throw Error('当前浏览器不支持图文混合剪贴板');
+      if(snap.images.length>6)throw Error('一次最多复制六幅图文插图');
+      const source=sourceFor(snap.ref.chapter);
+      const start=snap.ref.anchorStart,end=start+snap.ref.text.length;
+      const escapeHtml=text=>text.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      let html='',plain='',cursor=start;
+      const appendText=(from,to)=>{
+        const text=source.slice(from,to);
+        html+='<span>'+escapeHtml(text)+'</span>';
+        plain+=text;
+      };
+      for(const imageRef of snap.images){
+        const info=sourceImages(imageRef.chapter)
+          .find(i=>i.imageIndex===imageRef.imageIndex);
+        if(!info)throw Error('原图已离开当前书籍');
+        const at=Math.max(cursor,Math.min(end,info.offset));
+        appendText(cursor,at);
+        const jpeg=quoteImageJpeg(info.original);
+        html+='<img src="'+jpeg+'" alt="'+escapeHtml(imageRef.label||'插图')+'">';
+        plain+='[图片：'+(imageRef.label||'插图')+']';
+        cursor=at;
+      }
+      appendText(cursor,end);
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html':new Blob([html],{type:'text/html'}),
+        'text/plain':new Blob([plain],{type:'text/plain'})
+      })]);
+      resetSelection(true);jfDeskMessage('已复制图文内容');
+    }catch(error){jfDeskMessage('图文复制失败：'+error.message,true);}
+    return;
+  }
   if(snap.imageElement){
     try{
       if(!navigator.clipboard?.write||typeof ClipboardItem!=='function')
@@ -662,11 +813,9 @@ async function mark(){
   const saved=snap.savedMark||savedFor(snap.ref);
   resetSelection(true);
   try{
-    await jfDeskMutate(saved?{action:'delete-mark',mark:saved}:
-      {action:'mark',mark:snap.imageElement?
-        {...snap.ref,color:'amber'}:{...snap.ref,type:'text',
-          length:snap.ref.text.length,color:'amber'}});
-    jfDeskMessage(saved?'已取消标记':'已标记原文');
+    if(saved)await jfDeskMutate({action:'delete-mark',mark:saved});
+    else await persistMark(snap,'amber');
+    jfDeskMessage(saved?'已取消标记':'已标记选中内容');
   }catch(error){jfDeskMessage('标记保存失败：'+error.message,true);}
 }
 function quote(){
@@ -680,6 +829,43 @@ function quote(){
         bookId:snap.ref.bookId,chapter:snap.ref.chapter,anchorStart:null,
         epubImageIndex:snap.ref.imageIndex});
     }catch(error){jfDeskMessage('图片摘录失败：'+error.message,true);}
+    return true;
+  }
+  if(snap.images?.length){
+    try{
+      const images=snap.images.slice(0,6);
+      if(images.length!==snap.images.length)
+        throw Error('一次图文摘录最多包含六张图片');
+      const start=snap.ref.anchorStart,end=start+snap.ref.text.length;
+      const chapterSource=sourceFor(snap.ref.chapter);
+      const parts=[];
+      let cursor=start;
+      const addText=(from,to)=>{
+        const raw=chapterSource.slice(from,to),text=raw.trim();
+        if(!text)return;
+        parts.push({type:'text',bookId:snap.ref.bookId,
+          chapter:snap.ref.chapter,anchorStart:from+raw.length-raw.trimStart().length,
+          text,sourceText:text});
+      };
+      for(const imageRef of images){
+        const info=sourceImages(imageRef.chapter)
+          .find(e=>e.imageIndex===imageRef.imageIndex);
+        const img=info?.original;
+        if(!img)throw Error('选中图片已离开阅读窗口');
+        const at=Math.max(cursor,Math.min(end,info.offset));
+        addText(cursor,at);
+        const image=quoteImageJpeg(img);
+        parts.push({type:'image',image,text:imageRef.label,
+          bookId:imageRef.bookId,chapter:imageRef.chapter,
+          anchorStart:null,epubImageIndex:imageRef.imageIndex});
+        cursor=at;
+      }
+      addText(cursor,end);
+      const markParts=selectionMarkParts(snap,'amber');
+      resetSelection(true);
+      jfDeskChooseQuote({parts,markParts,bookId:snap.ref.bookId,
+        chapter:snap.ref.chapter,anchorStart:start});
+    }catch(error){jfDeskMessage('图文摘录失败：'+error.message,true);}
     return true;
   }
   resetSelection(true);
@@ -720,7 +906,8 @@ function reset(){
   stopVirtual();
   clearImageFocus();
   active=null;dragging=false;pointerAt=null;dismissOnClick=false;blockCache=null;
-  sourceCache=new WeakMap();resolvedLegacy=new WeakMap();
+  sourceCache=new WeakMap();imageCatalogCache=new WeakMap();
+  resolvedLegacy=new WeakMap();
   reader.classList.remove('jfEpubSelecting','jfEpubDragging');
   clearTransient();clearPaint();current()?.removeAllRanges();
 }
@@ -752,33 +939,35 @@ document.addEventListener('pointermove',event=>{
   metrics.dragEvents++;lastDragPoint={x:event.clientX,y:event.clientY};
   if(Math.hypot(event.clientX-pointerAt.x,event.clientY-pointerAt.y)>6)
     moved=true;
-  if(!moved||!jfDeskPaged)return;
-  const direction=cornerDirection(event.clientX,event.clientY);
+  if(!moved)return;
+  const direction=jfDeskPaged?cornerDirection(event.clientX,event.clientY):0;
   const onText=!direction?textPointAt(event.clientX,event.clientY):null;
+  const onImage=!direction?imageAt(event.clientX,event.clientY):null;
   if(virtual){
     if(event.cancelable)event.preventDefault();
-    // No caret clamping: blank paper, margins and book shell leave the
-    // logical selection unchanged. The original anchor always survives.
-    if(onText)extendVirtual(onText);
+    // Moving across a picture is meaningful selection, not blank paper.
+    if(onImage)extendVirtualImage(onImage);
+    else if(onText)extendVirtual(onText);
     if(current()?.rangeCount)current().removeAllRanges();
     armEdge(direction);
   }else{
     if(onText&&selecting())captureDragSeed();
-    // Once the pointer enters non-text paper, switch to a source-addressed
-    // selection BEFORE the browser can pull the native range to the last word.
     if(!onText&&dragOriginInText&&dragSeed){
       enterVirtual();
+      if(onImage)extendVirtualImage(onImage);
       if(event.cancelable)event.preventDefault();
       armEdge(direction);
     }else if(direction&&(selecting()||dragSeed))armEdge(direction);
     else armEdge(0);
   }
+  scheduleLivePreview();
 },{passive:false});
 function endPointer(event){
   if(!dragging)return;
   dragging=false;pointerAt=null;stopEdge();
   reader.classList.remove('jfEpubDragging');
   if(moved){dragEnded=Date.now();dismissOnClick=false;}
+  if(liveFrame){cancelAnimationFrame(liveFrame);liveFrame=0;}
   if(virtual)scheduleSettle(0);
   else scheduleSettle(event.pointerType==='touch'?110:25);
 }
@@ -787,7 +976,7 @@ document.addEventListener('pointercancel',endPointer,{passive:true});
 document.addEventListener('selectionchange',()=>{
   if(!canRead())return;
   metrics.selectEvents++;
-  if(dragging){captureDragSeed();return;}
+  if(dragging){captureDragSeed();scheduleLivePreview();return;}
   if(virtual)return;
   if(!selecting()&&!active&&menu.hidden)return;
   scheduleSettle(120);
@@ -919,7 +1108,8 @@ window.JFEpubSelection={
     chapter:jfDeskChapter,page:jfDeskPageIndex,visibleBlocks:blocks().length,
     selected:selecting(),painted:paintedMarks.length,
     crossPage:!!virtual,edgeDirection,edgeLocked,
-    anchor:virtual?.anchor,focus:virtual?.focus,dragSeed:!!dragSeed}),
+    anchor:virtual?.anchor,focus:virtual?.focus,dragSeed:!!dragSeed,
+    selectedImages:active?.images?.length||virtualReference()?.images?.length||0}),
   suppressTurn:()=>moved&&Date.now()-dragEnded<480
 };
 })();

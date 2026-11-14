@@ -135,6 +135,11 @@ function jfReadingAddMark(d,value){
     throw jfReaderError(400,'标记书籍和页码无效');
   const color=value.color===undefined?'blue':jfReadingMarkColor(value.color);
   const record={bookId,chapter,type:kind,...(color==='blue'?{}:{color})};
+  if(value.groupId!==undefined){
+    if(!/^[a-f0-9]{24}$/.test(String(value.groupId)))
+      throw jfReaderError(400,'组合标记编号无效');
+    record.groupId=value.groupId;
+  }
   if(kind==='text'){
     if(!text||!Number.isSafeInteger(anchorStart)||anchorStart<0||anchorStart>12000000||
       !Number.isSafeInteger(len)||len<1||len>5000)throw jfReaderError(400,'文字标记位置无效');
@@ -165,6 +170,26 @@ function jfReadingAddMark(d,value){
      kind==='page'?true:kind==='epub-image'?m.imageIndex===record.imageIndex:
        JSON.stringify(m.area)===JSON.stringify(record.area)));
   if(!duplicate){if(d.marks.length>=10000)throw jfReaderError(413,'标记数量达到上限');d.marks.push(record);}
+}
+// Mixed text/image highlights are one logical action. Validate every element
+// on a private copy before publishing the grouped marks to the vault.
+function jfReadingAddMarkGroup(d,marks){
+  if(!Array.isArray(marks)||marks.length<2||marks.length>24)
+    throw jfReaderError(400,'图文标记组合无效');
+  const bookId=marks[0]?.bookId,chapter=marks[0]?.chapter;
+  if(!marks.every(m=>m&&m.bookId===bookId&&m.chapter===chapter&&
+     ['text','epub-image'].includes(m.type)))
+    throw jfReaderError(400,'图文标记必须来自同一本书同一章节');
+  const draft={marks:[...(d.marks||[])]},id=crypto.randomBytes(12).toString('hex');
+  for(const mark of marks){
+    // Do not allow one existing marker to be silently re-parented; doing
+    // so could orphan a user's previously saved unrelated annotation group.
+    const before=draft.marks.length;
+    jfReadingAddMark(draft,{...mark,groupId:id});
+    if(draft.marks.length===before)
+      throw jfReaderError(409,'部分选区已标注，请先取消旧标记再整体标注');
+  }
+  d.marks=draft.marks;
 }
 // Mark identity is its immutable source anchor, not a mutable visual color.
 // Supports old v1 marks without IDs or colors. No migration is necessary.
@@ -304,9 +329,16 @@ function jfReadingUpdate(body){
     const item={id,title,content,format,excerpt,bookId,chapter,anchorStart,quotes:cleanQuotes,...(blocks?{blocks}:{}),updatedAt:Date.now(),createdAt:existing<0?Date.now():d.notes[existing].createdAt};
     if(existing<0)d.notes.push(item);else d.notes[existing]=item;
     // Optional atomic source marker: the note and its highlight commit together.
-    if(body.alsoMark){jfReadingAddMark(d,body.alsoMark);d.lastExcerptNoteId=id;}
+    if(body.alsoMarks){
+      jfReadingAddMarkGroup(d,body.alsoMarks);
+      d.lastExcerptNoteId=id;
+    }else if(body.alsoMark){
+      jfReadingAddMark(d,body.alsoMark);d.lastExcerptNoteId=id;
+    }
   } else if(body.action==='mark'){
     jfReadingAddMark(d,body.mark);
+  } else if(body.action==='mark-group'){
+    jfReadingAddMarkGroup(d,body.marks);
   } else if(body.action==='merge-marks'){
     // Merge two neighbouring visual units atomically. Source-page coordinates
     // remain independent; groupId merely makes them one logical annotation.

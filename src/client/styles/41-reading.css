@@ -4245,35 +4245,32 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   outline-offset:3px;
   box-shadow:0 0 0 4px var(--jf-epub-img-halo);
 }
-.jfReader.jfEpubSelecting :is(#jfSheetLeft,#jfSheetRight,#jfReadText)
-  img[data-jf-epub-image-color]:not([data-jf-epub-image-active]){
-  outline-color:transparent;box-shadow:none;
+/* Keep saved image marks visible even during another mixed selection.
+   Annotated content must never lose its ink merely because text is dragging. */
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText)
+  img[data-jf-epub-image-preview]{
+  outline:2px solid #947349;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(148,115,73,.14);
 }
 .jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText)
   img[data-jf-epub-image-active]{
-  outline:2px solid #6b8b7b;
+  outline:2px solid #947349;
   outline-offset:3px;
-  box-shadow:0 0 0 5px rgba(107,139,123,.16);
+  box-shadow:0 0 0 5px rgba(148,115,73,.14);
 }
-/* v7.136 · saved ink keeps its thin underline and adds a barely visible
-   same-hue tint; temporary selection still hides archived ink. */
-.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-amber),
-.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-blue),
-.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-mint),
-.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-rose),
-.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-violet){
-  text-decoration-line:none;
-  background-color:transparent;
-}
+/* v7.138 · do not erase saved annotation ink while selecting another
+   range. New selections preview the same warm thin line and subtle tint;
+   embedded illustrations use the matching outside-the-pixels image ring. */
 /* Temporary selection stays unfilled. Archived ink keeps the book texture
    visible under a faint same-hue background tint. */
 .jfReader ::highlight(jf-epub-selection){
-  background-color:transparent;
+  background-color:rgba(148,115,73,.09);
   color:inherit;
   text-decoration-line:underline;
   text-decoration-style:solid;
-  text-decoration-color:#60776c;
-  text-decoration-thickness:2px;
+  text-decoration-color:#947349;
+  text-decoration-thickness:1.5px;
   text-underline-offset:3px;
 }
 .jfReader ::highlight(jf-epub-mark-amber),

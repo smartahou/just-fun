@@ -274,9 +274,10 @@ function jfDeskMutate(payload){
       const updated=await jfDeskApi('workspace','POST',{...payload,revision:jfDeskWorkspace.revision});
       jfDeskWorkspace=updated;
       // Reading progress saves must not force a global underline rebuild.
-      if(payload.action==='mark'||payload.action==='delete-mark'||
-          payload.action==='recolor-mark'||
-         payload.action==='update-mark'||(payload.action==='note'&&payload.alsoMark)){
+      if(payload.action==='mark'||payload.action==='mark-group'||
+          payload.action==='delete-mark'||payload.action==='recolor-mark'||
+          payload.action==='update-mark'||
+          (payload.action==='note'&&(payload.alsoMark||payload.alsoMarks))){
         window.JFEpubSelection?.refresh?.();
         // Both PDF and EPUB share the book-wide mark index.
         if(!document.getElementById('jfPdfMarksList').hidden)
@@ -587,10 +588,18 @@ function jfDeskTagSourceImages(section,chapter){
   // Stable source-order identities survive cloned facing leaves, resizes and
   // the original EPUB image URL being replaced by optional plate processing.
   // Metadata only: no change to the text stream, dimensions or node ordering.
-  let i=0;
-  for(const img of section.querySelectorAll('img')){
-    img.dataset.jfEpubImageChapter=String(chapter);
-    img.dataset.jfEpubImageIndex=String(i++);
+  let i=0,offset=0;
+  // One linear document-order pass: the positional offset is in exactly the
+  // same chapter textContent coordinate space used by saved text selections.
+  const walker=document.createTreeWalker(section,
+    NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);
+  let node;
+  while((node=walker.nextNode())){
+    if(node.nodeType===Node.TEXT_NODE){offset+=node.nodeValue.length;continue;}
+    if(node.tagName!=='IMG')continue;
+    node.dataset.jfEpubImageChapter=String(chapter);
+    node.dataset.jfEpubImageIndex=String(i++);
+    node.dataset.jfEpubImageOffset=String(offset);
   }
 }
 async function jfDeskFlowFetch(n){
@@ -1444,6 +1453,20 @@ async function jfDeskQuoteCommit(){
     const blocks=[...jfDeskNoteBlocks(note),{kind:'quote',index:quotes.length-1},{kind:'text',text:''}];
     if(quotes.length>40)throw Error('目标笔记摘录已达上限');
     let mark=null;
+    const mixedParts=Array.isArray(quote.parts)?quote.parts:null;
+    const mixedMarks=mixedParts&&Array.isArray(quote.markParts)?quote.markParts:null;
+    if(mixedParts){
+      // Keep a single chooser, but write ordered text and picture excerpts as
+      // separate blocks. Each retains its original chapter/source identity.
+      quotes.pop();
+      blocks.splice(blocks.length-2,2);
+      for(const part of mixedParts){
+        if(quotes.length>=40)throw Error('目标笔记摘录已达上限');
+        quotes.push(part);
+        blocks.push({kind:'quote',index:quotes.length-1});
+      }
+      blocks.push({kind:'text',text:''});
+    }
     if(quote.type==='image'&&Number.isSafeInteger(quote.epubImageIndex))
       mark={type:'epub-image',bookId:quote.bookId,chapter:quote.chapter,
         imageIndex:quote.epubImageIndex,label:quote.text||'' ,color:'amber'};
@@ -1455,7 +1478,9 @@ async function jfDeskQuoteCommit(){
       mark={type:'text',text:sourceText.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(sourceText.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:'amber'})};
     }
     // Persist the new note, destination, and source highlight in one encrypted transaction.
-    await jfDeskMutate({action:'note',note:{...note,quotes,blocks},...(mark?{alsoMark:mark}:{})});
+    await jfDeskMutate({action:'note',note:{...note,quotes,blocks},
+      ...(mixedMarks?.length>1?{alsoMarks:mixedMarks}:
+        mark?{alsoMark:mark}:{})});
     jfDeskQuoteLast=note.id;jfDeskQuoteDismiss();
     jfDeskActiveNote=note.id;jfDeskDraft=null;jfDeskDirty=false;
     document.getElementById('jfDeskNoteTitle').value=note.title;

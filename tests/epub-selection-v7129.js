@@ -116,13 +116,18 @@ for(const [name,[underline,tint]] of Object.entries(savedInkTints)){
   assert(rule.includes('background-color:'+tint),
     name+' must use the same hue at 9% opacity');
 }
-assert(/\.jfReader\.jfEpubSelecting ::highlight\(jf-epub-mark-violet\)\s*\{[^}]*background-color:transparent/.test(css),
-  'archived tints disappear during active selection');
-assert(/\.jfReader ::highlight\(jf-epub-selection\)\s*\{[^}]*background-color:transparent/.test(css),
-  'temporary selection stays transparent');
+assert(!css.includes('.jfReader.jfEpubSelecting ::highlight(jf-epub-mark-violet)'),
+  'saved text ink remains visible while making a new selection');
+assert(/\.jfReader ::highlight\(jf-epub-selection\)\s*\{[^}]*background-color:rgba\(148,115,73,\.09\)/.test(css)&&
+  /\.jfReader ::highlight\(jf-epub-selection\)\s*\{[^}]*text-decoration-color:#947349/.test(css),
+  'live text selection previews the final thin ink and faint same-hue tint');
 // v7.137 · EPUB image annotations use a source image ordinal, never a
 // viewport rectangle or a mutable decoded/reprocessed image URL.
 const server=read('src/server/46-reading-and-notes.js');
+assert(server.includes('function jfReadingAddMarkGroup(d,marks)')&&
+  server.includes("body.action==='mark-group'")&&
+  server.includes('if(body.alsoMarks)'),
+  'combined text/image ink and note atomically share a group of source marks');
 for(const contract of [
   "['area','page','epub-image'].includes(value.type)",
   "kind==='epub-image'",
@@ -130,9 +135,10 @@ for(const contract of [
   "epubImageIndex=isImage?q.epubImageIndex:undefined"
 ])assert(server.includes(contract),'image data validation: '+contract);
 assert(reader.includes('function jfDeskTagSourceImages(section,chapter)')&&
-  reader.includes('img.dataset.jfEpubImageIndex=String(i++)')&&
+  reader.includes('node.dataset.jfEpubImageIndex=String(i++)')&&
+  reader.includes('node.dataset.jfEpubImageOffset=String(offset)')&&
   reader.includes('jfDeskTagSourceImages(first,number)'),
-  'source image ordinals survive EPUB flow and printed clone generation');
+  'original image ordinals and source-text offsets survive EPUB printing');
 assert(reader.includes("mark={type:'epub-image'")&&
   reader.includes("imageIndex:quote.epubImageIndex"),
   'image note atomically writes its source image annotation');
@@ -140,6 +146,13 @@ assert(pdf.includes("mark.type==='epub-image'")&&
   pdf.includes('JFEpubSelection?.jumpImage?.(mark)'),
   'shared mark index labels and jumps to EPUB image marks');
 for(const needle of [
+  'function sourceImages(chapter)',
+  'function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null)',
+  'function extendVirtualImage(img)',
+  'function drawLive(snap)',
+  'function scheduleLivePreview()',
+  'function selectionMarkParts(snap,color=',
+  "action:'mark-group'",
   'function imageMarkRef(img)',
   'function selectImage(img)',
   'function imageCanvas(img,maxSide=1440)',
@@ -154,8 +167,10 @@ for(const color of ['amber','blue','mint','rose','violet']){
     color+' image border exists');
 }
 assert(css.includes('outline-offset:3px')&&
-  css.includes('box-shadow:0 0 0 4px var(--jf-epub-img-halo)'),
-  'image ink only draws a restrained ring outside source pixels');
+  css.includes('box-shadow:0 0 0 4px var(--jf-epub-img-halo)')&&
+  css.includes('img[data-jf-epub-image-preview]')&&
+  !css.includes('img[data-jf-epub-image-color]:not([data-jf-epub-image-active])'),
+  'saved and live image ink both remain visible without covering image pixels');
 // Verify the server's real add / stable-identity functions without a vault.
 // An identical URL may appear twice in the same chapter: imageIndex
 // differentiates them without searching source text or displayed img src.
@@ -164,7 +179,8 @@ const from=server.indexOf('function jfReadingAddMark(');
 const to=server.indexOf('function jfReadingUpdate(',from);
 assert(from>=0&&to>from,'server mark contract');
 const context={jfReaderError:(status,message)=>{
-  const err=new Error(message);err.status=status;return err;}};
+  const err=new Error(message);err.status=status;return err;},
+  crypto:{randomBytes:()=>({toString:()=> 'a'.repeat(24)})}};
 vm.runInNewContext(server.slice(from,to),context);
 const state={marks:[]},baseMark={bookId:'a'.repeat(16),chapter:2,
   type:'epub-image',imageIndex:0,label:'图一',color:'amber'};
@@ -178,5 +194,19 @@ assert.throws(()=>context.jfReadingAddMark(state,{...baseMark,imageIndex:-1}),
   /EPUB 图片编号无效/);
 assert.throws(()=>context.jfReadingMarkIndex(state,{...baseMark,imageIndex:100002}),
   /图片标记定位无效/);
+const groupState={marks:[]};
+context.jfReadingAddMarkGroup(groupState,[
+  {type:'text',bookId:'a'.repeat(16),chapter:2,anchorStart:4,
+    text:'原文摘录',length:4,color:'amber'},
+  {...baseMark}
+]);
+assert.equal(groupState.marks.length,2);
+assert(groupState.marks[0].groupId&&
+  groupState.marks[0].groupId===groupState.marks[1].groupId,
+  'one group identity covers both text and illustration');
+assert.throws(()=>context.jfReadingAddMarkGroup(groupState,[
+  {...baseMark,imageIndex:1},{...baseMark,imageIndex:-1}]),
+  /EPUB 图片编号无效/);
+assert.equal(groupState.marks.length,2,'invalid group must not partially save');
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.137 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.138 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
