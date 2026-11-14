@@ -81,13 +81,13 @@ assert(source.includes('edgeLocked=true;')&&source.includes('edgeLocked=false;')
   'stationary pointer does not keep turning entire unselected spreads');
 assert(source.includes('if(virtual)return virtualReference()')&&
   source.includes('if(virtual&&virtual.session===jfDeskSession')&&
-  source.includes('virtual.focus=virtual.pending.focus'),
+  source.includes('virtual.index=jfDeskPageIndex;virtual.pending=null;'),
   'page render retains immutable source coordinates for cross-page selection');
 assert(source.includes('if(!direction)extendVirtual(caretAt(')&&
   source.includes('if(virtual)scheduleSettle(0)'),
   'continued pointer dragging extends the original span and commits on release');
-assert(source.includes('if(dragging||virtual)return;')&&
-  source.includes('else if(selecting())armEdge(direction);'),
+assert(source.includes('if(dragging){captureDragSeed();return;}')&&
+  source.includes('if(virtual)return;')&&source.includes('else armEdge(0);'),
   'normal native selection avoids eager expensive redraws');
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
 console.log('PASS v7.134 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
