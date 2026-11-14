@@ -32,7 +32,7 @@ assert(source.includes('CSS.highlights.set(key(col),new Highlight(...ranges))'),
 assert(source.includes('document.caretRangeFromPoint')&&
   !source.includes('hit.range.getClientRects'),
   'existing marks use a single caret hit-test, not all-range geometry');
-assert(reader.includes("if(payload.action==='mark'||payload.action==='delete-mark'")&&
+assert(reader.includes("if(payload.action==='mark'||payload.action==='mark-group'")&&
   reader.includes("window.JFEpubSelection?.restoreReady?.()"),
   'progress never redraws marks; reopening always paints after restore');
 assert(source.includes('lastReasons')&&source.includes('diagnostics'),
