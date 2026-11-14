@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.131.0 / Current version: v7.131.0** · 持续迭代 / Actively evolving
+**当前版本：v7.132.0 / Current version: v7.132.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.132 · 蓝色划线、复制与 EPUB 标记索引**：修正默认蓝色标记后端省略 `color` 字段时前端误用茶褐色绘制的问题；选区工具条加入“复制”，兼容 Clipboard API 与传统剪贴板写入。开放 EPUB/TXT 共用标记列表入口、同步标记变化、按原文锚点定位；移除 EPUB 标记跳转中修改正文 DOM 的旧路径，保护分页精度。新增浏览器回归验证：蓝色往返改色、复制、打开列表和源坐标跳转。
 
 **v7.131 · EPUB 划线交互、配色与索引优化**：选区工具条去掉单独“取消”按钮；点击书页其他位置只收起选区，不触发翻页，下一次点击才正常翻页。新增茶褐、青蓝、草绿、淡红、灰紫五色细划线；新选区点击色点即可保存，已保存标记可原地改色，沿用工作区原有 `recolor-mark` 原子操作。可见书页为文字节点建立一次性偏移索引，避免每次命中和生成范围都扫描全文；保留跨段、跨对页原文锚点与 CSS Highlights 渲染。
 

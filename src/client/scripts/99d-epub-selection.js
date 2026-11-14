@@ -16,7 +16,7 @@ menu.className='jfEpubSelectionMenu';
 menu.setAttribute('role','toolbar');
 menu.setAttribute('aria-label','选中文字操作');
 menu.hidden=true;
-for(const [action,label] of [['mark','标记'],['note','加入笔记']]){
+for(const [action,label] of [['copy','复制'],['mark','标记'],['note','加入笔记']]){
   const button=document.createElement('button');
   button.type='button';button.dataset.action=action;button.textContent=label;
   menu.append(button);
@@ -261,7 +261,9 @@ function paint(){
     if(!spans.length){
       reasons.notVisible=(reasons.notVisible||0)+1;continue;
     }
-    const col=colors.includes(mark.color)?mark.color:'amber';
+    // The server stores blue as an omitted color field.
+    const color=mark.color||'blue';
+    const col=colors.includes(color)?color:'blue';
     output.get(col).push(...spans);
     visible.push({mark,from,to:from+mark.text.length});
   }
@@ -349,6 +351,32 @@ async function applyColor(color){
     jfDeskMessage(saved?'已更换划线颜色':'已标记原文');
   }catch(error){jfDeskMessage('划线保存失败：'+error.message,true);}
 }
+function legacyCopy(text){
+  // Do not insert the fallback control into paginated book DOM.
+  const field=document.createElement('textarea');
+  field.value=text;field.readOnly=true;
+  field.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+  document.body.append(field);field.focus();field.select();
+  let ok=false;
+  try{ok=!!document.execCommand('copy');}catch{}
+  field.remove();return ok;
+}
+async function copy(){
+  const snap=active;
+  if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
+  const text=snap.quoteText||snap.ref.text;
+  if(!text)return;
+  try{
+    let copied=false;
+    if(navigator.clipboard?.writeText){
+      try{await navigator.clipboard.writeText(text);copied=true;}catch{}
+    }
+    if(!copied)copied=legacyCopy(text);
+    if(!copied)throw Error('浏览器未授权剪贴板写入');
+    resetSelection(true);
+    jfDeskMessage('已复制选中文字');
+  }catch(error){jfDeskMessage('复制失败：'+error.message,true);}
+}
 async function mark(){
   const snap=active;
   if(!snap||snap.ref.bookId!==jfDeskBook?.id||snap.session!==jfDeskSession)return;
@@ -391,6 +419,7 @@ for(const button of menu.querySelectorAll('button')){
   button.addEventListener('pointerdown',event=>event.preventDefault());
   button.addEventListener('click',()=>{
     if(button.dataset.color)void applyColor(button.dataset.color);
+    else if(button.dataset.action==='copy')void copy();
     else if(button.dataset.action==='mark')void mark();
     else if(button.dataset.action==='note')quote();
   });

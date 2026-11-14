@@ -237,6 +237,17 @@ def main():
                 assert '255, 255, 255' not in visual['color'], visual
                 assert visual['nativeBackground'] in ('rgba(0, 0, 0, 0)', 'transparent'), visual
                 assert visual['temporaryCount'] == 1 and visual['underline'] == 'underline', visual
+                # Copy selected original text without saving a mark.
+                page.evaluate("""()=>{
+                  Object.defineProperty(navigator,'clipboard',{configurable:true,
+                    value:{writeText:async text=>{window.__jfCopiedText=text;}}});
+                }""")
+                page.locator('#jfEpubSelectionMenu [data-action="copy"]').click()
+                page.wait_for_function("""()=>window.__jfCopiedText==='纸书选区测试甲乙丙丁' &&
+                  document.getElementById('jfEpubSelectionMenu').hidden""")
+                assert not page.evaluate("""()=>jfDeskWorkspace.marks.some(m=>
+                  m.text==='纸书选区测试甲乙丙丁')""")
+                choose(page, FIRST)
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='纸书选区测试甲乙丙丁')""")
@@ -252,6 +263,45 @@ def main():
                 assert marked['marks'] == 1 and marked['ranges'] >= 1, marked
                 assert marked['painted'] == FIRST and marked['underline'] == 'underline', marked
                 assert marked['pageCount'] == baseline, marked
+                # EPUB exposes a real book-wide mark index.
+                assert page.locator('#jfPdfMarksListToggle').is_visible()
+                page.locator('#jfPdfMarksListToggle').click()
+                page.wait_for_function("""()=>!document.getElementById('jfPdfMarksList').hidden
+                  && document.getElementById('jfPdfMarksListItems')
+                    .textContent.includes('纸书选区测试甲乙丙丁')""")
+                page.locator('#jfPdfMarksListToggle').click()
+                assert page.locator('#jfPdfMarksList').is_hidden()
+                # Blue is encoded as an omitted color field in the server.
+                pos_blue=page.evaluate("""()=>{
+                  const r=[...CSS.highlights.get('jf-epub-mark-amber')][0]
+                    .getClientRects()[0];
+                  return {x:r.left+r.width/2,y:r.top+r.height/2};
+                }""")
+                page.mouse.click(pos_blue['x'],pos_blue['y'])
+                page.wait_for_function("""()=>!document.getElementById(
+                  'jfEpubSelectionMenu').hidden""")
+                page.locator('#jfEpubSelectionMenu [data-color="blue"]').click()
+                page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+                  m.text==='纸书选区测试甲乙丙丁' && m.color===undefined) &&
+                  [...(CSS.highlights.get('jf-epub-mark-blue')||[])]
+                    .map(r=>r.toString()).join('')==='纸书选区测试甲乙丙丁'""")
+                assert page.evaluate("""()=>
+                  [...(CSS.highlights.get('jf-epub-mark-amber')||[])]
+                    .every(r=>r.toString()!=='纸书选区测试甲乙丙丁')""")
+                # Recolor back to amber to preserve later precise-source cases.
+                pos_amber=page.evaluate("""()=>{
+                  const r=[...CSS.highlights.get('jf-epub-mark-blue')][0]
+                    .getClientRects()[0];
+                  return {x:r.left+r.width/2,y:r.top+r.height/2};
+                }""")
+                page.mouse.click(pos_amber['x'],pos_amber['y'])
+                page.wait_for_function("""()=>!document.getElementById(
+                  'jfEpubSelectionMenu').hidden""")
+                page.locator('#jfEpubSelectionMenu [data-color="amber"]').click()
+                page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
+                  m.text==='纸书选区测试甲乙丙丁'&&m.color==='amber') &&
+                  [...(CSS.highlights.get('jf-epub-mark-amber')||[])]
+                    .map(r=>r.toString()).join('')==='纸书选区测试甲乙丙丁'""")
                 # A routine progress mutation used to repaint ALL highlights,
                 # even though neither the visible book nor marks changed.
                 before_progress = page.evaluate('JFEpubSelection.metrics.redraws')
@@ -467,8 +517,17 @@ def main():
                   jfDeskWorkspace.marks=window.__jfStressOriginalMarks;
                   delete window.__jfStressOriginalMarks;JFEpubSelection.refresh();
                 }""")
+                # List navigation must preserve source DOM and close the panel.
+                page.locator('#jfPdfMarksListToggle').click()
+                page.wait_for_function("""()=>!document.getElementById('jfPdfMarksList').hidden
+                  && document.querySelector('#jfPdfMarksListItems .jfPdfMarkItem')""")
+                page.locator('#jfPdfMarksListItems .jfPdfMarkItem').first.click()
+                page.wait_for_function("""()=>!jfDeskRestoring &&
+                  document.getElementById('jfPdfMarksList').hidden""")
+                assert page.evaluate("""()=>!document.querySelector(
+                  '#jfReadText mark.jfReadCitation')""")
                 assert not errors, errors
-                print('PASS v7.130 Chromium EPUB: selection across facing leaves, '
+                print('PASS v7.132 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

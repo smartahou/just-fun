@@ -276,8 +276,12 @@ function jfDeskMutate(payload){
       // Reading progress saves must not force a global underline rebuild.
       if(payload.action==='mark'||payload.action==='delete-mark'||
           payload.action==='recolor-mark'||
-         payload.action==='update-mark'||(payload.action==='note'&&payload.alsoMark))
+         payload.action==='update-mark'||(payload.action==='note'&&payload.alsoMark)){
         window.JFEpubSelection?.refresh?.();
+        // Both PDF and EPUB share the book-wide mark index.
+        if(!document.getElementById('jfPdfMarksList').hidden)
+          jfPdfJsMarksListRender();
+      }
       return updated;
     }catch(error){
       const message=String(error&&error.message||'');
@@ -453,6 +457,9 @@ async function jfDeskOpenReader(bookId,chapter){
     const outline=await jfDeskApi('outline?id='+encodeURIComponent(bookId));
     if(epoch!==jfDeskEpoch)return;
     jfDeskOutline=outline;jfDeskBook=outline.book;
+    // PDF will expose its toggle once pages are ready. EPUB/TXT can
+    // immediately reuse the shared annotation index.
+    document.getElementById('jfPdfMarksListToggle').hidden=!!outline.nativePdf;
     if(!outline.nativePdf){
       await jfDeskEnsureBookFonts();
       if(epoch!==jfDeskEpoch)return;

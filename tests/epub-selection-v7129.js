@@ -41,6 +41,18 @@ for(const t of ['取消标记','标记','加入笔记'])assert(source.includes(t
 assert(!source.includes("['cancel','取消']"),'tap-away replaces cancel button');
 assert(source.includes('dismissOnClick')&&source.includes('event.stopImmediatePropagation()'),
   'one outside click dismisses selection before pagination click');
+assert(source.includes("const color=mark.color||'blue'")&&
+  source.includes("const col=colors.includes(color)?color:'blue'"),
+  'default blue marks are rendered in the actual blue registry');
+assert(source.includes("['copy','复制']")&&source.includes('navigator.clipboard?.writeText')&&
+  source.includes("document.execCommand('copy')"),'copy has clipboard and fallback');
+assert(reader.includes("jfPdfMarksListToggle').hidden=!!outline.nativePdf")&&
+  reader.includes('jfPdfJsMarksListRender()'),
+  'non-PDF books expose and refresh the shared mark index');
+const pdf=read('src/client/scripts/99a-pdfjs.js');
+assert(pdf.includes('await jfDeskShowChapter(mark.chapter,0,')&&
+  !pdf.includes("jfDeskJumpToQuote({...mark,type:'text'})"),
+  'non-PDF mark index navigates via source offset, never via DOM mutation');
 assert(source.includes('jfEpubColorPalette')&&source.includes("action:'recolor-mark'")&&
   reader.includes("payload.action==='recolor-mark'"),
   'five reusable colors recolor without losing saved mark identity');

@@ -377,7 +377,9 @@ async function jfPdfJsMarkSelection(){
 function jfPdfJsBookMarks(){
   return (Array.isArray(jfDeskWorkspace?.marks)?jfDeskWorkspace.marks:[])
     .filter(m=>m.bookId===jfDeskBook?.id&&Number.isSafeInteger(m.chapter))
-    .sort((a,b)=>a.chapter-b.chapter||(a.area?.[1]||0)-(b.area?.[1]||0));
+    .sort((a,b)=>a.chapter-b.chapter||
+      (a.type==='text'&&b.type==='text'?a.anchorStart-b.anchorStart:0)||
+      (a.area?.[1]||0)-(b.area?.[1]||0));
 }
 // Logical annotation units: page-anchored source segments remain separate,
 // while an explicit shared groupId makes neighbouring regions one list item.
@@ -569,7 +571,12 @@ function jfPdfJsMarksListRender(){
     button.append(meta);
     button.addEventListener('click',async()=>{
       jfPdfMarkMenuClose();jfPdfJsMarksListClose();
-      if(!isPdf){await jfDeskShowChapter(mark.chapter);if(mark.text)jfDeskJumpToQuote({...mark,type:'text'});return;}
+      if(!isPdf){
+        // Navigate via original source offset, not a DOM-mutating <mark>.
+        await jfDeskShowChapter(mark.chapter,0,
+          mark.type==='text'&&Number.isSafeInteger(mark.anchorStart)?mark.anchorStart:null);
+        return;
+      }
       await jfPdfJsPage(mark.chapter);
       const record=jfPdfJsState.pages.get(mark.chapter);if(!record)return;
       for(let i=0;i<80&&record.status!=='ready'&&record.status!=='error';i++)await new Promise(r=>setTimeout(r,45));
