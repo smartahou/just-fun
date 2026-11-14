@@ -301,6 +301,69 @@ def assert_corner_dwell(page, direction, pointer_type='mouse'):
     page.evaluate('()=>JFEpubSelection.reset()')
     return after
 
+def assert_real_forward_mouse(page):
+    """Actual Playwright mouse drag, not dispatched synthetic PointerEvents."""
+    setup = page.evaluate("""()=>{
+      JFEpubSelection.reset();
+      if(!jfDeskPagedGeometry().two)return {ok:false,reason:'no facing pages'};
+      let index=-1;
+      for(let i=0;i+3<jfDeskPages.length;i+=2){
+        if(jfDeskPages[i+1]?.some(b=>!b.comic&&b.chapter===jfDeskChapter)&&
+           jfDeskPages[i+2]?.some(b=>!b.comic&&b.chapter===jfDeskChapter)){
+          index=i;break;
+        }
+      }
+      if(index<0)return {ok:false,reason:'no forward spread'};
+      jfDeskPageIndex=index;jfDeskPagedRender();
+      const sheet=document.getElementById('jfSheetRight');
+      const walker=document.createTreeWalker(sheet,NodeFilter.SHOW_TEXT);
+      let node=null,n;
+      while((n=walker.nextNode())){
+        if(n.nodeValue.trim().length>35){node=n;break;}
+      }
+      if(!node)return {ok:false,reason:'no long text node'};
+      const glyph=at=>{
+        const r=document.createRange();
+        r.setStart(node,at);r.setEnd(node,at+1);
+        const rect=r.getBoundingClientRect();
+        return {x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+      };
+      const shell=sheet.parentElement.getBoundingClientRect();
+      return {ok:true,index,target:index+2,
+        start:glyph(4),end:glyph(28),
+        corner:{x:shell.right+12,y:shell.top+20}};
+    }""")
+    assert setup['ok'], setup
+    page.mouse.move(setup['start']['x'], setup['start']['y'])
+    page.mouse.down()
+    try:
+        page.mouse.move(setup['end']['x'], setup['end']['y'], steps=10)
+        page.wait_for_function("""()=>getSelection()?.toString().trim().length>=3""",
+                               timeout=2500)
+        page.mouse.move(setup['corner']['x'], setup['corner']['y'], steps=10)
+        page.wait_for_function("""(target)=>jfDeskPageIndex===target &&
+          JFEpubSelection.diagnostics().crossPage""",
+                               arg=setup['target'], timeout=6000)
+        # The physical mouse stays in the same place after the flip.
+        current=page.evaluate("""()=>({
+          ref:JFEpubSelection.reference()?.ref,
+          page:jfDeskPageIndex,
+          locked:JFEpubSelection.diagnostics().edgeLocked
+        })""")
+        assert current['ref'] and current['locked'], (setup,current)
+        page.wait_for_timeout(950)
+        stable=page.evaluate("""()=>({
+          ref:JFEpubSelection.reference()?.ref,page:jfDeskPageIndex
+        })""")
+        assert stable=={'ref':current['ref'],'page':current['page']}, (
+          setup,current,stable)
+    finally:
+        page.mouse.up()
+    page.wait_for_function("""()=>!document.getElementById(
+      'jfEpubSelectionMenu').hidden && !!JFEpubSelection.reference()""")
+    page.evaluate('()=>JFEpubSelection.reset()')
+
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -661,6 +724,7 @@ def main():
                 # not iOS native selection-handle behavior.
                 assert_corner_dwell(page, 1, 'mouse')
                 assert_corner_dwell(page, -1, 'touch')
+                assert_real_forward_mouse(page)
                 assert not errors, errors
                 print('PASS v7.134 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '

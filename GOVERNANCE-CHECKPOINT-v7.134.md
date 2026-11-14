@@ -17,3 +17,6 @@
 - 增强 `tests/epub-selection-v7129.js`：断言不自动扩选、不重复触发和右边界原生选区折叠的兼容机制。
 - CI 与实际浏览器验证结果以 GitHub Actions 日志为准；运行前不得声称通过。
 - iPad Safari 原生选择手柄事件是否能正确冒泡还需真机验证，不用合成 touch pointer 代替该结论。
+
+## 补充验收：真实鼠标事件
+既有 Chromium 合成 PointerEvent 验证通过后，额外增加 Playwright 原生 `page.mouse.down/move/up` 测试，实测在右侧纸页拖选、移到右上角、悬停翻页及保持指针不动。该测试能暴露合成事件未触发浏览器原生 Selection 的遗漏，属于本次“向后翻页无效”的必要覆盖，而非额外功能。以新 CI 结果为最终依据。
