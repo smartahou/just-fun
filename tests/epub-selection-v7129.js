@@ -71,7 +71,7 @@ assert(source.includes('const EDGE_DWELL_MS=720')&&
   'corner dwell auto-turn uses existing prepared spreads only');
 assert(source.includes("const limit=direction<0?low:high")&&
   source.includes('return {index};')&&
-  !source.includes('virtual.index=jfDeskPageIndex;virtual.pending=null;'),
+  !source.includes('virtual.focus=virtual.pending.focus'),
   'turning either way preserves the original selection endpoint');
 assert(source.includes('function captureDragSeed()')&&
   source.includes('if(direction&&(selecting()||dragSeed))armEdge(direction)'),
