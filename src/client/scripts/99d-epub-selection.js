@@ -42,7 +42,7 @@ let dismissOnClick=false;
 // Only a held text drag in the outer upper corner enters the cross-page path.
 const EDGE_DWELL_MS=720;
 let edgeTimer=0,edgeDirection=0,virtual=null,virtualFrame=0,lastDragPoint=null;
-let dragSeed=null,edgeLocked=false;
+let dragSeed=null,edgeLocked=false,dragOriginInText=false;
 let settleTimer=0,settleFrame=0,paintFrame=0,observerFrame=0;
 let blockCache=null,sourceCache=new WeakMap(),resolvedLegacy=new WeakMap();
 let viewGeneration=0,paintedMarks=[],lastPaintKey=null;
@@ -61,7 +61,7 @@ function stopVirtual(){
   stopEdge();
   if(virtualFrame)cancelAnimationFrame(virtualFrame);
   virtualFrame=0;virtual=null;lastDragPoint=null;
-  dragSeed=null;edgeLocked=false;
+  dragSeed=null;edgeLocked=false;dragOriginInText=false;
 }
 const cancelTimer=()=>{
   if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
@@ -372,13 +372,15 @@ function cornerDirection(x,y){
   const right=document.getElementById('jfSheetRight')?.parentElement?.getBoundingClientRect();
   if(!left||!right)return 0;
   const nearTop=r=>Math.min(88,r.height*.14);
+  const nearBottom=r=>Math.min(88,r.height*.14);
   const nearSide=r=>Math.min(94,r.width*.22);
   // Accept the narrow outer gutter past each sheet: a real drag can end
   // slightly outside the paper without its native Selection staying alive.
   if(x>=left.left-20&&x<=left.left+nearSide(left)&&
      y>=left.top-12&&y<=left.top+nearTop(left))return -1;
+  // Forward: lower OUTER corner of the right leaf, never upper-right.
   if(x<=right.right+20&&x>=right.right-nearSide(right)&&
-     y>=right.top-12&&y<=right.top+nearTop(right))return 1;
+     y>=right.bottom-nearBottom(right)&&y<=right.bottom+12)return 1;
   return 0;
 }
 function adjacentSource(direction,chapter,anchor){
@@ -408,10 +410,11 @@ function adjacentSource(direction,chapter,anchor){
   return {index};
 }
 function captureDragSeed(){
-  // Cheap source-coordinate lookups only; never read layout or paint during
-  // ordinary native dragging. Keep the last valid text range when hovering
-  // over a blank corner causes the browser Selection to collapse.
+  // Remember only genuine text endpoints. Browser caret clamping in a wide
+  // paper margin must never replace our last valid source selection.
   if(!dragging||virtual||!ready())return;
+  if(moved&&lastDragPoint&&
+     !textPointAt(lastDragPoint.x,lastDragPoint.y))return;
   const sel=current();
   if(!sel||sel.isCollapsed||sel.rangeCount!==1)return;
   const a=position(sel.anchorNode,sel.anchorOffset);
@@ -450,6 +453,15 @@ function edgeTurn(direction){
     virtual.pending=null;
     scheduleVirtual();
   }
+}
+function enterVirtual(){
+  if(virtual||!dragSeed||dragSeed.bookId!==jfDeskBook?.id||
+     dragSeed.session!==jfDeskSession)return;
+  virtual={...dragSeed,index:jfDeskPageIndex,lastRect:null,pending:null};
+  current()?.removeAllRanges();
+  reader.classList.add('jfEpubSelecting');
+  menu.hidden=true;active=null;cancelTimer();
+  scheduleVirtual();
 }
 function armEdge(direction){
   if(!direction){
@@ -612,6 +624,7 @@ document.addEventListener('pointerdown',event=>{
   stopVirtual();
   dragging=true;moved=false;pointerAt={x:event.clientX,y:event.clientY};
   lastDragPoint={x:event.clientX,y:event.clientY};
+  dragOriginInText=!!textPointAt(event.clientX,event.clientY);
   reader.classList.add('jfEpubDragging');
   menu.hidden=true;active=null;clearTransient();cancelTimer();
 },{capture:true,passive:true});
@@ -622,13 +635,23 @@ document.addEventListener('pointermove',event=>{
     moved=true;
   if(!moved||!jfDeskPaged)return;
   const direction=cornerDirection(event.clientX,event.clientY);
+  const onText=!direction?textPointAt(event.clientX,event.clientY):null;
   if(virtual){
     if(event.cancelable)event.preventDefault();
-    if(!direction)extendVirtual(caretAt(event.clientX,event.clientY)||{});
+    // No caret clamping: blank paper, margins and book shell leave the
+    // logical selection unchanged. The original anchor always survives.
+    if(onText)extendVirtual(onText);
+    if(current()?.rangeCount)current().removeAllRanges();
     armEdge(direction);
   }else{
-    if(selecting())captureDragSeed();
-    if(direction&&(selecting()||dragSeed))armEdge(direction);
+    if(onText&&selecting())captureDragSeed();
+    // Once the pointer enters non-text paper, switch to a source-addressed
+    // selection BEFORE the browser can pull the native range to the last word.
+    if(!onText&&dragOriginInText&&dragSeed){
+      enterVirtual();
+      if(event.cancelable)event.preventDefault();
+      armEdge(direction);
+    }else if(direction&&(selecting()||dragSeed))armEdge(direction);
     else armEdge(0);
   }
 },{passive:false});
@@ -669,6 +692,38 @@ function caretAt(x,y){
   }
   const p=document.caretRangeFromPoint?.(x,y);
   return p?position(p.startContainer,p.startOffset):null;
+}
+function textPointAt(x,y){
+  // Do not consult the text-node index for pointer events over the header,
+  // footer, book shell or outside the printed sheets at all.
+  const target=document.elementFromPoint(x,y);
+  if(!target?.closest?.('#jfSheetLeft,#jfSheetRight')&&
+     !jfReadText.contains(target))return null;
+  // caretRangeFromPoint snaps blank page areas to the closest character.
+  // Validate one neighbouring glyph rectangle before accepting that caret
+  // as an extension endpoint. There is no per-mark geometry scan here.
+  let node=null,offset=-1;
+  const p=document.caretPositionFromPoint?.(x,y);
+  if(p){node=p.offsetNode;offset=p.offset;}
+  else{
+    const r=document.caretRangeFromPoint?.(x,y);
+    if(r){node=r.startContainer;offset=r.startOffset;}
+  }
+  if(!node||node.nodeType!==Node.TEXT_NODE||!owner(node))return null;
+  const len=node.nodeValue.length;
+  if(!len)return null;
+  const range=document.createRange();
+  for(const at of [Math.min(offset,len-1),Math.max(0,offset-1)]){
+    try{
+      range.setStart(node,at);range.setEnd(node,at+1);
+      for(const rect of range.getClientRects()){
+        const dx=Math.max(0,rect.left-x,x-rect.right);
+        const dy=Math.max(0,rect.top-y,y-rect.bottom);
+        if(dx<=13&&dy<=9)return position(node,offset);
+      }
+    }catch{}
+  }
+  return null;
 }
 center.addEventListener('click',event=>{
   if(!ready())return;

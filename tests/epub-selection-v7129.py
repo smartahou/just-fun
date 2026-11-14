@@ -230,14 +230,26 @@ def assert_corner_dwell(page, direction, pointer_type='mouse'):
       }
       const shell=sheet.parentElement.getBoundingClientRect();
       const x=direction<0?shell.left-12:shell.right+12;
-      const y=shell.top+20;
+      const y=direction<0?shell.top+20:shell.bottom-20;
+      return {ok:true,index,chapter:jfDeskChapter,
+        before:previous,target:index+direction*2,x,y,
+        oldWrongCorner:{x:shell.right+12,y:shell.top+20}};
+    }""", {'direction': direction, 'pointerType': pointer_type})
+    assert started['ok'], started
+    if direction>0:
+        page.evaluate("""({pointerType,oldWrongCorner})=>{
+          document.dispatchEvent(new PointerEvent('pointermove',{
+            bubbles:true,pointerType,pointerId:73,buttons:1,
+            clientX:oldWrongCorner.x,clientY:oldWrongCorner.y}));
+        }""", {'pointerType':pointer_type,
+                 'oldWrongCorner':started['oldWrongCorner']})
+        page.wait_for_timeout(860)
+        assert page.evaluate('jfDeskPageIndex')==started['index'], started
+    page.evaluate("""({pointerType,x,y})=>{
       document.dispatchEvent(new PointerEvent('pointermove',{
         bubbles:true,pointerType,pointerId:73,buttons:1,
         clientX:x,clientY:y}));
-      return {ok:true,index,chapter:jfDeskChapter,
-        before:previous,target:index+direction*2,x,y};
-    }""", {'direction': direction, 'pointerType': pointer_type})
-    assert started['ok'], started
+    }""", {'pointerType':pointer_type,'x':started['x'],'y':started['y']})
     page.wait_for_function("""(target)=>
       jfDeskPageIndex===target && JFEpubSelection.diagnostics().crossPage""",
                            arg=started['target'], timeout=6000)
@@ -331,7 +343,9 @@ def assert_real_forward_mouse(page):
       const shell=sheet.parentElement.getBoundingClientRect();
       return {ok:true,index,target:index+2,
         start:glyph(4),end:glyph(28),
-        corner:{x:shell.right+12,y:shell.top+20}};
+        blank:{x:shell.left+shell.width*.5,y:shell.bottom-18},
+        wrongCorner:{x:shell.right+12,y:shell.top+20},
+        corner:{x:shell.right+12,y:shell.bottom-20}};
     }""")
     assert setup['ok'], setup
     page.mouse.move(setup['start']['x'], setup['start']['y'])
@@ -340,7 +354,27 @@ def assert_real_forward_mouse(page):
         page.mouse.move(setup['end']['x'], setup['end']['y'], steps=10)
         page.wait_for_function("""()=>getSelection()?.toString().trim().length>=3""",
                                timeout=2500)
-        page.mouse.move(setup['corner']['x'], setup['corner']['y'], steps=10)
+        before=page.evaluate('JFEpubSelection.reference()?.ref')
+        assert before and before['text'], (setup,before)
+        # Move into non-selectable blank paper. Neither native caret clamping
+        # nor synthetic Highlight may extend the previous selection.
+        page.mouse.move(setup['blank']['x'],setup['blank']['y'])
+        page.wait_for_timeout(120)
+        blank=page.evaluate("""()=>({
+          ref:JFEpubSelection.reference()?.ref,
+          cross:JFEpubSelection.diagnostics().crossPage,
+          page:jfDeskPageIndex
+        })""")
+        assert blank['cross'] and blank['ref']==before and (
+          blank['page']==setup['index']), (setup,before,blank)
+        # Upper-right is NOT the forward hotspot.
+        page.mouse.move(setup['wrongCorner']['x'],
+                        setup['wrongCorner']['y'])
+        page.wait_for_timeout(860)
+        assert page.evaluate('jfDeskPageIndex')==setup['index'], setup
+        assert page.evaluate('JFEpubSelection.reference()?.ref')==before
+        # Only the lower-right outer corner turns forward.
+        page.mouse.move(setup['corner']['x'], setup['corner']['y'])
         page.wait_for_function("""(target)=>jfDeskPageIndex===target &&
           JFEpubSelection.diagnostics().crossPage""",
                                arg=setup['target'], timeout=6000)
@@ -726,7 +760,7 @@ def main():
                 assert_corner_dwell(page, -1, 'touch')
                 assert_real_forward_mouse(page)
                 assert not errors, errors
-                print('PASS v7.134 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.135 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

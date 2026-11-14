@@ -83,11 +83,21 @@ assert(source.includes('if(virtual)return virtualReference()')&&
   source.includes('if(virtual&&virtual.session===jfDeskSession')&&
   source.includes('virtual.index=jfDeskPageIndex;virtual.pending=null;'),
   'page render retains immutable source coordinates for cross-page selection');
-assert(source.includes('if(!direction)extendVirtual(caretAt(')&&
+assert(source.includes('if(onText)extendVirtual(onText)')&&
   source.includes('if(virtual)scheduleSettle(0)'),
-  'continued pointer dragging extends the original span and commits on release');
+  'continued drag extends only when over visible text and commits on release');
+assert(source.includes('const nearBottom=r=>')&&
+  source.includes('y>=right.bottom-nearBottom(right)')&&
+  source.includes('y<=right.bottom+12'),
+  'forward dwell requires the lower-right paper corner');
+assert(source.includes('function textPointAt(x,y)')&&
+  source.includes('rect.left-x,x-rect.right')&&
+  source.includes('rect.top-y,y-rect.bottom')&&
+  source.includes('if(!onText&&dragOriginInText&&dragSeed)')&&
+  source.includes('enterVirtual();'),
+  'non-text margins cannot expand selection by browser caret clamping');
 assert(source.includes('if(dragging){captureDragSeed();return;}')&&
   source.includes('if(virtual)return;')&&source.includes('else armEdge(0);'),
   'normal native selection avoids eager expensive redraws');
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.134 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.135 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
