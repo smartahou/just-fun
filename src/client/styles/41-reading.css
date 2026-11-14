@@ -4304,6 +4304,73 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   text-decoration-color:#8474a1;
   background-color:rgba(132,116,161,.09);
 }
+/* v7.139 · the same remembered ink is used for native drag, CSS Highlight
+   and illustration frames. All fills stay at 9%, outside image pixels. */
+.jfReader[data-jf-epub-selection-color="amber"] ::highlight(jf-epub-selection){
+  background-color:rgba(148,115,73,.09);
+  text-decoration-color:#947349;
+}
+.jfReader[data-jf-epub-selection-color="amber"]:not(.jfPdfMode) :is(#jfReadText,#jfPageView .jfSheetBody) *::selection{
+  background-color:rgba(148,115,73,.09)!important;
+  text-decoration-color:#947349;
+}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText) :is(img[data-jf-epub-image-preview="amber"],img[data-jf-epub-image-active="amber"]){
+  outline:2px solid #947349;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(148,115,73,.14);
+}
+.jfReader[data-jf-epub-selection-color="blue"] ::highlight(jf-epub-selection){
+  background-color:rgba(102,139,156,.09);
+  text-decoration-color:#668b9c;
+}
+.jfReader[data-jf-epub-selection-color="blue"]:not(.jfPdfMode) :is(#jfReadText,#jfPageView .jfSheetBody) *::selection{
+  background-color:rgba(102,139,156,.09)!important;
+  text-decoration-color:#668b9c;
+}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText) :is(img[data-jf-epub-image-preview="blue"],img[data-jf-epub-image-active="blue"]){
+  outline:2px solid #668b9c;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(102,139,156,.14);
+}
+.jfReader[data-jf-epub-selection-color="mint"] ::highlight(jf-epub-selection){
+  background-color:rgba(105,140,114,.09);
+  text-decoration-color:#698c72;
+}
+.jfReader[data-jf-epub-selection-color="mint"]:not(.jfPdfMode) :is(#jfReadText,#jfPageView .jfSheetBody) *::selection{
+  background-color:rgba(105,140,114,.09)!important;
+  text-decoration-color:#698c72;
+}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText) :is(img[data-jf-epub-image-preview="mint"],img[data-jf-epub-image-active="mint"]){
+  outline:2px solid #698c72;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(105,140,114,.14);
+}
+.jfReader[data-jf-epub-selection-color="rose"] ::highlight(jf-epub-selection){
+  background-color:rgba(173,124,123,.09);
+  text-decoration-color:#ad7c7b;
+}
+.jfReader[data-jf-epub-selection-color="rose"]:not(.jfPdfMode) :is(#jfReadText,#jfPageView .jfSheetBody) *::selection{
+  background-color:rgba(173,124,123,.09)!important;
+  text-decoration-color:#ad7c7b;
+}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText) :is(img[data-jf-epub-image-preview="rose"],img[data-jf-epub-image-active="rose"]){
+  outline:2px solid #ad7c7b;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(173,124,123,.14);
+}
+.jfReader[data-jf-epub-selection-color="violet"] ::highlight(jf-epub-selection){
+  background-color:rgba(132,116,161,.09);
+  text-decoration-color:#8474a1;
+}
+.jfReader[data-jf-epub-selection-color="violet"]:not(.jfPdfMode) :is(#jfReadText,#jfPageView .jfSheetBody) *::selection{
+  background-color:rgba(132,116,161,.09)!important;
+  text-decoration-color:#8474a1;
+}
+.jfReader :is(#jfSheetLeft,#jfSheetRight,#jfReadText) :is(img[data-jf-epub-image-preview="violet"],img[data-jf-epub-image-active="violet"]){
+  outline:2px solid #8474a1;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(132,116,161,.14);
+}
 @media(max-width:620px){
   .jfReader .jfEpubSelectionMenu{font-size:12px}
   .jfReader .jfEpubSelectionMenu button{min-height:40px;padding:10px 12px}

@@ -1456,6 +1456,9 @@ async function jfDeskQuoteCommit(){
     const blocks=[...jfDeskNoteBlocks(note),{kind:'quote',index:quotes.length-1},{kind:'text',text:''}];
     if(quotes.length>40)throw Error('目标笔记摘录已达上限');
     let mark=null;
+    const markColor=!jfDeskOutline?.nativePdf&&
+      ['amber','blue','mint','rose','violet'].includes(quote.markColor)?
+      quote.markColor:'amber';
     const mixedParts=Array.isArray(quote.parts)?quote.parts:null;
     const mixedMarks=mixedParts&&Array.isArray(quote.markParts)?quote.markParts:null;
     if(mixedParts){
@@ -1472,13 +1475,13 @@ async function jfDeskQuoteCommit(){
     }
     if(quote.type==='image'&&Number.isSafeInteger(quote.epubImageIndex))
       mark={type:'epub-image',bookId:quote.bookId,chapter:quote.chapter,
-        imageIndex:quote.epubImageIndex,label:quote.text||'' ,color:'amber'};
+        imageIndex:quote.epubImageIndex,label:quote.text||'',color:markColor};
     else if(quote.type==='image'&&Array.isArray(quote.area)&&!quote.pages?.length)
       mark={bookId:quote.bookId,chapter:quote.chapter,type:'area',area:quote.area,
         ...(quote.segments?{segments:quote.segments}:{})};
     else if(quote.text&&Number.isSafeInteger(quote.anchorStart)){
       const sourceText=typeof quote.sourceText==='string'&&quote.sourceText?quote.sourceText:quote.text;
-      mark={type:'text',text:sourceText.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(sourceText.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:'amber'})};
+      mark={type:'text',text:sourceText.slice(0,5000),bookId:quote.bookId,chapter:quote.chapter,anchorStart:quote.anchorStart,length:Math.min(sourceText.length,5000),...(jfDeskOutline?.nativePdf?{}:{color:markColor})};
     }
     // Persist the new note, destination, and source highlight in one encrypted transaction.
     await jfDeskMutate({action:'note',note:{...note,quotes,blocks},

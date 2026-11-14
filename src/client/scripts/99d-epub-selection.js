@@ -10,6 +10,19 @@ const center=document.getElementById('jfReadCenter');
 if(!reader||!center)return;
 const colors=['blue','mint','amber','rose','violet'];
 const colorNames={amber:'茶褐',blue:'青蓝',mint:'草绿',rose:'淡红',violet:'灰紫'};
+const LAST_COLOR_KEY='jf.epub.annotation.lastColor.v1';
+let lastColor='amber';
+try{
+  const stored=localStorage.getItem(LAST_COLOR_KEY);
+  if(colors.includes(stored))lastColor=stored;
+}catch{}
+reader.dataset.jfEpubSelectionColor=lastColor;
+function rememberColor(color){
+  if(!colors.includes(color))return;
+  lastColor=color;
+  reader.dataset.jfEpubSelectionColor=color;
+  try{localStorage.setItem(LAST_COLOR_KEY,color);}catch{}
+}
 const menu=document.createElement('div');
 menu.id='jfEpubSelectionMenu';
 menu.className='jfEpubSelectionMenu';
@@ -38,6 +51,7 @@ reader.append(menu);
 const key=color=>'jf-epub-mark-'+color;
 const transient='jf-epub-selection';
 let active=null,dragging=false,moved=false,pointerAt=null,dragEnded=0;
+let imageDragStart=null;
 let liveFrame=0,liveSelectedImages=[];
 let dismissOnClick=false;
 // Only a held text drag in the outer upper corner enters the cross-page path.
@@ -64,6 +78,7 @@ function stopVirtual(){
   if(virtualFrame)cancelAnimationFrame(virtualFrame);
   virtualFrame=0;virtual=null;lastDragPoint=null;
   dragSeed=null;edgeLocked=false;dragOriginInText=false;
+  imageDragStart=null;
 }
 const cancelTimer=()=>{
   if(settleTimer)clearTimeout(settleTimer);settleTimer=0;
@@ -109,10 +124,22 @@ function sourceImages(chapter){
 }
 function imageAt(x,y){
   const target=document.elementFromPoint(x,y);
-  const img=target?.closest?.('img[data-jf-epub-image-index]');
+  let img=target?.closest?.('img[data-jf-epub-image-index]');
+  // An EPUB <figure> often has transparent padding around the drawing.
+  // Permit a narrow 14px halo there, but never turn the whole paper margin
+  // into an image hit zone. Actual caption letters remain text-selectable.
+  if(!img&&!target?.closest?.('figcaption')){
+    const figure=target?.closest?.('figure');
+    const candidates=figure?.querySelectorAll('img[data-jf-epub-image-index]');
+    if(candidates?.length===1){
+      const candidate=candidates[0],r=candidate.getBoundingClientRect();
+      if(x>=r.left-14&&x<=r.right+14&&y>=r.top-14&&y<=r.bottom+14)
+        img=candidate;
+    }
+  }
   return img&&!img.classList.contains('jfInlineGlyph')&&imageMarkRef(img)?img:null;
 }
-function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null){
+function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null,anchorImage=null){
   // The image has zero textContent length, so its immutable source offset
   // sits BETWEEN two text characters. An endpoint touching the image itself
   // is included explicitly; ordinary text ranges include interior pictures.
@@ -128,8 +155,10 @@ function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null){
   }
   for(const entry of sourceImages(chapter)){
     const inside=entry.offset>start&&entry.offset<end;
-    const focused=focusImage?.chapter===chapter&&
-      focusImage.imageIndex===entry.imageIndex;
+    const focused=(focusImage?.chapter===chapter&&
+      focusImage.imageIndex===entry.imageIndex)||
+      (anchorImage?.chapter===chapter&&
+      anchorImage.imageIndex===entry.imageIndex);
     const native=entry.offset>=start&&entry.offset<=end&&
       nativeIds.has(entry.imageIndex);
     if(inside||focused||native){
@@ -288,11 +317,24 @@ function virtualReference(){
   if(typeof source!=='string')return null;
   const start=Math.min(virtual.anchor,virtual.focus);
   const end=Math.max(virtual.anchor,virtual.focus);
-  if(end<=start||end-start>5000)return null;
+  if(end-start>5000)return null;
+  if(end===start&&virtual.anchorImage){
+    const ref={type:'epub-image',bookId:virtual.bookId,
+      chapter:virtual.anchorImage.chapter,imageIndex:virtual.anchorImage.imageIndex,
+      label:virtual.anchorImage.label||''};
+    const imageElement=visibleImages().find(img=>
+      Number(img.dataset.jfEpubImageChapter)===ref.chapter&&
+      Number(img.dataset.jfEpubImageIndex)===ref.imageIndex);
+    const rect=imageElement?.getBoundingClientRect();
+    return {ref,images:[ref],imageElement,
+      rects:rect?[rect]:[],session:virtual.session};
+  }
+  if(end<=start)return null;
   const span=source.slice(start,end),text=span.trim();
   if(!text)return null;
   const leading=span.length-span.trimStart().length;
-  const images=imagesInSelection(virtual.chapter,start,end,null,virtual.imageFocus);
+  const images=imagesInSelection(virtual.chapter,start,end,null,
+    virtual.imageFocus,virtual.anchorImage);
   const point=virtual.lastRect||(lastDragPoint?{
     left:lastDragPoint.x,top:lastDragPoint.y,bottom:lastDragPoint.y,
     width:0,height:0}:null);
@@ -433,7 +475,7 @@ function placeMenu(snap,near=null){
   menu.querySelector('[data-action=mark]').textContent=mark?'取消标记':'标记';
   for(const button of palette.querySelectorAll('[data-color]')){
     button.setAttribute('aria-pressed',String(
-      (mark?(mark.color||'blue'):'amber')===button.dataset.color));
+      (mark?(mark.color||'blue'):lastColor)===button.dataset.color));
   }
   menu.hidden=false;
   const width=menu.offsetWidth||230,height=menu.offsetHeight||44;
@@ -454,8 +496,9 @@ function drawVirtual(){
   if(!virtual||!ready()||!supported())return;
   const snap=virtualReference();
   if(!snap){clearTransient();return;}
-  const spans=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
-    snap.ref.anchorStart+snap.ref.text.length);
+  const spans=snap.ref.type==='epub-image'?[]:
+    rangesFor(snap.ref.chapter,snap.ref.anchorStart,
+      snap.ref.anchorStart+snap.ref.text.length);
   if(spans.length){
     const first=virtual.focus<virtual.anchor;
     const focusRange=first?spans[0]:spans[spans.length-1];
@@ -474,9 +517,10 @@ function scheduleVirtual(){
 }
 function drawLive(snap){
   if(!snap||!ready())return;
-  if(supported()&&snap.ref?.type!=='epub-image'){
-    const spans=rangesFor(snap.ref.chapter,snap.ref.anchorStart,
-      snap.ref.anchorStart+snap.ref.text.length);
+  if(supported()){
+    const spans=snap.ref?.type==='epub-image'?[]:
+      rangesFor(snap.ref.chapter,snap.ref.anchorStart,
+        snap.ref.anchorStart+snap.ref.text.length);
     if(spans.length)CSS.highlights.set(transient,new Highlight(...spans));
     else CSS.highlights.delete(transient);
   }
@@ -485,7 +529,7 @@ function drawLive(snap){
   for(const img of visibleImages()){
     const id=img.dataset.jfEpubImageChapter+':'+img.dataset.jfEpubImageIndex;
     if(selected.has(id)){
-      img.dataset.jfEpubImagePreview='amber';
+      img.dataset.jfEpubImagePreview=lastColor;
       currentImages.push(img);
     }else img.removeAttribute('data-jf-epub-image-preview');
   }
@@ -622,6 +666,21 @@ function extendVirtual(point){
   virtual.imageFocus=null;
   scheduleVirtual();
 }
+function startImageDrag(img){
+  const ref=imageMarkRef(img);
+  if(!ref||virtual)return false;
+  const entry=sourceImages(ref.chapter).find(x=>x.imageIndex===ref.imageIndex);
+  if(!entry)return false;
+  virtual={bookId:ref.bookId,session:jfDeskSession,chapter:ref.chapter,
+    anchor:entry.offset,focus:entry.offset,index:jfDeskPageIndex,
+    imageFocus:ref,anchorImage:ref,lastRect:img.getBoundingClientRect(),
+    pending:null};
+  current()?.removeAllRanges();
+  reader.classList.add('jfEpubSelecting');
+  menu.hidden=true;active=null;cancelTimer();
+  scheduleVirtual();
+  return true;
+}
 function extendVirtualImage(img){
   if(!virtual||virtual.pending)return;
   const ref=imageMarkRef(img);
@@ -687,7 +746,8 @@ function selectImage(img){
   clearTransient();
   active={ref,session:jfDeskSession,imageElement:img,
     rects:[rect],image:true};
-  img.dataset.jfEpubImageActive='1';
+  const saved=savedFor(ref);
+  img.dataset.jfEpubImageActive=saved?(saved.color||'blue'):lastColor;
   reader.classList.add('jfEpubSelecting');
   placeMenu(active,rect);
   return true;
@@ -727,6 +787,7 @@ async function applyColor(color){
   if(!colors.includes(color)||!snap||snap.ref.bookId!==jfDeskBook?.id||
      snap.session!==jfDeskSession)return;
   const saved=snap.savedMark||savedFor(snap.ref);
+  rememberColor(color);
   resetSelection(true);
   if(saved&&(saved.color||'blue')===color)return;
   try{
@@ -814,7 +875,7 @@ async function mark(){
   resetSelection(true);
   try{
     if(saved)await jfDeskMutate({action:'delete-mark',mark:saved});
-    else await persistMark(snap,'amber');
+    else await persistMark(snap,lastColor);
     jfDeskMessage(saved?'已取消标记':'已标记选中内容');
   }catch(error){jfDeskMessage('标记保存失败：'+error.message,true);}
 }
@@ -827,7 +888,7 @@ function quote(){
       resetSelection(true);
       jfDeskChooseQuote({type:'image',image,text:snap.ref.label,
         bookId:snap.ref.bookId,chapter:snap.ref.chapter,anchorStart:null,
-        epubImageIndex:snap.ref.imageIndex});
+        epubImageIndex:snap.ref.imageIndex,markColor:lastColor});
     }catch(error){jfDeskMessage('图片摘录失败：'+error.message,true);}
     return true;
   }
@@ -861,7 +922,7 @@ function quote(){
         cursor=at;
       }
       addText(cursor,end);
-      const markParts=selectionMarkParts(snap,'amber');
+      const markParts=selectionMarkParts(snap,lastColor);
       resetSelection(true);
       jfDeskChooseQuote({parts,markParts,bookId:snap.ref.bookId,
         chapter:snap.ref.chapter,anchorStart:start});
@@ -870,7 +931,7 @@ function quote(){
   }
   resetSelection(true);
   jfDeskChooseQuote({...snap.ref,text:snap.quoteText||snap.ref.text,
-    sourceText:snap.ref.text});
+    sourceText:snap.ref.text,markColor:lastColor});
   return true;
 }
 function refresh(){schedulePaint(true);}
@@ -894,6 +955,7 @@ function pageRendered(){
   stopVirtual();
   clearImageFocus();
   active=null;menu.hidden=true;dragging=false;pointerAt=null;dismissOnClick=false;
+  imageDragStart=null;
   reader.classList.remove('jfEpubDragging','jfEpubSelecting');
   current()?.removeAllRanges();
   clearTransient();invalidate();schedulePaint();
@@ -906,6 +968,7 @@ function reset(){
   stopVirtual();
   clearImageFocus();
   active=null;dragging=false;pointerAt=null;dismissOnClick=false;blockCache=null;
+  imageDragStart=null;
   sourceCache=new WeakMap();imageCatalogCache=new WeakMap();
   resolvedLegacy=new WeakMap();
   reader.classList.remove('jfEpubSelecting','jfEpubDragging');
@@ -930,6 +993,7 @@ document.addEventListener('pointerdown',event=>{
   dragging=true;moved=false;pointerAt={x:event.clientX,y:event.clientY};
   lastDragPoint={x:event.clientX,y:event.clientY};
   dragOriginInText=!!textPointAt(event.clientX,event.clientY);
+  imageDragStart=imageAt(event.clientX,event.clientY);
   reader.classList.add('jfEpubDragging');
   clearImageFocus();
   menu.hidden=true;active=null;clearTransient();cancelTimer();
@@ -943,6 +1007,10 @@ document.addEventListener('pointermove',event=>{
   const direction=jfDeskPaged?cornerDirection(event.clientX,event.clientY):0;
   const onText=!direction?textPointAt(event.clientX,event.clientY):null;
   const onImage=!direction?imageAt(event.clientX,event.clientY):null;
+  if(imageDragStart&&!virtual){
+    const start=imageDragStart;
+    if(startImageDrag(start)&&event.cancelable)event.preventDefault();
+  }
   if(virtual){
     if(event.cancelable)event.preventDefault();
     // Moving across a picture is meaningful selection, not blank paper.
@@ -965,6 +1033,7 @@ document.addEventListener('pointermove',event=>{
 function endPointer(event){
   if(!dragging)return;
   dragging=false;pointerAt=null;stopEdge();
+  imageDragStart=null;
   reader.classList.remove('jfEpubDragging');
   if(moved){dragEnded=Date.now();dismissOnClick=false;}
   if(liveFrame){cancelAnimationFrame(liveFrame);liveFrame=0;}
@@ -1109,6 +1178,7 @@ window.JFEpubSelection={
     selected:selecting(),painted:paintedMarks.length,
     crossPage:!!virtual,edgeDirection,edgeLocked,
     anchor:virtual?.anchor,focus:virtual?.focus,dragSeed:!!dragSeed,
+    lastColor,imageDrag:!!imageDragStart,
     selectedImages:active?.images?.length||virtualReference()?.images?.length||0}),
   suppressTurn:()=>moved&&Date.now()-dragEnded<480
 };

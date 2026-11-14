@@ -148,7 +148,7 @@ assert(pdf.includes("mark.type==='epub-image'")&&
   'shared mark index labels and jumps to EPUB image marks');
 for(const needle of [
   'function sourceImages(chapter)',
-  'function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null)',
+  'function imagesInSelection(chapter,start,end,nativeRange=null,focusImage=null,anchorImage=null)',
   'function extendVirtualImage(img)',
   'function drawLive(snap)',
   'function scheduleLivePreview()',
@@ -209,5 +209,27 @@ assert.throws(()=>context.jfReadingAddMarkGroup(groupState,[
   {...baseMark,imageIndex:1},{...baseMark,imageIndex:-1}]),
   /EPUB 图片编号无效/);
 assert.equal(groupState.marks.length,2,'invalid group must not partially save');
+assert(source.includes("const LAST_COLOR_KEY='jf.epub.annotation.lastColor.v1'")&&
+  source.includes('localStorage.getItem(LAST_COLOR_KEY)')&&
+  source.includes('localStorage.setItem(LAST_COLOR_KEY,color)')&&
+  source.includes('rememberColor(color);')&&
+  source.includes("persistMark(snap,lastColor)")&&
+  source.includes('sourceText:snap.ref.text,markColor:lastColor'),
+  'last selected ink persists across reload and drives future marks and notes');
+assert(reader.includes("['amber','blue','mint','rose','violet'].includes(quote.markColor)")&&
+  reader.includes('color:markColor'),
+  'note-associated marks inherit the remembered EPUB selection color');
+assert(source.includes('function startImageDrag(img)')&&
+  source.includes('imageDragStart=imageAt(event.clientX,event.clientY)')&&
+  source.includes('virtual.anchorImage')&&
+  source.includes('if(imageDragStart&&!virtual)')&&
+  source.includes("if(!img&&!target?.closest?.('figcaption'))"),
+  'image-origin gestures carry source anchors into caption text without grabbing blank paper');
+for(const color of ['amber','blue','mint','rose','violet']){
+  assert(css.includes('[data-jf-epub-selection-color="'+color+'"] ::highlight(jf-epub-selection)')&&
+    css.includes('img[data-jf-epub-image-preview="'+color+'"]')&&
+    css.includes('img[data-jf-epub-image-active="'+color+'"]'),
+    color+' current selection tint and image frame use matching remembered ink');
+}
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.138 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.139 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

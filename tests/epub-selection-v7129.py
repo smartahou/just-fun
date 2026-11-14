@@ -76,7 +76,8 @@ def make_epub_images(path):
                    '<h2>插图标记验收</h2>'+text+
                    '<figure><img src="media/photo.png" alt="第一幅测试插图"/></figure>'+
                    middle+
-                   '<figure><img src="media/photo.png" alt="第二幅测试插图"/></figure>'+
+                   '<figure><img src="media/photo.png" alt="第二幅测试插图"/>'+
+                   '<figcaption>插图说明：画中人物代表晚清外交的无奈。</figcaption></figure>'+
                    text+'</body></html>')
         z.writestr('OEBPS/media/photo.png',png)
 
@@ -600,24 +601,34 @@ def assert_epub_images(page,book_id):
           'jfEpubSelectionMenu').hidden&&
           JFEpubSelection.reference()?.images?.some(i=>i.imageIndex===1)&&
           !!document.querySelector(
-            '#jfSheetLeft img[data-jf-epub-image-preview="amber"],'+
-            '#jfSheetRight img[data-jf-epub-image-preview="amber"]')""",
+            '#jfSheetLeft img[data-jf-epub-image-preview],'+
+            '#jfSheetRight img[data-jf-epub-image-preview]')""",
                                timeout=4000)
         look=page.evaluate("""()=>{
           const ref=JFEpubSelection.reference();
           const ink=document.querySelector(
-            '#jfSheetLeft img[data-jf-epub-image-preview="amber"],'+
-            '#jfSheetRight img[data-jf-epub-image-preview="amber"]');
+            '#jfSheetLeft img[data-jf-epub-image-preview],'+
+            '#jfSheetRight img[data-jf-epub-image-preview]');
           const p=document.querySelector('#jfSheetLeft p,#jfSheetRight p');
           const css=getComputedStyle(p,'::highlight(jf-epub-selection)');
           return {images:ref.images.map(m=>m.imageIndex),
             text:ref.ref.text,back:css.backgroundColor,
             line:css.textDecorationColor,
             imageOutline:getComputedStyle(ink).outlineStyle,
+            previewInk:ink?.dataset.jfEpubImagePreview,
+            remembered:JFEpubSelection.diagnostics().lastColor,
             group:jfDeskWorkspace.marks.filter(m=>m.groupId).length};
         }""")
+        color_rgba={
+            'amber':'rgba(148, 115, 73, 0.09)',
+            'blue':'rgba(102, 139, 156, 0.09)',
+            'mint':'rgba(105, 140, 114, 0.09)',
+            'rose':'rgba(173, 124, 123, 0.09)',
+            'violet':'rgba(132, 116, 161, 0.09)'
+        }
         assert look['images']==[1] and look['text'] and (
-            look['back']=='rgba(148, 115, 73, 0.09)') and (
+            look['back']==color_rgba[look['remembered']]) and (
+            look['previewInk']==look['remembered']) and (
             look['imageOutline']=='solid'),look
         return look
 
@@ -708,8 +719,8 @@ def assert_epub_images(page,book_id):
         page.wait_for_function("""()=>JFEpubSelection.reference()?.images?.some(
           i=>i.imageIndex===1)""",timeout=3000)
         page.wait_for_function("""()=>!!document.querySelector(
-          '#jfSheetLeft img[data-jf-epub-image-preview="amber"],'+
-          '#jfSheetRight img[data-jf-epub-image-preview="amber"]')""")
+          '#jfSheetLeft img[data-jf-epub-image-preview],'+
+          '#jfSheetRight img[data-jf-epub-image-preview]')""")
     finally:
         page.mouse.up()
     page.wait_for_function("""()=>!document.getElementById(
@@ -748,6 +759,80 @@ def assert_epub_images(page,book_id):
       m.type==='text'&&m.groupId&&
       jfDeskWorkspace.marks.some(i=>i.type==='epub-image'&&
         i.imageIndex===1&&i.groupId===m.groupId))""")
+
+
+    # The screenshot failure: start INSIDE the illustration and continue
+    # dragging over its caption. Native browsers don't create a text Range
+    # when a pointerdown happens on <img>, so the reader must own the source
+    # anchor and only extend when entering real caption glyphs.
+    picture_caption=page.evaluate("""()=>{
+      JFEpubSelection.reset();
+      const selector='img[data-jf-epub-image-index="1"]';
+      const at=jfDeskPages.findIndex(pg=>pg.some(block=>
+        block.node?.matches?.(selector)||block.node?.querySelector?.(selector)));
+      if(at<0)return {ok:false,reason:'missing caption picture source'};
+      const step=jfDeskPagedGeometry().two?2:1;
+      jfDeskPageIndex=Math.floor(at/step)*step;jfDeskPagedRender();
+      const image=document.querySelector('#jfSheetLeft '+selector+
+        ',#jfSheetRight '+selector);
+      const caption=image?.closest('figure')?.querySelector('figcaption');
+      const node=caption?.firstChild;
+      if(!image||!node||node.nodeType!==3)
+        return {ok:false,reason:'caption is not on the same visible figure'};
+      const r=document.createRange();r.setStart(node,0);
+      r.setEnd(node,Math.min(node.nodeValue.length,7));
+      const box=r.getBoundingClientRect(),pic=image.getBoundingClientRect();
+      return {ok:box.width>0&&pic.width>0,
+        picture:{x:pic.left+pic.width/2,y:pic.top+pic.height/2},
+        caption:{x:box.right-1,y:box.top+box.height/2},
+        remembered:JFEpubSelection.diagnostics().lastColor,
+        currentPage:jfDeskPageIndex};
+    }""")
+    assert picture_caption['ok'],picture_caption
+    page.mouse.move(picture_caption['picture']['x'],
+                    picture_caption['picture']['y'])
+    page.mouse.down()
+    try:
+        page.mouse.move(picture_caption['caption']['x'],
+                        picture_caption['caption']['y'],steps=18)
+        page.wait_for_function("""()=>JFEpubSelection.diagnostics().crossPage&&
+          JFEpubSelection.reference()?.images?.some(i=>i.imageIndex===1)&&
+          JFEpubSelection.reference()?.ref.text?.includes('插图说明')""",
+                               timeout=4000)
+        preview=page.evaluate("""()=>{
+          const snap=JFEpubSelection.reference();
+          const img=document.querySelector(
+            '#jfSheetLeft img[data-jf-epub-image-preview],'+
+            '#jfSheetRight img[data-jf-epub-image-preview]');
+          return {images:snap.images.map(x=>x.imageIndex),text:snap.ref.text,
+            preview:img?.dataset.jfEpubImagePreview,
+            selected:JFEpubSelection.diagnostics().lastColor,
+            unchangedPage:jfDeskPageIndex};
+        }""")
+        assert preview['images']==[1] and len(preview['text'])<180 and (
+            preview['preview']==preview['selected']) and (
+            preview['unchangedPage']==picture_caption['currentPage']),preview
+    finally:
+        page.mouse.up()
+    page.wait_for_function("""()=>!document.getElementById(
+      'jfEpubSelectionMenu').hidden&&
+      JFEpubSelection.reference()?.images?.some(i=>i.imageIndex===1)&&
+      JFEpubSelection.reference()?.ref.text?.includes('插图说明')""")
+    page.evaluate('()=>JFEpubSelection.reset()')
+
+    # Last explicitly chosen ink persists across reload and is the default
+    # for the NEXT unmarked selection, not amber on every new toolbar.
+    remembered=page.evaluate("""()=>({
+      last:JFEpubSelection.diagnostics().lastColor,
+      stored:localStorage.getItem('jf.epub.annotation.lastColor.v1'),
+      reader:document.getElementById('jfReader').dataset.jfEpubSelectionColor
+    })""")
+    assert remembered['last']=='mint' and remembered['stored']=='mint' and (
+        remembered['reader']=='mint'),remembered
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_function("""()=>!!window.JFEpubSelection&&
+      document.getElementById('jfReader').dataset.jfEpubSelectionColor==='mint'""")
+    assert page.evaluate("""()=>JFEpubSelection.diagnostics().lastColor""")=='mint'
 
 def main():
     with tempfile.TemporaryDirectory(
@@ -808,7 +893,7 @@ def main():
                 assert visual['sourceText'] == FIRST, visual
                 assert visual['selected'] == FIRST, visual
                 assert '255, 255, 255' not in visual['color'], visual
-                assert visual['nativeBackground'] in ('rgba(0, 0, 0, 0)', 'transparent'), visual
+                assert visual['nativeBackground'] == 'rgba(148, 115, 73, 0.09)', visual
                 assert visual['temporaryCount'] == 1 and visual['underline'] == 'underline', visual
                 # Copy selected original text without saving a mark.
                 page.evaluate("""()=>{
@@ -1121,7 +1206,7 @@ def main():
                 assert_real_forward_mouse(page)
                 assert_epub_images(page,image_book['id'])
                 assert not errors, errors
-                print('PASS v7.138 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.139 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()
