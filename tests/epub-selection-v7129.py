@@ -817,6 +817,10 @@ def main():
                 page.locator('#jfEpubSelectionMenu [data-action="mark"]').click()
                 page.wait_for_function("""()=>jfDeskWorkspace.marks.some(m=>
                   m.text==='纸书选区测试甲乙丙丁')""")
+                # Workspace persistence finishes before the next requestAnimationFrame
+                # paints CSS Highlights. Assert after the actual ink is committed.
+                page.wait_for_function("""()=>
+                  (CSS.highlights.get('jf-epub-mark-amber')?.size||0)>0""")
                 marked = page.evaluate("""()=>({
                   marks:jfDeskWorkspace.marks.filter(x=>x.bookId===jfDeskBook.id).length,
                   ranges:CSS.highlights.get('jf-epub-mark-amber')?.size||0,
