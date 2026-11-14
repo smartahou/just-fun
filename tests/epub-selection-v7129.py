@@ -444,7 +444,12 @@ def assert_epub_images(page,book_id):
     """Click and mark two repeated EPUB illustrations by independent source index."""
     page.evaluate('(id)=>jfDeskOpenReader(id,0)',book_id)
     page.wait_for_function("""(id)=>jfDeskBook?.id===id&&!jfDeskRestoring&&
-      jfDeskPages.length>=1""",arg=book_id,timeout=12000)
+      jfDeskFlow.length>0""",arg=book_id,timeout=12000)
+    # Paper mode is remembered per book. A new fixture has no saved preference.
+    if not page.evaluate('jfDeskPaged'):
+        page.locator('#jfReadPaged').click()
+    page.wait_for_function("""()=>jfDeskPaged&&jfDeskPages.length>0""",
+                           timeout=12000)
     overview=page.evaluate("""()=>{
       const images=[...jfDeskFlow[0].el.querySelectorAll('img')];
       return {indices:images.map(i=>i.dataset.jfEpubImageIndex),
