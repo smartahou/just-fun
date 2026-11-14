@@ -403,7 +403,11 @@ body.jfNotesMode #jfDeskNotes{height:calc(100dvh - 91px)!important;max-height:ca
 .jfPdfMarkPage{font:600 12px/1.3 system-ui;color:#d8f5ef}
 .jfPdfMarkText{font:11px/1.5 system-ui;color:#8fa9b7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}
 .jfPdfMarksEmpty{padding:12px;color:#8daab4;font:12px system-ui}
-#jfPdfMarksListToggle[aria-expanded="true"]{color:#a8e6d7;background:#8fcdbc22}
+#jfPdfMarksListToggle[aria-expanded="true"]{
+  color:#a8e6d7;background:#8fcdbc22;
+  /* Keep the toggle clickable if the user drags the floating panel upward. */
+  position:relative;z-index:46;
+}
 
 .jfPdfPageBookmark{position:absolute;z-index:4;top:0;right:18px;width:17px;height:27px;background:#78c9cfda;clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);pointer-events:none;filter:drop-shadow(0 1px 3px #0005)}
 

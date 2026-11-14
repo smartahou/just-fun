@@ -26,8 +26,13 @@ function jfPdfJsMarksListApply(panel,forceDefault=false){
   let left=jfPdfMarksListUi.left,top=jfPdfMarksListUi.top,width=jfPdfMarksListUi.width,height=jfPdfMarksListUi.height;
   if(forceDefault||left===null||top===null||width===null||height===null){
     width=Math.min(540,bounds.width-36);
-    height=Math.min(Math.max(300,Math.round(bounds.height*.74)),bounds.height-28);
-    left=Math.max(6,bounds.width-width-18); top=18;
+    // The old top:18 put this panel directly over its own header toggle,
+    // preventing the user from clicking that toggle to close the list.
+    const header=panel.closest('.jfReader')?.querySelector('.jfReaderHeader');
+    top=(header?.offsetHeight||65)+8;
+    height=Math.min(Math.max(300,Math.round(bounds.height*.74)),
+      Math.max(190,bounds.height-top-12));
+    left=Math.max(6,bounds.width-width-18);
   }
   const next=jfPdfJsMarksListClamp(panel,left,top,width,height);
   Object.assign(jfPdfMarksListUi,next);

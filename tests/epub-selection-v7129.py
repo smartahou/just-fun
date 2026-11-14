@@ -269,6 +269,13 @@ def main():
                 page.wait_for_function("""()=>!document.getElementById('jfPdfMarksList').hidden
                   && document.getElementById('jfPdfMarksListItems')
                     .textContent.includes('纸书选区测试甲乙丙丁')""")
+                assert page.evaluate("""()=>{
+                  const header=document.querySelector('.jfReaderHeader')
+                    .getBoundingClientRect();
+                  const panel=document.getElementById('jfPdfMarksList')
+                    .getBoundingClientRect();
+                  return panel.top>=header.bottom+4;
+                }"""), 'mark list must open below reader header'
                 page.locator('#jfPdfMarksListToggle').click()
                 assert page.locator('#jfPdfMarksList').is_hidden()
                 # Blue is encoded as an omitted color field in the server.
