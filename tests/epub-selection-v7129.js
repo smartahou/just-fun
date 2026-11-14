@@ -108,7 +108,7 @@ const savedInkTints={
 };
 for(const [name,[underline,tint]] of Object.entries(savedInkTints)){
   const selector='.jfReader ::highlight(jf-epub-mark-'+name+')';
-  const at=css.indexOf(selector+'{');
+  const at=css.lastIndexOf(selector+'{');
   assert(at>=0,'missing saved mark style '+name);
   const rule=css.slice(at,css.indexOf('}',at)+1);
   assert(rule.includes('text-decoration-color:'+underline),
