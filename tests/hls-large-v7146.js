@@ -7,11 +7,12 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const crypto=require('node:crypto'),vm=require('node:vm');
 const src=fs.readFileSync(path.join(__dirname,'../src/server/35-hls-playlists.js'),'utf8');
 function response(){
-  return {status:0,headers:{},body:'',
+  return {status:0,headers:{},body:'',chunks:[],
     writeHead(status,headers){this.status=status;this.headers=headers;},
-    end(body){this.body=body||'';}};
+    write(chunk){this.chunks.push(String(chunk));return true;},
+    end(body){if(body)this.chunks.push(String(body));this.body=this.chunks.join('');}};
 }
-for(const hash of [false,true]){
+(async()=>{\nfor(const hash of [false,true]){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'jf-large-hls-'));
   try{
     const original='long-recording.m3u8',managed=hash?'a'.repeat(32):original;
@@ -30,21 +31,21 @@ for(const hash of [false,true]){
       streamMedia:()=>{throw Error('not expected')}};
     vm.createContext(ctx);
     vm.runInContext(src,ctx,{filename:'35-hls-playlists.js'});
-    ctx.jfHlsScan();
+    await ctx.jfHlsScan();
     assert.equal(item.hlsError,undefined,'long playlist indexed');
     assert.equal(item.hlsAssets.length,1,'repeated segment needs one asset');
     assert.equal(ctx.jfHlsReady(item),true,'ready after large scan');
     const saved=item.hlsAssets[0];
     if(hash)assert.match(path.basename(saved.stored),/^[a-f0-9]{32}$/);
     const responseRoot=response();
-    ctx.jfHlsServe({method:'GET'},responseRoot,item);
+    await ctx.jfHlsServe({method:'GET'},responseRoot,item);
     assert.equal(responseRoot.status,200,'large HLS served');
     assert.equal((responseRoot.body.match(/\/api\/hls\//g)||[]).length,125000,
       'all repeated references rewritten');
     assert(!responseRoot.body.includes('segment.ts\n'),'source URI not exposed');
     const runtime=vm.runInContext('jfHlsRuntime',ctx)(item);
     assert.equal(runtime.byId.get(saved.id),saved);
-    ctx.jfHlsScan();
+    await ctx.jfHlsScan();
     assert.equal(item.hlsError,undefined,'repeat scan stays healthy');
     assert.equal(item.hlsAssets.length,1,'repeat scan does not duplicate assets');
     // A large, fully ready index should not be linearly scanned per HTTP request.
@@ -60,3 +61,5 @@ for(const hash of [false,true]){
     console.log('PASS '+(hash?'Hash':'original')+' HLS >5 MiB scan/serve/cache');
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 }
+
+})().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
