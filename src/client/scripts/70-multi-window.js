@@ -914,9 +914,6 @@ function openMulti(key) {
       'video'
     );
 
-  if(miniVideo&&item.originalExt==='.m3u8'){
-    jfSetVideoSource(miniVideo,item.mediaUrl,item);
-  }
   if (miniVideo) {
     // 多开视频只在创建时继承一次当前记忆音量；
     // 后续音量调整完全独立，不参与全局同步。
@@ -1069,6 +1066,7 @@ function openMulti(key) {
 
         if (video) {
           video.pause();
+          jfReleaseVideoSource(video);
         }
 
         box.remove();
@@ -1085,6 +1083,9 @@ function openMulti(key) {
       box
     );
 
+  if(miniVideo&&item.originalExt==='.m3u8'){
+    jfSetVideoSource(miniVideo,item.mediaUrl,item);
+  }
   updateMiniVisibilityToggle();
 }
 
