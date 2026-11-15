@@ -62,7 +62,7 @@ assert(pdf.includes('function jfPdfJsEpubListUnit(row,unit)')&&
 assert(reader.includes("jfReader.classList.toggle('jfEpubMode',outline.format==='EPUB')")&&
   css.includes('.jfReader.jfEpubMode #jfReadExcerpt{display:none!important}')&&
   css.includes('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]')&&
-  css.includes('background:rgba(105,94,74,.09)'),
+  css.includes('background-color:rgba(105,94,74,.09)!important'),
   'redundant EPUB excerpt button is hidden and list-toggle focus matches old paper');
 
 assert(pdf.includes('await jfDeskShowChapter(mark.chapter,0,')&&
