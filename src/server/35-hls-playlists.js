@@ -217,7 +217,11 @@ function jfHlsManifest(item,relative,content){
     const name=jfHlsRelative(raw,relative);
     const asset=lookup.get(name);
     if(!asset)throw Error('HLS 资源未完成索引：'+name);
-    return '/api/hls/'+item.key+'/'+asset.id;
+    // The physical file remains extensionless in Hash mode. The virtual URL
+    // carries only the media TYPE suffix: FFmpeg's HLS demuxer refuses
+    // extensionless fragment URLs by default, and some codecs need this hint.
+    const suffix=/^\.[a-z0-9]{1,10}$/i.test(asset.ext||'')?asset.ext:'.bin';
+    return '/api/hls/'+item.key+'/'+asset.id+suffix;
   };
   return String(content).split(/\r?\n/).map(line=>{
     if(line.startsWith('#'))return line.replace(/\bURI="([^"]+)"/g,(_all,url)=>
@@ -225,7 +229,7 @@ function jfHlsManifest(item,relative,content){
     return line.trim()?mapUri(line.trim()):line;
   }).join('\n');
 }
-function jfHlsServe(req,res,item,id=''){
+function jfHlsServe(req,res,item,id='',requestedExt=''){
   if(!jfHlsIsPlaylist(item)||!['GET','HEAD'].includes(req.method)){res.writeHead(404);res.end();return;}
   if(!jfHlsReady(item)){
     res.writeHead(409,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
@@ -234,7 +238,9 @@ function jfHlsServe(req,res,item,id=''){
   }
   try{
     const asset=id?(item.hlsAssets||[]).find(x=>x.id===id&&x.state==='ready'):null;
-    if(id&&!asset){res.writeHead(404);res.end();return;}
+    if(id&&(!asset||(requestedExt&&asset.ext!==requestedExt))){
+      res.writeHead(404);res.end();return;
+    }
     const file=asset?jfHlsStoredPath(item,asset.stored):managedPath(item);
     const ext=asset?asset.ext:'.m3u8';
     if(ext==='.m3u8'){
