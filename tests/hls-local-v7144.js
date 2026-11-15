@@ -44,7 +44,8 @@ function response(){
     writeHead(status,headers={}){this.status=status;this.headers=headers;},
     end(data){this.body=data;}};
 }
-(async()=>{\nfor(const hash of [false,true]){
+(async()=>{
+for(const hash of [false,true]){
   const f=fixture(hash);
   try{
     await f.ctx.jfHlsScan();
