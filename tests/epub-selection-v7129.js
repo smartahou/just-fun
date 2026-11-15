@@ -222,9 +222,13 @@ assert(reader.includes("['amber','blue','mint','rose','violet'].includes(quote.m
 assert(source.includes('function startImageDrag(img)')&&
   source.includes('imageDragStart=imageAt(event.clientX,event.clientY)')&&
   source.includes('virtual.anchorImage')&&
-  source.includes('if(imageDragStart&&!virtual)')&&
+  source.includes('if(!virtual&&!dragOriginInText&&!dragSeed)')&&
+  source.includes('const start=imageDragStart||onImage;')&&
+  source.includes('imageAt(event.clientX,event.clientY);')&&
+  source.includes("snap.rects?.[0]||virtual.originRect")&&
+  source.includes("snap.ref.type==='epub-image'?")&&
   source.includes("if(!img&&!target?.closest?.('figcaption'))"),
-  'image-origin gestures carry source anchors into caption text without grabbing blank paper');
+  'real postcard illustrations select from image or blank-to-image and retain menu anchor');
 for(const color of ['amber','blue','mint','rose','violet']){
   assert(css.includes('[data-jf-epub-selection-color="'+color+'"] ::highlight(jf-epub-selection)')&&
     css.includes('img[data-jf-epub-image-preview="'+color+'"]')&&
@@ -232,4 +236,4 @@ for(const color of ['amber','blue','mint','rose','violet']){
     color+' current selection tint and image frame use matching remembered ink');
 }
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.139 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.140 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

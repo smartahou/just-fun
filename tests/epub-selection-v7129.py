@@ -42,8 +42,8 @@ def make_epub(path):
 
 
 
-def make_epub_images(path):
-    """Two visual illustrations sharing the same file but distinct source anchors."""
+def make_epub_images(path,standalone=False):
+    """Repeated pictures; optional separate-image-P + caption-P paper layout."""
     width,height=240,146
     raw=bytearray()
     for y in range(height):
@@ -71,14 +71,22 @@ def make_epub_images(path):
                    '</manifest><spine><itemref idref="a"/></spine></package>')
         text='<p>'+'这是含有图片的旧书章节，图片前后的正文应保持原有分页行为。'*2+'</p>'
         middle='<p>'+'图文并茂，原文照旧，重复图片的标记必须分别保存。'*2+'</p>'
+        if standalone:
+            first='<p><img src="media/photo.png" alt="第一幅测试插图"/></p>'+(
+                '<p>画片一：晚清社会百态。（漫画明信片）</p>')
+            second='<p><img src="media/photo.png" alt="第二幅测试插图"/></p>'+(
+                '<p>画片二：洋务风潮渐起。（漫画明信片）</p>')
+            # Ensure there are several real spreads, exercising the warmed
+            # page face swap instead of only the initial ID-bearing pool slot.
+            middle=middle*14
+        else:
+            first='<figure><img src="media/photo.png" alt="第一幅测试插图"/></figure>'
+            second=('<figure><img src="media/photo.png" alt="第二幅测试插图"/>'+
+                    '<figcaption>插图说明：画中人物代表晚清外交的无奈。</figcaption></figure>')
         z.writestr('OEBPS/chapter.xhtml',
                    '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
-                   '<h2>插图标记验收</h2>'+text+
-                   '<figure><img src="media/photo.png" alt="第一幅测试插图"/></figure>'+
-                   middle+
-                   '<figure><img src="media/photo.png" alt="第二幅测试插图"/>'+
-                   '<figcaption>插图说明：画中人物代表晚清外交的无奈。</figcaption></figure>'+
-                   text+'</body></html>')
+                   '<h2>插图标记验收</h2>'+text+first+
+                   middle+second+text+'</body></html>')
         z.writestr('OEBPS/media/photo.png',png)
 
 def choose(page, word):
@@ -834,6 +842,102 @@ def assert_epub_images(page,book_id):
       document.getElementById('jfReader').dataset.jfEpubSelectionColor==='mint'""")
     assert page.evaluate("""()=>JFEpubSelection.diagnostics().lastColor""")=='mint'
 
+
+def assert_postcard_selection(page,book_id):
+    """Real copied image-only P and caption P; after buffered face swapping."""
+    page.evaluate('(id)=>jfDeskOpenReader(id,0)',book_id)
+    page.wait_for_function("""(id)=>jfDeskBook?.id===id&&
+      !jfDeskRestoring&&jfDeskFlow.length>0""",arg=book_id,timeout=12000)
+    if not page.evaluate('jfDeskPaged'):
+        page.locator('#jfReadPaged').click()
+    page.wait_for_function('()=>jfDeskPaged&&jfDeskPages.length>=3',
+                           timeout=12000)
+    state=page.evaluate("""()=>{
+      const img=jfDeskFlow[0].el.querySelectorAll('img');
+      const selector='img[data-jf-epub-image-index="1"]';
+      const at=jfDeskPages.findIndex(p=>p.some(item=>
+        item.node?.matches?.(selector)||item.node?.querySelector?.(selector)));
+      if(at<0)return {ok:false,reason:'image 1 absent from page list'};
+      const step=jfDeskPagedGeometry().two?2:1;
+      jfDeskPageIndex=Math.floor(at/step)*step;
+      jfDeskPagedRender();
+      const picture=document.querySelector('#jfSheetLeft '+selector+
+        ',#jfSheetRight '+selector);
+      const figure=picture?.closest('figure.jfPrintPlateWithCaption');
+      if(!picture||!figure)return {ok:false,
+        reason:'the image-P and caption-P did not become a grouped plate',at};
+      const rect=picture.getBoundingClientRect();
+      const cap=figure.querySelector('figcaption');
+      const capRect=cap?.getBoundingClientRect();
+      return {ok:!!capRect?.width&&rect.width>20,
+        page:jfDeskPageIndex,at,images:img.length,
+        image:{x:rect.left+rect.width/2,y:rect.top+rect.height/2},
+        endBlank:{x:rect.right+36,y:rect.bottom+22},
+        wrapper:figure.className,
+        caption:cap.textContent};
+    }""")
+    assert state['ok'] and state['images']==2,state
+
+    # A single click on the actual picture must never flip the spread and
+    # must show BOTH a frame and an action menu with proper placement.
+    page.mouse.click(state['image']['x'],state['image']['y'])
+    page.wait_for_function("""()=>JFEpubSelection.diagnostics().imageSelectionMenu&&
+      JFEpubSelection.reference()?.ref.type==='epub-image'&&
+      JFEpubSelection.reference()?.ref.imageIndex===1""",timeout=3000)
+    clicked=page.evaluate("""()=>{
+      const img=document.querySelector('#jfSheetLeft img[data-jf-epub-image-index="1"],'+
+        '#jfSheetRight img[data-jf-epub-image-index="1"]');
+      const menu=document.getElementById('jfEpubSelectionMenu');
+      return {frame:img?.dataset.jfEpubImageActive,
+        menu:!menu.hidden,menuRect:menu.getBoundingClientRect().toJSON(),
+        page:jfDeskPageIndex,ref:JFEpubSelection.reference()?.ref};
+    }""")
+    assert clicked['frame'] and clicked['menu'] and (
+        clicked['page']==state['page']) and (
+        clicked['menuRect']['width']>=150),clicked
+    page.evaluate('()=>JFEpubSelection.reset()')
+
+    # Start INSIDE the image, move over untouched old-paper whitespace,
+    # release. A picture has no Range text, but still owns a valid selection.
+    page.mouse.move(state['image']['x'],state['image']['y'])
+    page.mouse.down()
+    try:
+        page.mouse.move(state['endBlank']['x'],state['endBlank']['y'],steps=12)
+    finally:
+        page.mouse.up()
+    page.wait_for_function("""()=>JFEpubSelection.diagnostics().imageSelectionMenu&&
+      JFEpubSelection.reference()?.images?.some(m=>m.imageIndex===1)""",
+                           timeout=3500)
+    released=page.evaluate("""()=>{
+      const menu=document.getElementById('jfEpubSelectionMenu');
+      const box=menu.getBoundingClientRect();
+      return {active:!menu.hidden,top:box.top,left:box.left,
+        frame:!!document.querySelector(
+          '#jfSheetLeft img[data-jf-epub-image-preview],'+
+          '#jfSheetRight img[data-jf-epub-image-preview]'),
+        image:JFEpubSelection.reference()?.ref.type,
+        page:jfDeskPageIndex};
+    }""")
+    assert released['active'] and released['frame'] and (
+        released['image']=='epub-image') and (
+        released['page']==state['page']) and (
+        released['top']>0 and released['left']>=0),released
+    page.evaluate('()=>JFEpubSelection.reset()')
+
+    # Also support a deliberate sweep across the picture from adjacent
+    # blank paper; a drag that never touches an image must do nothing.
+    page.mouse.move(state['image']['x']-38,state['image']['y'])
+    page.mouse.down()
+    try:
+        page.mouse.move(state['image']['x'],state['image']['y'],steps=12)
+        page.mouse.move(state['endBlank']['x'],state['endBlank']['y'],steps=10)
+    finally:
+        page.mouse.up()
+    page.wait_for_function("""()=>JFEpubSelection.diagnostics().imageSelectionMenu&&
+      JFEpubSelection.reference()?.images?.some(m=>m.imageIndex===1)""",
+                           timeout=3500)
+    page.evaluate('()=>JFEpubSelection.reset()')
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -843,6 +947,7 @@ def main():
         library.mkdir()
         make_epub(library / 'selection.epub')
         make_epub_images(library / 'illustrations.epub')
+        make_epub_images(library / 'postcards.epub',standalone=True)
         proc = log = None
         try:
             proc, port, log = launch(ROOT / 'dist/douyin.js', library,
@@ -853,6 +958,7 @@ def main():
                 books=json.load(response)['books']
                 book=next(b for b in books if b['name']=='selection.epub')
                 image_book=next(b for b in books if b['name']=='illustrations.epub')
+                postcard_book=next(b for b in books if b['name']=='postcards.epub')
             with sync_playwright() as pw:
                 browser = pw.chromium.launch(
                     executable_path='/usr/bin/chromium',
@@ -1208,8 +1314,9 @@ def main():
                 assert_corner_dwell(page, -1, 'touch')
                 assert_real_forward_mouse(page)
                 assert_epub_images(page,image_book['id'])
+                assert_postcard_selection(page,postcard_book['id'])
                 assert not errors, errors
-                print('PASS v7.139 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.140 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

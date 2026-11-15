@@ -125,15 +125,15 @@ function sourceImages(chapter){
 function imageAt(x,y){
   const target=document.elementFromPoint(x,y);
   let img=target?.closest?.('img[data-jf-epub-image-index]');
-  // An EPUB <figure> often has transparent padding around the drawing.
-  // Permit a narrow 14px halo there, but never turn the whole paper margin
-  // into an image hit zone. Actual caption letters remain text-selectable.
+  // Native hit-testing can land on the surrounding <p>/<figure>, especially
+  // for white-matted and transparent postcard illustrations. Recognize the
+  // printed picture's small local margin, never the entire sheet/figure.
   if(!img&&!target?.closest?.('figcaption')){
-    const figure=target?.closest?.('figure');
-    const candidates=figure?.querySelectorAll('img[data-jf-epub-image-index]');
+    const wrapper=target?.closest?.('figure,p,div');
+    const candidates=wrapper?.querySelectorAll('img[data-jf-epub-image-index]');
     if(candidates?.length===1){
       const candidate=candidates[0],r=candidate.getBoundingClientRect();
-      if(x>=r.left-14&&x<=r.right+14&&y>=r.top-14&&y<=r.bottom+14)
+      if(x>=r.left-18&&x<=r.right+18&&y>=r.top-18&&y<=r.bottom+18)
         img=candidate;
     }
   }
@@ -324,8 +324,9 @@ function virtualReference(){
       label:virtual.anchorImage.label||''};
     const imageElement=visibleImages().find(img=>
       Number(img.dataset.jfEpubImageChapter)===ref.chapter&&
-      Number(img.dataset.jfEpubImageIndex)===ref.imageIndex);
-    const rect=imageElement?.getBoundingClientRect();
+      Number(img.dataset.jfEpubImageIndex)===ref.imageIndex)||
+      (virtual.originElement?.isConnected?virtual.originElement:null);
+    const rect=imageElement?.getBoundingClientRect()||virtual.originRect;
     return {ref,images:[ref],imageElement,
       rects:rect?[rect]:[],session:virtual.session};
   }
@@ -479,9 +480,11 @@ function placeMenu(snap,near=null){
   }
   menu.hidden=false;
   const width=menu.offsetWidth||230,height=menu.offsetHeight||44;
-  const rect=near||snap.rects?.[snap.rects.length-1];
+  const rect=near||snap.rects?.[snap.rects.length-1]||
+    (lastDragPoint?{left:lastDragPoint.x,top:lastDragPoint.y,
+      bottom:lastDragPoint.y,width:0,height:0}:null);
   const first=snap.rects?.[0]||rect;
-  if(!rect)return;
+  if(!rect){menu.hidden=true;return;}
   const header=reader.querySelector('.jfReaderHeader')?.getBoundingClientRect().bottom||0;
   const x=Math.max(8,Math.min(innerWidth-width-8,rect.left+rect.width/2-width/2));
   const above=(first?.top??rect.top)-height-12;
@@ -506,7 +509,10 @@ function drawVirtual(){
     virtual.lastRect=rects.length?(first?rects[0]:rects[rects.length-1]):null;
     CSS.highlights.set(transient,new Highlight(...spans));
   }else{
-    virtual.lastRect=null;
+    // An image has no text Range. Keep its physical rectangle for toolbar
+    // placement instead of wiping the only valid selection geometry.
+    virtual.lastRect=snap.ref.type==='epub-image'?
+      (snap.rects?.[0]||virtual.originRect||null):null;
     if(supported())CSS.highlights.delete(transient);
   }
   drawLive(snap);
@@ -674,7 +680,7 @@ function startImageDrag(img){
   virtual={bookId:ref.bookId,session:jfDeskSession,chapter:ref.chapter,
     anchor:entry.offset,focus:entry.offset,index:jfDeskPageIndex,
     imageFocus:ref,anchorImage:ref,lastRect:img.getBoundingClientRect(),
-    pending:null};
+    originElement:img,originRect:img.getBoundingClientRect(),pending:null};
   current()?.removeAllRanges();
   reader.classList.add('jfEpubSelecting');
   menu.hidden=true;active=null;cancelTimer();
@@ -1007,9 +1013,12 @@ document.addEventListener('pointermove',event=>{
   const direction=jfDeskPaged?cornerDirection(event.clientX,event.clientY):0;
   const onText=!direction?textPointAt(event.clientX,event.clientY):null;
   const onImage=!direction?imageAt(event.clientX,event.clientY):null;
-  if(imageDragStart&&!virtual){
-    const start=imageDragStart;
-    if(startImageDrag(start)&&event.cancelable)event.preventDefault();
+  if(!virtual&&!dragOriginInText&&!dragSeed){
+    // Allow entering a picture FROM its surrounding blank paper. The gesture
+    // becomes a real selection only after the pointer actually hits the
+    // visible picture or its small bounded local margin.
+    const start=imageDragStart||onImage;
+    if(start&&startImageDrag(start)&&event.cancelable)event.preventDefault();
   }
   if(virtual){
     if(event.cancelable)event.preventDefault();
@@ -1104,7 +1113,7 @@ function textPointAt(x,y){
 }
 center.addEventListener('click',event=>{
   if(!ready())return;
-  const img=event.target.closest?.('img[data-jf-epub-image-index]');
+  const img=imageAt(event.clientX,event.clientY);
   if(img&&!moved&&selectImage(img)){
     event.preventDefault();event.stopImmediatePropagation();
     return;
@@ -1174,6 +1183,7 @@ observer.observe(jfReadText,{subtree:true,childList:true,characterData:true});
 window.JFEpubSelection={
   reference,quote,refresh,reset,pageRendered,restoreReady,jumpImage,
   metrics,diagnostics:()=>({...metrics,book:jfDeskBook?.id,
+    imageSelectionMenu:!menu.hidden,
     chapter:jfDeskChapter,page:jfDeskPageIndex,visibleBlocks:blocks().length,
     selected:selecting(),painted:paintedMarks.length,
     crossPage:!!virtual,edgeDirection,edgeLocked,
