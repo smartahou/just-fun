@@ -9,6 +9,7 @@
     "src/server/15-metadata-vault.js",
     "src/server/20-catalog-and-backup.js",
     "src/server/30-media-library.js",
+    "src/server/35-hls-playlists.js",
     "src/server/40-http-media.js",
     "src/server/45-bookshelf.js",
     "src/server/46-reading-and-notes.js",
