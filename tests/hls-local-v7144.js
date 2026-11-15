@@ -92,6 +92,8 @@ for(const hash of [false,true]){
     assert.equal(ts.state,'ready');
     assert.throws(()=>f.ctx.jfHlsRelative('../escape.ts'),/越界|超出/);
     assert.throws(()=>f.ctx.jfHlsRelative('https://example.org/live.ts'),/本地/);
+    assert.equal(f.ctx.jfHlsRelative('nested/clip.ts?cache=1#pos'), 'nested/clip.ts');
+    assert.equal(f.ctx.jfHlsRelative('%E6%B5%8B%E8%AF%95.ts'), '测试.ts');
     assert.throws(()=>f.ctx.jfHlsRelative('..\\escape.ts'),/本地/);
     console.log('HLS '+(hash?'Hash':'original')+' fixture PASS');
   }finally{f.dispose();}
