@@ -1119,7 +1119,11 @@ def assert_postcard_pair(page,book_id):
       })),images:members.filter(m=>m.dataset.markType==='epub-image').length,
       heading:unit.querySelector('.jfEpubMarkUnitHeading')?.textContent,
       listOpen:!list.hidden,activeInk:getComputedStyle(toggle).backgroundColor,
+      inlineInk:toggle.style.getPropertyValue('background-color'),
+      inlinePriority:toggle.style.getPropertyPriority('background-color'),
       toggleExpanded:toggle.getAttribute('aria-expanded'),
+      toggleHidden:toggle.hidden,toggleDisplay:getComputedStyle(toggle).display,
+      matches:toggle.matches('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]'),
       readerClass:toggle.closest('.jfReader')?.className,
       quoteHidden:getComputedStyle(excerpt).display==='none',
       sourceNoMutation:jfDeskFlow[0].el.querySelectorAll('img').length};
