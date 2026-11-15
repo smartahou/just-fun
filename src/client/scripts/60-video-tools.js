@@ -1180,20 +1180,17 @@ function loadFeedVideo(video, section, active) {
     return;
   }
 
+  const item=allItems.find(x=>x.key===video.dataset.itemKey);
   const alreadyLoaded =
     video.dataset.loaded === '1' &&
-    video.getAttribute('src') === src;
+    jfVideoSourceMatches(video,src,item);
 
   // Adjacent players may buffer in background, but must never auto-play.
   video.preload = 'auto';
 
   if (!alreadyLoaded) {
-    video.src = src;
+    jfSetVideoSource(video,src,item);
     video.dataset.loaded = '1';
-
-    try {
-      video.load();
-    } catch {}
   }
 }
 
@@ -1230,6 +1227,7 @@ function unloadFeedVideo(video) {
   disconnectFeedVideoObserver(video);
   video.preload = 'none';
   video.dataset.loaded = '0';
+  jfReleaseVideoSource(video);
   video.removeAttribute('src');
 
   try {
