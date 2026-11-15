@@ -393,7 +393,7 @@ async function jfHlsStreamManifest(req,res,item,relative,file){
     if(!res.destroyed)res.end();
   }catch(error){
     // Headers may already have been sent; never respond with a second 404.
-    if(typeof res.destroy==='function')res.destroy(error);
+    if(typeof res.destroy==='function')res.destroy();
     else res.end();
   }
 }
