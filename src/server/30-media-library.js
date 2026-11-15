@@ -1154,7 +1154,8 @@ async function enrichCatalog() {
           return false;
         }
 
-        if (itemMediaKind(item) !== 'video' || jfHlsIsPlaylist(item)) return false;
+        if (itemMediaKind(item) !== 'video' || jfHlsIsPlaylist(item) ||
+            jfHlsChildKeys.has(item.key)) return false;
 
         const cover=coverFullPath(item);
         const freshProbe=REFRESH || ((!item.duration||!item.resolution) &&
