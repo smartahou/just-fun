@@ -20,6 +20,8 @@ function itemPublic(item) {
     readOnly:item.readOnly===true,
     originalName: item.originalName || '',
     originalExt: item.originalExt || '',
+    hlsError:jfHlsIsPlaylist(item)?String(item.hlsError||''):'',
+    hlsReady:jfHlsIsPlaylist(item)?jfHlsReady(item):undefined,
     displayName: item.displayName || '',
     favorite: item.favorite === true,
     creator:
