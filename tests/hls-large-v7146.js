@@ -12,7 +12,8 @@ function response(){
     write(chunk){this.chunks.push(String(chunk));return true;},
     end(body){if(body)this.chunks.push(String(body));this.body=this.chunks.join('');}};
 }
-(async()=>{\nfor(const hash of [false,true]){
+(async()=>{
+for(const hash of [false,true]){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'jf-large-hls-'));
   try{
     const original='long-recording.m3u8',managed=hash?'a'.repeat(32):original;
