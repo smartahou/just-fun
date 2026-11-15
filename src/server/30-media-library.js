@@ -1073,7 +1073,7 @@ async function writeCover(
   // Async capture: never block the HTTP loop while FFmpeg is decoding.
   // A stalled encoder must be killed, with the old cover left untouched.
   let succeeded=false;
-  const hls=jfHlsIsPlaylist(item);
+  const hls=jfHlsIsPlaylist(item)&&!jfHlsDirectVideo(item)&&!jfHlsBinaryTs(item);
   const source=hls?jfHlsLocalUrl(item):managedPath(item);
   const makeArgs=(seek)=>[
     '-hide_banner','-loglevel','error','-nostdin','-y',
@@ -1219,7 +1219,8 @@ async function enrichCatalog() {
 
     if(REFRESH || ((!item.duration||!item.resolution) &&
       (!item.probeAttemptFingerprint||item.probeAttemptFingerprint!==item.fingerprint))){
-      const meta=await probeVideo(jfHlsIsPlaylist(item)?
+      const probeHls=jfHlsIsPlaylist(item)&&!jfHlsDirectVideo(item)&&!jfHlsBinaryTs(item);
+      const meta=await probeVideo(probeHls?
         jfHlsLocalUrl(item):managedPath(item));
       // Apple metadata and an accompanying same-stem still image are strong indicators.
       // Exported MP4 may have lost both: those remain video until the owner classifies them.
