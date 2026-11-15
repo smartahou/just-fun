@@ -56,7 +56,7 @@ async function exercise(hash){
     };
     vm.createContext(ctx);
     vm.runInContext(moduleSource,ctx,{filename:'35-hls-playlists.js'});
-    ctx.jfHlsScan();
+    await ctx.jfHlsScan();
     assert.equal(item.hlsError,undefined,'all HLS resources must resolve');
     assert(ctx.jfHlsReady(item));
     assert(item.hlsAssets.length>=1);
