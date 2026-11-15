@@ -31,7 +31,8 @@ function jfSetVideoSource(video,url,item){
       video.removeAttribute('src');
       video.load();
       const hls=new Hls({enableWorker:false});
-      const record={hls,url};jfHlsPlayers.set(video,record);
+      const record={hls,url,networkRetries:0,mediaRetries:0};
+      jfHlsPlayers.set(video,record);
       hls.on(Hls.Events.MEDIA_ATTACHED,()=>{
         if(jfHlsPlayers.get(video)===record)hls.loadSource(url);
       });
@@ -46,8 +47,12 @@ function jfSetVideoSource(video,url,item){
       hls.on(Hls.Events.ERROR,(_event,data)=>{
         if(!data?.fatal||jfHlsPlayers.get(video)!==record)return;
         console.warn('[Just Fun HLS]',data.details||data.type||'播放失败');
-        if(data.type===Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();return;}
-        if(data.type===Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();return;}
+        if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&record.networkRetries++<2){
+          hls.startLoad();return;
+        }
+        if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&record.mediaRetries++<1){
+          hls.recoverMediaError();return;
+        }
         jfReleaseVideoSource(video);
       });
       hls.attachMedia(video);
