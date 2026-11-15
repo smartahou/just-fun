@@ -21,11 +21,31 @@ function jfVideoSourceMatches(video,url,item){
   }
   return !jfHlsPlayers.has(video)&&video.getAttribute('src')===url;
 }
+function jfHlsNotifyFailure(video,message){
+  if(!video?.isConnected)return;
+  // Background prefetch should never display errors over the user's reading
+  // or over another video; only notify for the active Feed or mini-player.
+  const activeFeed=video.classList.contains('feedVideo')&&
+    document.getElementById('feedOverlay')?.classList.contains('open')&&
+    video.dataset.itemKey===currentFeedKey;
+  if(!activeFeed&&!video.controls)return;
+  const readable=String(message||'未知播放错误').slice(0,150);
+  if(video.dataset.hlsNotified===readable)return;
+  video.dataset.hlsNotified=readable;
+  if(typeof unifiedToast==='function')unifiedToast('HLS 播放失败：'+readable);
+  console.warn('[Just Fun HLS]',readable);
+}
 function jfSetVideoSource(video,url,item){
   if(!video||!url)return;
   if(jfVideoSourceMatches(video,url,item))return;
   jfReleaseVideoSource(video);
   if(jfVideoIsHls(item,url)){
+    const source=item||allItems.find(entry=>entry.mediaUrl===url);
+    if(source?.hlsReady===false){
+      jfHlsNotifyFailure(video,source.hlsError||'本地分片正在扫描，请稍后刷新');
+      return;
+    }
+    delete video.dataset.hlsNotified;
     const Hls=window.JF?.Hls;
     if(Hls?.isSupported()){
       video.removeAttribute('src');
@@ -53,13 +73,14 @@ function jfSetVideoSource(video,url,item){
         if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&record.mediaRetries++<1){
           hls.recoverMediaError();return;
         }
+        jfHlsNotifyFailure(video,data.details||data.type||'无法解码播放清单');
         jfReleaseVideoSource(video);
       });
       hls.attachMedia(video);
       return;
     }
     if(!video.canPlayType('application/vnd.apple.mpegurl')){
-      console.warn('[Just Fun HLS] 当前浏览器不支持 HLS');
+      jfHlsNotifyFailure(video,'当前浏览器不支持 HLS 播放');
       return;
     }
   }
