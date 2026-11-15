@@ -1026,14 +1026,16 @@ async function writeCover(
   if (
     NO_SCREENSHOT ||
     !HAS_FFMPEG ||
-    !item.duration
+    (!item.duration && !jfHlsReady(item))
   ) {
     return null;
   }
 
-  const t = precise
-    ? Math.max(0,Math.min(Number(time)||0,Math.max(0,Number(item.duration)-0.001)))
-    : clampCoverTime(item.duration,time);
+  const t = jfHlsIsPlaylist(item)&&!Number(item.duration)
+    ? Math.max(0.1,Number(time)||0.5)
+    : precise
+      ? Math.max(0,Math.min(Number(time)||0,Math.max(0,Number(item.duration)-0.001)))
+      : clampCoverTime(item.duration,time);
 
   const stamp =
     Date.now()
@@ -1071,15 +1073,28 @@ async function writeCover(
   // Async capture: never block the HTTP loop while FFmpeg is decoding.
   // A stalled encoder must be killed, with the old cover left untouched.
   let succeeded=false;
+  const hls=jfHlsIsPlaylist(item);
+  const source=hls?jfHlsLocalUrl(item):managedPath(item);
+  const makeArgs=(seek)=>[
+    '-hide_banner','-loglevel','error','-nostdin','-y',
+    ...(indexed?[]:['-ss',String(seek)]),
+    '-i',source,'-frames:v','1',
+    ...(indexed?['-vsync','0']:[]),
+    '-vf',indexed?`select=eq(n\\\\,${frameIndex}),scale=720:-2`:'scale=720:-2',
+    '-q:v','4',temp
+  ];
   try {
-    await runCommand('ffmpeg',[
-      '-hide_banner','-loglevel','error','-nostdin','-y',
-      ...(indexed?[]:['-ss',String(t)]),
-      '-i',managedPath(item),'-frames:v','1',
-      ...(indexed?['-vsync','0']:[]),
-      '-vf',indexed?`select=eq(n\\,${frameIndex}),scale=720:-2`:'scale=720:-2',
-      '-q:v','4',temp
-    ],{stdio:['ignore','ignore','pipe'],timeoutMs:60000});
+    try{
+      await runCommand('ffmpeg',makeArgs(t),{
+        stdio:['ignore','ignore','pipe'],timeoutMs:60000});
+    }catch(error){
+      // Some HLS manifests cannot seek directly to 35%. Still capture the
+      // first actual decoded frame rather than leaving a permanent blank cover.
+      if(!hls||indexed)throw error;
+      try{fs.unlinkSync(temp);}catch{}
+      await runCommand('ffmpeg',makeArgs(0),{
+        stdio:['ignore','ignore','pipe'],timeoutMs:60000});
+    }
     succeeded=true;
   } catch (error) {
     try {fs.unlinkSync(temp);} catch {}
@@ -1154,8 +1169,9 @@ async function enrichCatalog() {
           return false;
         }
 
-        if (itemMediaKind(item) !== 'video' || jfHlsIsPlaylist(item) ||
-            jfHlsChildKeys.has(item.key)) return false;
+        if (itemMediaKind(item) !== 'video' || jfHlsChildKeys.has(item.key) ||
+            (jfHlsIsPlaylist(item)&&(!jfHlsReady(item)||!jfHlsServerPort)))
+          return false;
 
         const cover=coverFullPath(item);
         const freshProbe=REFRESH || ((!item.duration||!item.resolution) &&
@@ -1163,7 +1179,7 @@ async function enrichCatalog() {
         const missingCover=!item.cover||!cover||!fs.existsSync(cover);
         const freshCover=!NO_SCREENSHOT && (REFRESH||missingCover) &&
           (REFRESH||!item.coverAttemptFingerprint||item.coverAttemptFingerprint!==item.fingerprint);
-        return freshProbe || (freshCover && (item.duration>0||freshProbe));
+        return freshProbe || (freshCover && (item.duration>0||freshProbe||jfHlsReady(item)));
       }
     );
 
@@ -1203,11 +1219,12 @@ async function enrichCatalog() {
 
     if(REFRESH || ((!item.duration||!item.resolution) &&
       (!item.probeAttemptFingerprint||item.probeAttemptFingerprint!==item.fingerprint))){
-      const meta=await probeVideo(managedPath(item));
+      const meta=await probeVideo(jfHlsIsPlaylist(item)?
+        jfHlsLocalUrl(item):managedPath(item));
       // Apple metadata and an accompanying same-stem still image are strong indicators.
       // Exported MP4 may have lost both: those remain video until the owner classifies them.
       const stillBase=path.parse(item.originalName||item.managedName||'').name.toLowerCase();
-      const paired=Number(meta.duration)>0&&Number(meta.duration)<=10&&catalog.items.some(other=>
+      const paired=!jfHlsIsPlaylist(item)&&Number(meta.duration)>0&&Number(meta.duration)<=10&&catalog.items.some(other=>
         other!==item&&other.state==='ready'&&other.relativeDir===item.relativeDir&&
         IMAGE_EXTENSIONS.has(String(other.originalExt||'').toLowerCase())&&
         path.parse(other.originalName||other.managedName||'').name.toLowerCase()===stillBase);
@@ -1223,7 +1240,7 @@ async function enrichCatalog() {
 
     if (
       !NO_SCREENSHOT &&
-      item.duration &&
+      (item.duration||jfHlsReady(item)) &&
       (
         REFRESH ||
         !item.cover ||
