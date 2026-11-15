@@ -30,3 +30,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 
 ## v6.57 · PDF 连续阅读专项
 运行 `python tests/pdf-reader-v657.py` 验证并发缓存、严格参数、黑屏防护、快速翻页、键盘导航、失败回退、源文件SHA。其余正式回归使用 `python tests/run-all.py --batch 1..4` 和 `--merge`。
+
+## v7.144 · 本地 HLS/Hash
+
+`node tests/hls-local-v7144.js` 使用自动生成并销毁的临时 HLS 主清单、子清单、视频分片、初始化片段和本地密钥，分别验证 Hash 开关：匿名物理命名、清单 URI 重写、同目录及子目录相对路径、已索引 .ts 去重、资源返回内容及异常中断后的 pending 恢复。需另行运行 Chromium 实际播放及完整离线构建，不应将源代码静态检查等同于真实解码验收。
