@@ -50,6 +50,21 @@ assert(reader.includes("jfPdfMarksListToggle').hidden=!!outline.nativePdf")&&
   reader.includes('jfPdfJsMarksListRender()'),
   'non-PDF books expose and refresh the shared mark index');
 const pdf=read('src/client/scripts/99a-pdfjs.js');
+assert(pdf.includes('function jfPdfJsEpubListUnit(row,unit)')&&
+  pdf.includes("if(!isPdf){\n      jfPdfJsEpubListUnit(row,unit);")&&
+  pdf.includes("for(const mark of ordered){")&&
+  pdf.includes("item.dataset.markType=mark.type")&&
+  pdf.includes("item.dataset.imageIndex=String(mark.imageIndex)")&&
+  pdf.includes("frame.className='jfEpubMarkThumb'")&&
+  pdf.includes("thumbnail.loading='lazy'")&&
+  pdf.includes("item.addEventListener('click',()=>void jfPdfJsEpubJumpMark(mark))"),
+  'EPUB grouped text and image marks render as separate jumpable members with photo thumbnails');
+assert(reader.includes("jfReader.classList.toggle('jfEpubMode',outline.format==='EPUB')")&&
+  css.includes('.jfReader.jfEpubMode #jfReadExcerpt{display:none!important}')&&
+  css.includes('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]')&&
+  css.includes('background:rgba(105,94,74,.09)'),
+  'redundant EPUB excerpt button is hidden and list-toggle focus matches old paper');
+
 assert(pdf.includes('await jfDeskShowChapter(mark.chapter,0,')&&
   !pdf.includes("jfDeskJumpToQuote({...mark,type:'text'})"),
   'non-PDF mark index navigates via source offset, never via DOM mutation');
@@ -243,4 +258,4 @@ for(const color of ['amber','blue','mint','rose','violet']){
     color+' current selection tint and image frame use matching remembered ink');
 }
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.141 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.142 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

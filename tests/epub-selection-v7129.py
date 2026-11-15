@@ -1092,6 +1092,50 @@ def assert_postcard_pair(page,book_id):
     assert len(saved['groupIds'])==1 and saved['images']==['0','1'],saved
     assert any('画片一' in item for item in saved['text']),saved
 
+    # A grouped EPUB entry must expose all members, not just unit[0].
+    # The user's real screenshot showed two pictures with blue borders but
+    # a list card showing only the first text excerpt.
+    page.locator('#jfPdfMarksListToggle').click()
+    page.wait_for_function("""()=>!document.getElementById('jfPdfMarksList').hidden&&
+      !!document.querySelector('#jfPdfMarksListItems .jfEpubMarkUnit')&&
+      document.querySelectorAll('#jfPdfMarksListItems .jfEpubMarkPart').length===3&&
+      document.querySelectorAll(
+        '#jfPdfMarksListItems .jfEpubMarkPart[data-mark-type="epub-image"]').length===2&&
+      document.querySelectorAll(
+        '#jfPdfMarksListItems .jfEpubMarkThumb img').length===2""",
+                           timeout=3500)
+    page.wait_for_function("""()=>[...document.querySelectorAll(
+      '#jfPdfMarksListItems .jfEpubMarkThumb img')].every(i=>i.naturalWidth>0)""",
+                           timeout=3500)
+    shown=page.evaluate("""()=>{
+      const unit=document.querySelector('#jfPdfMarksListItems .jfEpubMarkUnit');
+      const members=[...unit.querySelectorAll('.jfEpubMarkPart')];
+      const list=document.getElementById('jfPdfMarksList');
+      const toggle=document.getElementById('jfPdfMarksListToggle');
+      const excerpt=document.getElementById('jfReadExcerpt');
+      return {members:members.map(m=>({
+        type:m.dataset.markType,index:m.dataset.imageIndex||null,
+        label:m.innerText,thumb:!!m.querySelector('.jfEpubMarkThumb img')
+      })),images:members.filter(m=>m.dataset.markType==='epub-image').length,
+      heading:unit.querySelector('.jfEpubMarkUnitHeading')?.textContent,
+      listOpen:!list.hidden,activeInk:getComputedStyle(toggle).backgroundColor,
+      quoteHidden:getComputedStyle(excerpt).display==='none',
+      sourceNoMutation:jfDeskFlow[0].el.querySelectorAll('img').length};
+    }""")
+    assert shown['images']==2 and shown['members'][0]['type']=='epub-image',shown
+    assert shown['members'][1]['type']=='text' and (
+        shown['members'][2]['type']=='epub-image'),shown
+    assert '图文组合' in shown['heading'] and shown['quoteHidden'],shown
+    assert shown['activeInk']=='rgba(105, 94, 74, 0.09)',shown
+    assert shown['sourceNoMutation']==2,shown
+
+    # Each photo has its own navigation target even when grouped with text.
+    page.locator('#jfPdfMarksListItems .jfEpubMarkPart[data-image-index="1"]').click()
+    page.wait_for_function("""()=>document.getElementById('jfPdfMarksList').hidden&&
+      !!document.querySelector('#jfSheetLeft img[data-jf-epub-image-index="1"],'+
+        '#jfSheetRight img[data-jf-epub-image-index="1"]')""",
+                           timeout=3500)
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -1473,7 +1517,7 @@ def main():
                 assert_postcard_selection(page,postcard_book['id'])
                 assert_postcard_pair(page,pair_book['id'])
                 assert not errors, errors
-                print('PASS v7.141 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.142 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

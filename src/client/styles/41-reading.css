@@ -4379,3 +4379,128 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
   }
   .jfReader .jfEpubColorPalette{gap:1px;padding:0 4px}
 }
+
+
+/* v7.142 · EPUB's annotation index shows EACH source member in a combined
+   text-and-image mark. Paper-mode toolbar stays quiet and booklike. */
+.jfReader.jfEpubMode #jfReadExcerpt{display:none!important}
+.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]{
+  color:#48483e;
+  background:rgba(105,94,74,.09);
+  border:1px solid rgba(105,94,74,.16);
+  box-shadow:none;
+  border-radius:8px;
+}
+.jfReader.jfEpubMode #jfPdfMarksListToggle:hover{
+  color:#3f483e;
+  border-color:rgba(105,94,74,.24);
+  background:rgba(105,94,74,.10);
+}
+.jfReader.jfEpubMode #jfPdfMarksListToggle:focus-visible{
+  outline:1px solid rgba(96,85,65,.60);
+  outline-offset:2px;
+}
+.jfReader .jfPdfMarkUnit.jfEpubMarkUnit{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  padding:5px;
+}
+.jfReader .jfEpubMarkUnitHeading{
+  padding:8px 10px 7px;
+  color:#abc4c3;
+  font:500 11px/1.45 system-ui;
+  letter-spacing:.015em;
+}
+.jfReader .jfEpubMarkUnit .jfEpubMarkPart{
+  flex:none;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border-radius:7px;
+  min-width:0;
+}
+.jfReader .jfEpubMarkUnit .jfEpubMarkPart + .jfEpubMarkPart{
+  border-top:1px solid rgba(189,217,216,.075);
+}
+.jfReader .jfEpubMarkUnit .jfEpubMarkPart:hover,
+.jfReader .jfEpubMarkUnit .jfEpubMarkPart:focus-visible{
+  background:rgba(150,178,170,.11);
+  outline:none;
+}
+.jfReader .jfEpubMarkPartContent{
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  min-width:0;
+  text-align:left;
+}
+.jfReader .jfEpubMarkPartKind{
+  color:#9fb9b6;
+  font:500 11px/1.25 system-ui;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.jfReader .jfEpubMarkPartKind::before{
+  content:"";
+  width:7px;
+  height:7px;
+  flex:none;
+  border-radius:50%;
+  background:var(--jf-epub-index-ink,#668b9c);
+}
+.jfReader .jfEpubMarkPart[data-mark-color="amber"]{--jf-epub-index-ink:#947349}
+.jfReader .jfEpubMarkPart[data-mark-color="blue"]{--jf-epub-index-ink:#668b9c}
+.jfReader .jfEpubMarkPart[data-mark-color="mint"]{--jf-epub-index-ink:#698c72}
+.jfReader .jfEpubMarkPart[data-mark-color="rose"]{--jf-epub-index-ink:#ad7c7b}
+.jfReader .jfEpubMarkPart[data-mark-color="violet"]{--jf-epub-index-ink:#8474a1}
+.jfReader .jfEpubMarkPart .jfPdfMarkText{
+  width:auto;
+  max-width:100%;
+  color:#d3e0dd;
+  font:12px/1.55 system-ui;
+  white-space:normal;
+  overflow:hidden;
+  overflow-wrap:anywhere;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+}
+.jfReader .jfEpubMarkPart .jfPdfMarkPage{
+  color:#91ada7;
+  font:10px/1.4 system-ui;
+}
+.jfReader .jfEpubMarkThumb{
+  display:grid;
+  place-items:center;
+  position:relative;
+  flex:0 0 72px;
+  width:72px;
+  height:74px;
+  overflow:hidden;
+  border:1px solid rgba(168,181,165,.23);
+  border-radius:5px;
+  background:#ded8c7;
+  color:#6e745f;
+}
+.jfReader .jfEpubMarkThumbFallback{
+  font:24px/1 system-ui;
+  opacity:.65;
+}
+.jfReader .jfEpubMarkThumb img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+@media(max-width:520px){
+  .jfReader .jfEpubMarkThumb{flex-basis:55px;width:55px;height:62px}
+}

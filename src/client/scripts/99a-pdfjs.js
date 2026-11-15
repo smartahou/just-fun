@@ -539,6 +539,91 @@ async function jfPdfJsOriginalMarkImage(mark){
   }
   throw Error('跨页图片太大，请缩小标记区域');
 }
+// EPUB source-accurate index: a grouped text+image annotation is not
+// reducible to unit[0]. Render EACH constituent part, including the actual
+// picture when its loaded chapter source is available.
+function jfPdfJsEpubSourceImage(mark){
+  const section=jfDeskFlow.find(s=>s.n===mark.chapter)?.el;
+  return section?.querySelector(
+    'img[data-jf-epub-image-index="'+mark.imageIndex+'"]')||null;
+}
+function jfPdfJsEpubPartOffset(mark){
+  if(mark.type==='text')return mark.anchorStart;
+  if(mark.type==='epub-image'){
+    const img=jfPdfJsEpubSourceImage(mark);
+    const at=Number(img?.dataset.jfEpubImageOffset);
+    return img?.hasAttribute('data-jf-epub-image-offset')&&
+      Number.isSafeInteger(at)?at:Number.MAX_SAFE_INTEGER;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+async function jfPdfJsEpubJumpMark(mark){
+  jfPdfMarkMenuClose();jfPdfJsMarksListClose();
+  await jfDeskShowChapter(mark.chapter,0,
+    mark.type==='text'&&Number.isSafeInteger(mark.anchorStart)?
+      mark.anchorStart:null);
+  if(mark.type==='epub-image')window.JFEpubSelection?.jumpImage?.(mark);
+}
+function jfPdfJsEpubListUnit(row,unit){
+  row.classList.add('jfEpubMarkUnit');
+  const ordered=[...unit].sort((a,b)=>
+    a.chapter-b.chapter||jfPdfJsEpubPartOffset(a)-jfPdfJsEpubPartOffset(b));
+  if(unit.length>1){
+    const head=document.createElement('div');
+    head.className='jfEpubMarkUnitHeading';
+    const count=unit.filter(m=>m.type==='epub-image').length;
+    head.textContent='第 '+(unit[0].chapter+1)+' 章 · '+
+      (count?'图文组合':'组合标记')+' · '+unit.length+' 处';
+    row.append(head);
+  }
+  for(const mark of ordered){
+    const item=document.createElement('button');
+    item.type='button';item.className='jfPdfMarkItem jfEpubMarkPart';
+    item.dataset.markType=mark.type;
+    if(mark.type==='epub-image')item.dataset.imageIndex=String(mark.imageIndex);
+    const ink=['blue','mint','amber','rose','violet'].includes(mark.color)?
+      mark.color:'blue';
+    item.dataset.markColor=ink;
+    if(mark.type==='epub-image'){
+      const frame=document.createElement('span');
+      frame.className='jfEpubMarkThumb';
+      const original=jfPdfJsEpubSourceImage(mark);
+      const source=original?.currentSrc||original?.getAttribute('src')||'';
+      const fallback=document.createElement('span');
+      fallback.className='jfEpubMarkThumbFallback';fallback.textContent='▧';
+      frame.append(fallback);
+      if(source){
+        const thumbnail=document.createElement('img');
+        thumbnail.alt='';thumbnail.loading='lazy';thumbnail.decoding='async';
+        thumbnail.src=source;
+        thumbnail.addEventListener('error',()=>thumbnail.remove(),{once:true});
+        frame.append(thumbnail);
+      }
+      item.append(frame);
+    }
+    const content=document.createElement('span');
+    content.className='jfEpubMarkPartContent';
+    const name=document.createElement('span');
+    name.className='jfEpubMarkPartKind';
+    name.textContent=mark.type==='epub-image'?
+      '插图 '+(mark.imageIndex+1):'原文';
+    const detail=document.createElement('span');
+    detail.className='jfPdfMarkText';
+    detail.textContent=mark.type==='epub-image'?
+      (mark.label||'第 '+(mark.imageIndex+1)+' 幅插图'):
+      (mark.text||'文字标记').slice(0,220);
+    content.append(name,detail);
+    if(unit.length===1){
+      const meta=document.createElement('span');meta.className='jfPdfMarkPage';
+      meta.textContent='第 '+(mark.chapter+1)+' 章 · '+
+        (mark.type==='epub-image'?'图片标记':'原文标记');
+      content.append(meta);
+    }
+    item.append(content);
+    item.addEventListener('click',()=>void jfPdfJsEpubJumpMark(mark));
+    row.append(item);
+  }
+}
 function jfPdfJsMarksListRender(){
   const list=document.getElementById('jfPdfMarksListItems');if(!list)return;
   list.replaceChildren();const units=jfPdfJsMarkUnits();
@@ -546,6 +631,11 @@ function jfPdfJsMarksListRender(){
   for(const unit of units){
     const mark=unit[0],last=unit[unit.length-1],isPdf=!!jfDeskOutline?.nativePdf;
     const row=document.createElement('div');row.className='jfPdfMarkUnit';
+    if(!isPdf){
+      jfPdfJsEpubListUnit(row,unit);
+      list.append(row);
+      continue;
+    }
     const button=document.createElement('button');button.type='button';button.className='jfPdfMarkItem';
     if(unit.every(m=>m.type==='area'&&Array.isArray(m.area))&&isPdf){
       const previews=document.createElement('div');previews.className='jfPdfMarkUnitPreviews';

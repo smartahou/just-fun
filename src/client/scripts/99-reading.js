@@ -497,6 +497,9 @@ async function jfDeskOpenReader(bookId,chapter){
       view.style.setProperty('--jf-read-family',jfReadFamilyMap[jfDeskPrefs.family]||jfReadFamilyMap.serif);
     }
     jfReader.classList.toggle('jfPdfMode',!!outline.nativePdf);
+    // EPUB's in-selection toolbar already provides Add to Notes.
+    // Do not expose an inert duplicate quote glyph beside the mark index.
+    jfReader.classList.toggle('jfEpubMode',outline.format==='EPUB');
     if(outline.nativePdf){
       jfReadText.hidden=true;
       const saved=jfDeskWorkspace.progress[bookId];
@@ -1084,7 +1087,7 @@ async function jfDeskCloseReader(){
   jfDeskSyncImmersive(false);
   document.getElementById('jfReadTypographyPanel').hidden=true;
   document.getElementById('jfReadTypographyToggle').setAttribute('aria-expanded','false');
-  jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
+  jfReadVisualText='';document.getElementById('jfReadExcerpt').disabled=false;jfDeskPdfClear();++jfDeskEpoch;jfReader.hidden=true;jfReader.classList.remove('jfPdfMode','jfEpubMode');jfDeskBook=null;jfDeskOutline=null;jfDeskPdfInfo=null;
   document.getElementById('jfPdfPages').hidden=true;
   document.getElementById('jfReadPdf').removeAttribute('src');
   if(document.body.classList.contains('jfNotesMode'))jfDeskOpenNotes();
