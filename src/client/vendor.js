@@ -3,6 +3,7 @@
 // before the application scripts run. The legacy manifest concatenation stays
 // untouched so existing shared-scope modules keep their initialization order.
 import MarkdownIt from 'markdown-it';
+import Hls from 'hls.js';
 
 const md = new MarkdownIt({
   html: false,      // never trust raw HTML in notes (same policy as the legacy renderer)
@@ -50,3 +51,4 @@ md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
 
 window.JF = window.JF || {};
 window.JF.markdown = md;
+window.JF.Hls = Hls;
