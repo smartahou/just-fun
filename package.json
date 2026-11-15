@@ -1,6 +1,6 @@
 {
   "name": "just-fun",
-  "version": "7.144.0",
+  "version": "7.144.1",
   "private": true,
   "description": "Just Fun — local-first multimedia, reading, and notes workspace (human-led, AI-assisted)",
   "devDependencies": {
@@ -31,7 +31,8 @@
     "test:reader-rapid-turn": "node tests/reader-rapid-turn-v7121.js",
     "test:reader-paginator-measure": "node tests/reader-paginator-measure-v7123.js",
     "test:reader-faces": "node tests/reader-prepared-faces-v7122.js",
-    "test:hls": "node tests/hls-local-v7144.js"
+    "test:hls": "node tests/hls-local-v7144.js",
+    "test:deploy-deps": "node tests/deploy-deps-v7145.js"
   },
   "license": "MIT",
   "dependencies": {
