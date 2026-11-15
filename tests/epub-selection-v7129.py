@@ -1107,6 +1107,9 @@ def assert_postcard_pair(page,book_id):
     page.wait_for_function("""()=>[...document.querySelectorAll(
       '#jfPdfMarksListItems .jfEpubMarkThumb img')].every(i=>i.naturalWidth>0)""",
                            timeout=3500)
+    # The paper toolbar can animate its focus state; assert after the
+    # visual transition has settled, not in the same paint as the click.
+    page.wait_for_timeout(300)
     shown=page.evaluate("""()=>{
       const unit=document.querySelector('#jfPdfMarksListItems .jfEpubMarkUnit');
       const members=[...unit.querySelectorAll('.jfEpubMarkPart')];
@@ -1123,6 +1126,10 @@ def assert_postcard_pair(page,book_id):
       inlinePriority:toggle.style.getPropertyPriority('background-color'),
       toggleExpanded:toggle.getAttribute('aria-expanded'),
       toggleHidden:toggle.hidden,toggleDisplay:getComputedStyle(toggle).display,
+      transition:getComputedStyle(toggle).transitionProperty,
+      duration:getComputedStyle(toggle).transitionDuration,
+      animation:getComputedStyle(toggle).animationName,
+      activeColor:getComputedStyle(toggle).color,
       matches:toggle.matches('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]'),
       readerClass:toggle.closest('.jfReader')?.className,
       quoteHidden:getComputedStyle(excerpt).display==='none',
