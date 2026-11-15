@@ -464,8 +464,55 @@ async function jfHlsStreamManifest(req,res,item,relative,file){
     else res.end();
   }
 }
+
+function jfHlsTsVirtualId(item){
+  return crypto.createHash('sha256').update('jf-ts-stream:'+item.key).digest('hex').slice(0,32);
+}
+function jfHlsTsManifest(item){
+  const file=managedPath(item),size=fs.lstatSync(file).size;
+  // HLS byteranges are aligned to complete 188-byte MPEG-TS packets.
+  // Do not load a multi-hundred-megabyte transport stream into memory.
+  const chunkSize=188*16384;
+  const number=Math.ceil(size/chunkSize);
+  if(number>200000)throw Error('TS 媒体分段数过多');
+  const seconds=Number(item.duration)>0?item.duration/number:6;
+  const target=Math.max(1,Math.ceil(seconds));
+  const url='/api/hls/'+item.key+'/'+jfHlsTsVirtualId(item)+'.ts';
+  const lines=['#EXTM3U','#EXT-X-VERSION:4',
+    '#EXT-X-PLAYLIST-TYPE:VOD','#EXT-X-TARGETDURATION:'+target,
+    '#EXT-X-MEDIA-SEQUENCE:0'];
+  for(let i=0;i<number;i++){
+    const start=i*chunkSize,length=Math.min(chunkSize,size-start);
+    lines.push('#EXTINF:'+seconds.toFixed(6)+',',
+      '#EXT-X-BYTERANGE:'+length+'@'+start,url);
+  }
+  lines.push('#EXT-X-ENDLIST');
+  return lines.join('\n')+'\n';
+}
+
 function jfHlsServe(req,res,item,id='',requestedExt=''){
   if(!jfHlsIsPlaylist(item)||!['GET','HEAD'].includes(req.method)){res.writeHead(404);res.end();return;}
+  // A .m3u8 extension is not proof that the payload is an HLS manifest.
+  // Already-indexed MP4/WebM videos can use native HTML5 Range playback.
+  if(jfHlsDirectVideo(item)){
+    if(id){res.writeHead(404);res.end();return;}
+    return streamMedia(req,res,{mime:jfHlsDetectedMime(item)},managedPath(item));
+  }
+  // A single MPEG-TS payload can be wrapped as a byte-ranged virtual HLS
+  // playlist; the underlying anonymous file is never copied or converted.
+  if(jfHlsBinaryTs(item)){
+    if(id){
+      if(id!==jfHlsTsVirtualId(item)||(requestedExt&&requestedExt!=='.ts')){
+        res.writeHead(404);res.end();return;
+      }
+      return streamMedia(req,res,{mime:'video/mp2t'},managedPath(item));
+    }
+    const body=jfHlsTsManifest(item);
+    res.writeHead(200,{'Content-Type':'application/vnd.apple.mpegurl; charset=utf-8',
+      'Content-Length':Buffer.byteLength(body),'Cache-Control':'no-store'});
+    res.end(req.method==='HEAD'?'':body);
+    return;
+  }
   if(!jfHlsReady(item)){
     res.writeHead(409,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
     res.end('HLS 清单未就绪：'+String(item.hlsError||'资源尚未完成索引').slice(0,240));
