@@ -9,7 +9,9 @@ const JF_HLS_MAX_PLAYLIST=5*1024*1024;
 function jfHlsIsPlaylist(item){return String(item?.originalExt||'').toLowerCase()==='.m3u8';}
 function jfHlsRoot(item){return path.dirname(managedPath(item));}
 function jfHlsRelative(value,parent=''){
-  const raw=String(value||'').trim();
+  let raw=String(value||'').trim();
+  // HLS URIs are URL-encoded even when they refer to local Unicode filenames.
+  try{raw=decodeURIComponent(raw);}catch{throw Error('HLS 资源 URI 编码无效');}
   if(!raw||raw.includes('\\')||/[?#]/.test(raw)||raw.startsWith('/')||
      /^[a-z][a-z0-9+.-]*:/i.test(raw)||raw.startsWith('//')||
      /[\x00-\x1f]/.test(raw))throw Error('HLS 只允许本地相对资源路径');
