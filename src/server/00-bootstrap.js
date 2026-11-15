@@ -15,7 +15,7 @@ const { spawn, spawnSync, execFileSync } = require('child_process');
 
 const VIDEO_EXTENSIONS = new Set([
   '.mp4', '.mkv', '.avi', '.wmv', '.mov', '.m4v',
-  '.flv', '.rmvb', '.ts', '.webm', '.mpg', '.mpeg'
+  '.flv', '.rmvb', '.ts', '.webm', '.mpg', '.mpeg', '.m3u8'
 ]);
 
 const IMAGE_EXTENSIONS = new Set([
@@ -65,6 +65,7 @@ const MIME_BY_EXT = {
   '.wmv': 'video/x-ms-wmv',
   '.flv': 'video/x-flv',
   '.ts': 'video/mp2t',
+  '.m3u8': 'application/vnd.apple.mpegurl',
   '.mpeg': 'video/mpeg',
   '.mpg': 'video/mpeg',
   '.rmvb': 'application/vnd.rn-realmedia-vbr',
