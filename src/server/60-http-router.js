@@ -1426,6 +1426,7 @@ function startServer() {
   server.listen(nextPort,HOST,()=>{
     const address=server.address();
     const actualPort=address && address.port;
+    jfHlsServerPort=actualPort;
     const url=`http://127.0.0.1:${actualPort}/`;
     console.log(`Just Fun 已启动：${url}`);
     if(JF_LAN_ENABLED){
