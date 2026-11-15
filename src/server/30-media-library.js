@@ -1292,6 +1292,7 @@ async function scanAll(
       ingestNewFiles();
       ingestDataTree();
       ingestSourceTree();
+      jfHlsScan();
       reconcileCatalog();
       syncFileModificationTimes();
 
