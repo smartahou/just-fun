@@ -58,7 +58,11 @@ function jfHlsSniff(file){
   const ascii=b.toString('utf8',0,Math.min(b.length,64));
   if(ascii.replace(/^\uFEFF/,'').startsWith('#EXTM3U'))return 'playlist';
   if(b.length>=12&&b.toString('ascii',4,8)==='ftyp')return 'mp4';
-  if(b.length>=4&&b[0]===0x1a&&b[1]===0x45&&b[2]===0xdf&&b[3]===0xa3)return 'webm';
+  if(b.length>=4&&b[0]===0x1a&&b[1]===0x45&&b[2]===0xdf&&b[3]===0xa3){
+    const doc=b.toString('latin1');
+    if(doc.includes('webm'))return 'webm';
+    return doc.includes('matroska')?'matroska':'ebml';
+  }
   if(b.length>=4&&b.toString('ascii',0,3)==='FLV')return 'flv';
   if(b.length>=12&&b.toString('ascii',0,4)==='RIFF'&&
     b.toString('ascii',8,12)==='AVI ')return 'avi';
@@ -230,6 +234,8 @@ async function jfHlsScanOne(item){
       'leading-space':'HLS 标头前存在不符合规范的空白字符',
       flv:'文件实际为 FLV 视频而非 HLS 清单',
       avi:'文件实际为 AVI 视频而非 HLS 清单',
+      matroska:'文件实际为 MKV 视频容器，不能当作 HLS 清单解析',
+      ebml:'文件实际为 EBML 视频容器，而非 HLS 文本清单',
       'mpegts-variant':'文件实际为非标准包长 MPEG-TS 视频，而非 HLS 清单',
       empty:'文件为空',unknown:'文件不是标准 HLS 清单，且未识别为可直接播放的视频容器'};
     item.hlsError=labels[detected]||'文件内容与 .m3u8 扩展名不符';
