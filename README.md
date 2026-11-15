@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.144.0 / Current version: v7.144.0** · 持续迭代 / Actively evolving
+**当前版本：v7.144.1 / Current version: v7.144.1** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.144.1 · 修复升级时缺失 HLS.js 导致的构建失败**：修复正式分支更新器仅检查旧安装中的 PDF.js、没有按候选版本锁文件检查新依赖的问题。旧版更新器在验证新候选代码时，会通过构建器自动在隔离子目录安装精确版本的 HLS.js（不改动原 node_modules）；更新成功后新版更新器按候选 package-lock.json 核对全部直接依赖，使用 npm ci 准备可复用的忽略版本化缓存，避免在 Windows worktree junction 上运行 npm。未改变用户媒体、Hash 文件或已验证的运行版；依赖下载失败保留已有运行程序。新增无网络部署契约检查 `node tests/deploy-deps-v7145.js`。
 
 **v7.144 · 本地 HLS (.m3u8) 视频与全库 Hash**：将 .m3u8 作为视频纳入根目录、普通子目录与 data/ 的媒体扫描；原名模式保留清单及分片原名，Hash 模式对清单及清单引用的本地 .ts/.m4s/.mp4/密钥等普通文件匿名重命名，并在索引中持久化文件映射。播放清单与分片通过带匿名 ID 的本地接口提供，不修改原始清单文本；关联 .ts 不再作为重复视频卡片出现。离线构建捆绑 hls.js@1.6.15，用于 Windows Chrome/Edge 等非原生 HLS 浏览器，同时保留 Safari 原生回退；主 Feed、原生全屏切换、悬停预览、多开小窗同步适配。仅支持清单内部的**本地相对路径**，不代理远端 HTTP HLS、外部直播地址或 DRM 内容；目前不允许从应用内部直接移动或删除整个 HLS 文件包，以防分片孤立及 Hash 映射丢失，仍可在文件管理器中对原名包进行整体管理。增加独立临时目录 HLS 索引、引用重写、匿名命名、崩溃恢复与路径安全测试；Windows/Chromium 实机解码验收仍需执行。
 
