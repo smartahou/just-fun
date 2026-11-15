@@ -5,12 +5,33 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
 const http=require('node:http'),vm=require('node:vm');
-const {spawnSync}=require('node:child_process');
+const {spawnSync,spawn}=require('node:child_process');
 const moduleSource=fs.readFileSync(
   path.join(__dirname,'../src/server/35-hls-playlists.js'),'utf8');
 const exec=(program,args,timeout=30000)=>spawnSync(program,args,{
   encoding:'utf8',timeout,windowsHide:true,maxBuffer:4*1024*1024
 });
+function execAsync(program,args,timeout=30000){
+  return new Promise(resolve=>{
+    let stdout='',stderr='',settled=false;
+    const done=status=>{
+      if(settled)return;
+      settled=true;clearTimeout(timer);resolve({status,stdout,stderr});
+    };
+    const child=spawn(program,args,{windowsHide:true,stdio:['ignore','pipe','pipe']});
+    const timer=setTimeout(()=>{child.kill('SIGKILL');done(-1);},timeout);
+    child.stdout.on('data',buf=>{
+      stdout+=buf.toString();
+      if(stdout.length>4*1024*1024)child.kill('SIGKILL');
+    });
+    child.stderr.on('data',buf=>{
+      stderr+=buf.toString();
+      if(stderr.length>4*1024*1024)child.kill('SIGKILL');
+    });
+    child.on('error',error=>{stderr+=' '+error.message;done(-1);});
+    child.on('close',code=>done(code));
+  });
+}
 if(exec('ffmpeg',['-version']).status!==0||exec('ffprobe',['-version']).status!==0){
   console.log('SKIP: FFmpeg and FFprobe are needed for HLS decode/cover smoke test');
   process.exit(0);
@@ -85,14 +106,16 @@ async function exercise(hash){
     assert.equal(fetched.status,200);
     assert(manifest.includes('.ts'),'HLS HTTP segment URL has type suffix');
     assert(!manifest.includes('sample000.ts'),'physical source name not leaked');
-    const decoded=exec('ffprobe',['-v','error','-print_format','json',
+    // A synchronous child would deadlock: FFprobe awaits HTTP from THIS
+    // Node process. Keep the event loop serving the HLS fixtures.
+    const decoded=await execAsync('ffprobe',['-v','error','-print_format','json',
       '-show_format','-show_streams',url],30000);
     assert.equal(decoded.status,0,'ffprobe: '+decoded.stderr);
     const info=JSON.parse(decoded.stdout);
     assert(Number(info.format?.duration)>0,'HLS duration available');
     assert(info.streams?.some(stream=>stream.codec_type==='video'&&stream.width===320));
     const cover=path.join(temp,'cover.jpg');
-    const thumbnail=exec('ffmpeg',['-hide_banner','-loglevel','error',
+    const thumbnail=await execAsync('ffmpeg',['-hide_banner','-loglevel','error',
       '-nostdin','-y','-ss','0.5','-i',url,'-frames:v','1',
       '-vf','scale=720:-2','-q:v','4',cover],30000);
     assert.equal(thumbnail.status,0,'ffmpeg cover: '+thumbnail.stderr);
