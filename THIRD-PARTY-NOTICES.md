@@ -4,6 +4,10 @@
 
 本项目构建时使用锁定的 **pdfjs-dist@6.4.299**。正式离线依赖包的 package.json 声明 **Apache License 2.0**。Git 仓库不提交 node_modules/，但构建后的运行 JS 会嵌入 PDF.js 模块与相关资源。未来发行打包产物时，需要核查并保留适用的许可证、版权声明及 NOTICE 文件；以上游软件包自带文本为准。
 
+## HLS.js
+
+浏览器端离线播放使用 **hls.js@1.6.15**，上游采用 **Apache License 2.0**。构建后的单文件包含 HLS.js 代码，不依赖外部 CDN。发行或再分发时需保留适用的许可证及版权声明，遵循上游软件包自带文本。
+
 ## FFmpeg / FFprobe
 
 程序调用用户电脑已安装的 FFmpeg/FFprobe，不随此源码仓库分发其可执行文件。若未来制作附带 FFmpeg 的发行版，需根据实际编译选项检查 LGPL/GPL 和分发义务。
@@ -16,4 +20,4 @@
 
 ## English
 
-The build pins **Mozilla PDF.js (pdfjs-dist@6.4.299)**, whose package metadata declares **Apache-2.0**. The source repository excludes node_modules/, but built distributions embed PDF.js and must carry any required license/notice materials. FFmpeg/FFprobe are host-provided; bundling their binaries would require an independent LGPL/GPL compliance review. The logo was previously supplied by the project owner, and assets/favicon.ico was made from it; no Element UI or other third-party icon library origin has been identified. The owner should still confirm underlying artwork rights; non-original fonts and media require independent review.
+The build pins **hls.js@1.6.15 (Apache-2.0)** for offline HLS playback and **Mozilla PDF.js (pdfjs-dist@6.4.299)**, whose package metadata declares **Apache-2.0**. The source repository excludes node_modules/, but built distributions embed PDF.js and must carry any required license/notice materials. FFmpeg/FFprobe are host-provided; bundling their binaries would require an independent LGPL/GPL compliance review. The logo was previously supplied by the project owner, and assets/favicon.ico was made from it; no Element UI or other third-party icon library origin has been identified. The owner should still confirm underlying artwork rights; non-original fonts and media require independent review.
