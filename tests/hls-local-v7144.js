@@ -50,7 +50,8 @@ for(const hash of [false,true]){
     f.ctx.jfHlsScan();
     assert.equal(f.main.hlsError,undefined,'valid playlists scanned');
     assert.equal(f.main.hlsAssets.length,4,'child playlist, segment, init and key');
-    assert(f.ctx.jfHlsChildKeys.has(f.segment.key),'TS segment suppressed as independent video');
+    assert(vm.runInContext('jfHlsChildKeys',f.ctx).has(f.segment.key),
+      'TS segment suppressed as independent video');
     for(const asset of f.main.hlsAssets){
       assert.equal(asset.state,'ready');
       const actual=path.join(f.root,...asset.stored.split('/'));
