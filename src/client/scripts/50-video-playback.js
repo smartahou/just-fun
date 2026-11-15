@@ -5,7 +5,8 @@
 const jfHlsPlayers=new WeakMap();
 function jfVideoIsHls(item,url){
   const resolved=item||allItems.find(x=>x.mediaUrl===url);
-  return String(resolved?.originalExt||'').toLowerCase()==='.m3u8';
+  return String(resolved?.originalExt||'').toLowerCase()==='.m3u8' &&
+    !resolved?.hlsDirectMime;
 }
 function jfReleaseVideoSource(video){
   const record=jfHlsPlayers.get(video);
