@@ -30,7 +30,8 @@ function jfHlsRuntime(item){
   return runtime;
 }
 function jfHlsReady(item){
-  return jfHlsIsPlaylist(item)&&!item.hlsError&&jfHlsRuntime(item).allReady;
+  return jfHlsIsPlaylist(item)&&!item.hlsError&&
+    (jfHlsDirectVideo(item)||jfHlsBinaryTs(item)||jfHlsRuntime(item).allReady);
 }
 let jfHlsIndexedOriginals=new Map();
 let jfHlsIndexedPhysical=new Set();
@@ -44,6 +45,41 @@ const JF_HLS_MAX_ASSETS=200000;
 const JF_HLS_MAX_PLAYLIST=2*1024*1024*1024;
 const JF_HLS_MAX_LINE=1024*1024;
 function jfHlsIsPlaylist(item){return String(item?.originalExt||'').toLowerCase()==='.m3u8';}
+
+function jfHlsSniff(file){
+  // Content signatures take precedence over a filename extension. Only read
+  // a few KiB; never parse a 300 MiB binary file as an HLS text manifest.
+  const fd=fs.openSync(file,'r');
+  const head=Buffer.alloc(1024);
+  let length=0;
+  try{length=fs.readSync(fd,head,0,head.length,0);}
+  finally{fs.closeSync(fd);}
+  const b=head.subarray(0,length);
+  const ascii=b.toString('utf8',0,Math.min(b.length,64));
+  if(ascii.replace(/^\uFEFF/,'').startsWith('#EXTM3U'))return 'playlist';
+  if(b.length>=12&&b.toString('ascii',4,8)==='ftyp')return 'mp4';
+  if(b.length>=4&&b[0]===0x1a&&b[1]===0x45&&b[2]===0xdf&&b[3]===0xa3)return 'webm';
+  if(b.length>=4&&b.toString('ascii',0,3)==='FLV')return 'flv';
+  if(b.length>=12&&b.toString('ascii',0,4)==='RIFF'&&
+    b.toString('ascii',8,12)==='AVI ')return 'avi';
+  for(const stride of [188,192,204]){
+    const offset=stride===192?4:0;
+    if(b.length>offset+stride*3&&b[offset]===0x47&&
+      b[offset+stride]===0x47&&b[offset+stride*2]===0x47)
+      return stride===188?'mpegts':'mpegts-variant';
+  }
+  if(b.length>=2&&((b[0]===0xff&&b[1]===0xfe)||
+    (b[0]===0xfe&&b[1]===0xff)))return 'utf16';
+  if(ascii.trimStart().startsWith('#EXTM3U'))return 'leading-space';
+  if(b.length===0)return 'empty';
+  return 'unknown';
+}
+function jfHlsDetectedMime(item){
+  return ({mp4:'video/mp4',webm:'video/webm'})[item.hlsDetectedFormat]||'';
+}
+function jfHlsBinaryTs(item){return item?.hlsDetectedFormat==='mpegts';}
+function jfHlsDirectVideo(item){return Boolean(jfHlsDetectedMime(item));}
+
 function jfHlsRoot(item){return path.dirname(managedPath(item));}
 function jfHlsRelative(value,parent=''){
   let raw=String(value||'').trim();
@@ -174,6 +210,37 @@ function jfHlsExistingAsset(item,relative){
   try{return jfHlsContained(base,original);}catch{return null;}
 }
 async function jfHlsScanOne(item){
+  // Identify the actual contents before treating the file as a text playlist.
+  // Mislabelled MP4/WebM and MPEG-TS must not cause ever-increasing size caps.
+  let detected;
+  try{detected=jfHlsSniff(managedPath(item));}
+  catch(error){item.hlsError='无法读取媒体文件：'+error.message;return false;}
+  const prior=item.hlsDetectedFormat||'';
+  if(detected!=='playlist'){
+    item.hlsDetectedFormat=detected;
+    if(detected==='mp4'||detected==='webm'||detected==='mpegts'){
+      delete item.hlsError;
+      if(item.hlsAssets?.length){item.hlsAssets=[];jfHlsRuntimeCache.delete(item);}
+      if(item.hlsScanFingerprint){delete item.hlsScanFingerprint;}
+      if(item.hlsNestedPlaylists){delete item.hlsNestedPlaylists;}
+      if(prior!==detected)saveCatalog();
+      return false;
+    }
+    const labels={utf16:'文件采用 UTF-16 编码，不符合 HLS 所需的 UTF-8 文本格式',
+      'leading-space':'HLS 标头前存在不符合规范的空白字符',
+      flv:'文件实际为 FLV 视频而非 HLS 清单',
+      avi:'文件实际为 AVI 视频而非 HLS 清单',
+      'mpegts-variant':'文件实际为非标准包长 MPEG-TS 视频，而非 HLS 清单',
+      empty:'文件为空',unknown:'文件不是标准 HLS 清单，且未识别为可直接播放的视频容器'};
+    item.hlsError=labels[detected]||'文件内容与 .m3u8 扩展名不符';
+    if(prior!==detected)saveCatalog();
+    return false;
+  }
+  if(prior!=='playlist'){
+    item.hlsDetectedFormat='playlist';
+    delete item.hlsScanFingerprint;
+    if(prior)saveCatalog();
+  }
   // The library checks for changes every 15 seconds. Re-reading a 200 MiB
   // playlist on each tick would monopolize HDD/USB drives. Only rescan when
   // the root or any indexed nested playlist actually changed, or on errors.
