@@ -1407,6 +1407,13 @@ function startServer() {
       }
     );
 
+  // Keep FFmpeg HLS capture on the actual active port, including 3865→3866
+  // retries when the preferred address is already occupied.
+  server.on('listening',()=>{
+    jfHlsServerPort=server.address()?.port||0;
+  });
+  server.on('close',()=>{jfHlsServerPort=0;});
+
   // Retry strictly on EADDRINUSE. --lan uses only verified local subnets.
   // After 20 consecutive conflicts let the OS allocate a free ephemeral port.
   let nextPort=PORT;
