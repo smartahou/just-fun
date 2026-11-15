@@ -52,10 +52,11 @@ for(const hash of [false,true]){
       id:String(i).padStart(32,'0'),original:'part'+i+'.ts',
       stored:'part'+i,state:'ready'}))};
     const access=vm.runInContext('jfHlsRuntime',ctx);
-    assert.equal(access(huge).byId.size,60000);
-    assert.strictEqual(access(huge),access(huge),'index reuse');
+    const cachedIndex=access(huge);
+    assert.equal(cachedIndex.byId.size,60000);
+    assert.strictEqual(access(huge),cachedIndex,'index reuse');
     huge.hlsAssets=[...huge.hlsAssets];
-    assert.notStrictEqual(access(huge),runtime,'new data array gets a fresh index');
+    assert.notStrictEqual(access(huge),cachedIndex,'new data array gets a fresh index');
     console.log('PASS '+(hash?'Hash':'original')+' HLS >5 MiB scan/serve/cache');
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 }
