@@ -56,31 +56,53 @@ function ensureRepo({requireClean=true}={}) {
   if(requireClean&&git('status','--porcelain','--untracked-files=no'))throw Error('存在未提交的源码修改；更新已停止，以防覆盖本地工作');
   if(!git('remote'))throw Error('没有配置 GitHub origin 远程仓库');
 }
-function vendorOk() {
+// Dependencies must match the TARGET worktree, not the still-old main branch.
+// Update builds a detached commit before fast-forwarding; checking only PDF.js
+// missed the new HLS.js dependency and left the old runtime as the fallback.
+function vendorOk(nodeModules,stage) {
   try {
-    const base=path.join(root,'node_modules','pdfjs-dist');
-    const pkg=JSON.parse(fs.readFileSync(path.join(base,'package.json'),'utf8'));
-    return pkg.version===requiredPdfJs && ['build/pdf.min.mjs','build/pdf.worker.min.mjs','cmaps','standard_fonts'].every(x=>fs.existsSync(path.join(base,x))) && hash(path.join(base,'build/pdf.min.mjs'))===requiredPdfModuleSha;
-  } catch {return false;}
+    const pkg=JSON.parse(fs.readFileSync(path.join(stage,'package.json'),'utf8'));
+    const lock=JSON.parse(fs.readFileSync(path.join(stage,'package-lock.json'),'utf8'));
+    for(const [name,spec] of Object.entries({...pkg.dependencies,...pkg.devDependencies})){
+      const wanted=lock.packages?.['node_modules/'+name]?.version;
+      if(!wanted||typeof spec!=='string')return false;
+      const installed=JSON.parse(fs.readFileSync(path.join(nodeModules,name,'package.json'),'utf8'));
+      if(installed.version!==wanted)return false;
+    }
+    const pdf=path.join(nodeModules,'pdfjs-dist');
+    return ['build/pdf.min.mjs','build/pdf.worker.min.mjs','cmaps','standard_fonts']
+      .every(x=>fs.existsSync(path.join(pdf,x))) &&
+      hash(path.join(pdf,'build/pdf.min.mjs'))===requiredPdfModuleSha;
+  }catch{return false;}
 }
 function npmInstallCommand(platform=process.platform,comspec=process.env.ComSpec) {
-  // Install from package.json/lockfile only. Installing a single package name with
-  // --no-save makes npm recompute the tree and drop devDependencies (esbuild, the
-  // vendor bundler) — that silently broke the next build twice.
-  const args=['install','--no-audit','--no-fund'];
+  const args=['ci','--no-audit','--no-fund','--prefer-offline'];
   if(platform==='win32') {
-    // Node spawnSync cannot execute .cmd/.bat directly on Windows (EINVAL).
-    // The command is deliberately fixed: never interpolate media paths or user input.
+    // Never spawn npm.cmd directly on Windows (EINVAL).
     return {program:comspec||'cmd.exe',args:['/d','/s','/c','npm.cmd '+args.join(' ')]};
   }
   return {program:'npm',args};
 }
-function ensureVendor() {
-  if(vendorOk())return;
-  console.log('首次准备锁定版本 PDF.js 6.4.299（需要 npm 网络或本机缓存）…');
+function ensureVendor(stage) {
+  // Reuse the user's existing node_modules only when EVERY direct dependency
+  // matches the candidate lockfile, including the HLS player and esbuild.
+  const currentModules=path.join(root,'node_modules');
+  if(vendorOk(currentModules,stage))return currentModules;
+  // Use a persistent but ignored cache keyed by the candidate lockfile;
+  // do not overwrite the user's existing node_modules or touch media files.
+  const lockKey=hash(path.join(stage,'package-lock.json')).slice(0,24);
+  const cache=path.join(app,'vendor-cache',lockKey);
+  const cachedModules=path.join(cache,'node_modules');
+  if(vendorOk(cachedModules,stage))return cachedModules;
+  fs.mkdirSync(cache,{recursive:true});
+  fs.copyFileSync(path.join(stage,'package.json'),path.join(cache,'package.json'));
+  fs.copyFileSync(path.join(stage,'package-lock.json'),path.join(cache,'package-lock.json'));
+  console.log('正在安装候选版本所需依赖（首次需要 npm 网络或缓存）…');
   const command=npmInstallCommand();
-  run(command.program,command.args,{timeout:240000,stdio:'inherit'});
-  if(!vendorOk())throw Error('PDF.js 依赖未安装完整，保留原运行版本。');
+  run(command.program,command.args,{cwd:cache,timeout:240000,stdio:'inherit'});
+  if(!vendorOk(cachedModules,stage))
+    throw Error('候选版本依赖不完整，保留原运行版本。');
+  return cachedModules;
 }
 function validateCandidate(stage,commit) {
   const pkg=JSON.parse(fs.readFileSync(path.join(stage,'package.json'),'utf8'));
@@ -120,13 +142,14 @@ function update({fetch=true,fetchTimeout=180000}={}) {
   if(existing?.commit===target && isValid(live,existing)){
     console.log(`已是最新运行版 ${existing.version} (${target.slice(0,8)})`);return existing;
   }
-  ensureVendor();
   let stage=null,attached=false;
   try{
     stage=fs.mkdtempSync(path.join(os.tmpdir(),'jf-deploy-'));
     git('worktree','add','--detach',stage,target);attached=true;
-    // A junction on Windows; a directory symlink on POSIX. No vendor files are copied to Git.
-    fs.symlinkSync(path.join(root,'node_modules'),path.join(stage,'node_modules'),process.platform==='win32'?'junction':'dir');
+    // Inspect the candidate package lock, not the checked-out old manifest.
+    // The installed module directory is never mutated through this junction.
+    const modules=ensureVendor(stage);
+    fs.symlinkSync(modules,path.join(stage,'node_modules'),process.platform==='win32'?'junction':'dir');
     console.log(`构建并验证 ${target.slice(0,8)} …`);
     const candidate=validateCandidate(stage,target);
     if(fetch && before!==target) {
@@ -137,9 +160,8 @@ function update({fetch=true,fetchTimeout=180000}={}) {
     console.log(`更新成功：Just Fun ${candidate.version} / ${candidate.sha256.slice(0,16)}…`);
     return candidate;
   }finally{
-    // Detach the node_modules junction FIRST. Both 'git worktree remove' and
-    // fs.rmSync recurse through a junction on Windows and would otherwise erase
-    // the real node_modules content, leaving the next build without esbuild.
+    // Detach the node_modules junction FIRST: worktree cleanup must not
+    // recursively delete either the user's modules or our verified cache.
     if(stage){
       const link=path.join(stage,'node_modules');
       try{ if(fs.existsSync(link)) fs.rmdirSync(link); }
