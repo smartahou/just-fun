@@ -1,5 +1,6 @@
 # Just Fun: generated artifacts and private user data
 node_modules/
+.jf-build-deps/
 dist/
 *.log
 *.tmp
