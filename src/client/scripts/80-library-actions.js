@@ -1042,6 +1042,7 @@ function jfStopHoverPreview(){
   clearTimeout(jfHoverTimer);jfHoverTimer=null;jfHoverToken++;
   if(jfHoverItem)jfHoverItem.classList.remove('previewLoading');
   if(jfHoverVideo){
+    jfReleaseVideoSource(jfHoverVideo);
     try{jfHoverVideo.pause();jfHoverVideo.removeAttribute('src');jfHoverVideo.load();}catch{}
     jfHoverVideo.remove();
   }
@@ -1095,8 +1096,7 @@ grid.addEventListener('pointerover',event=>{
     },{once:true});
     video.addEventListener('error',()=>{if(valid())jfStopHoverPreview();},{once:true});
     cover.insertBefore(video,cover.querySelector('.badges'));
-    video.src=item.mediaUrl;
-    video.load();
+    jfSetVideoSource(video,item.mediaUrl,item);
   },800);
 });
 grid.addEventListener('pointerout',event=>{
