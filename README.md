@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.144.1 / Current version: v7.144.1** · 持续迭代 / Actively evolving
+**当前版本：v7.145.0 / Current version: v7.145.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.145 · 修复 HLS 无封面及无法播放**：修复上一版错误地将 .m3u8 从视频元数据、封面扫描中排除，现通过实际监听端口的本地 HTTP 清单让 FFprobe 获取时长/分辨率，并让 FFmpeg 截取真实首帧；HLS 清单不支持目标时间 seek 时自动尝试起始画面。修复 HLS 分片虚拟 URL 全部无扩展名的问题：FFmpeg HLS 解复用器会默认拒绝没有媒体类型后缀的分片；现在仅 URL 使用匿名资源 ID + 经校验的 .ts/.m4s/.m3u8 等类型后缀，磁盘上的 Hash 文件仍然无扩展名，资源原名也不会暴露。索引缺少本地分片或浏览器无法解码时，播放界面给出明确错误而非静默失败。增加使用临时合成 HLS 的 HTTP/FFprobe/FFmpeg 真正解码及 JPEG 封面回归测试（Hash 开/关）；运行 `npm run test:hls`。仍限本地相对资源，远端流、DRM 不支持；没有 FFmpeg 时无法自动抽取封面。
 
 **v7.144.1 · 修复升级时缺失 HLS.js 导致的构建失败**：修复正式分支更新器仅检查旧安装中的 PDF.js、没有按候选版本锁文件检查新依赖的问题。旧版更新器在验证新候选代码时，会通过构建器自动在隔离子目录安装精确版本的 HLS.js（不改动原 node_modules）；更新成功后新版更新器按候选 package-lock.json 核对全部直接依赖，使用 npm ci 准备可复用的忽略版本化缓存，避免在 Windows worktree junction 上运行 npm。未改变用户媒体、Hash 文件或已验证的运行版；依赖下载失败保留已有运行程序。新增无网络部署契约检查 `node tests/deploy-deps-v7145.js`。
 
