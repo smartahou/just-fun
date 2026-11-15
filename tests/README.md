@@ -42,3 +42,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 ## v7.145 · HLS 真实播放链路与封面
 
 `npm run test:hls` 先运行无网络的分片索引/Hash/清单 URL 测试，再运行 `tests/hls-ffmpeg-v7146.js`：创建临时的有效 H264 HLS 视频，启动仅测试使用的 loopback HTTP 服务，从匿名分片 URL 使用 FFprobe 解析视频元数据，并用 FFmpeg 产生真正的 JPEG 封面，分别检查 Hash 开/关。系统未安装 FFmpeg/FFprobe 时该后半项会标注 SKIP，不代表通过。实际 Chromium HLS.js 解码需要另行浏览器验收。
+
+## v7.146 · 大型 HLS 清单
+
+`node tests/hls-large-v7146.js` 创建超过旧版 5 MiB 上限的临时 HLS VOD 清单（大量引用同一分片），分别检查原名、Hash 两种模式的扫描、匿名映射、HTTP 清单改写、重复扫描幂等性，以及大容量分片索引缓存；不涉及真实媒体库。全量 HLS 入口 `npm run test:hls` 同时包含原有索引与 FFmpeg 解码测试。此项不等于 Windows 实机播放验收。
