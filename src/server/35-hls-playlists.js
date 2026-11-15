@@ -266,11 +266,21 @@ function jfHlsManifest(item,relative,content){
     const suffix=/^\.[a-z0-9]{1,10}$/i.test(asset.ext||'')?asset.ext:'.bin';
     return '/api/hls/'+item.key+'/'+asset.id+suffix;
   };
-  return String(content).split(/\r?\n/).map(line=>{
-    if(line.startsWith('#'))return line.replace(/\bURI="([^"]+)"/g,(_all,url)=>
-      'URI="'+mapUri(url)+'"');
-    return line.trim()?mapUri(line.trim()):line;
-  }).join('\n');
+  const source=String(content),lines=[];
+  // Avoid split().map() duplicating the largest playlist into two huge arrays.
+  let start=0;
+  while(start<=source.length){
+    const end=source.indexOf('\n',start);
+    let line=source.slice(start,end<0?source.length:end);
+    if(line.endsWith('\r'))line=line.slice(0,-1);
+    if(line.startsWith('#')){
+      lines.push(line.replace(/\bURI="([^"]+)"/g,(_all,url)=>
+        'URI="'+mapUri(url)+'"'));
+    }else lines.push(line.trim()?mapUri(line.trim()):line);
+    if(end<0)break;
+    start=end+1;
+  }
+  return lines.join('\n');
 }
 function jfHlsServe(req,res,item,id='',requestedExt=''){
   if(!jfHlsIsPlaylist(item)||!['GET','HEAD'].includes(req.method)){res.writeHead(404);res.end();return;}
