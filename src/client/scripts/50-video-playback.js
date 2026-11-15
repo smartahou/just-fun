@@ -435,8 +435,6 @@ async function stepNativeFullscreen(
   video.dataset.fullscreenKey =
     next.key;
 
-  video.load();
-
   applyRotationToVideo(
     video,
     next.rotation || 0
