@@ -57,13 +57,16 @@ assert(pdf.includes('function jfPdfJsMarksListSyncToggle(open)')&&
   'EPUB mark toggle uses actual panel-open state, not stale hover/focus CSS');
 assert(pdf.includes('function jfPdfJsEpubListUnit(row,unit)')&&
   pdf.includes("if(!isPdf){\n      jfPdfJsEpubListUnit(row,unit);")&&
-  pdf.includes("for(const mark of ordered){")&&
-  pdf.includes("item.dataset.markType=mark.type")&&
-  pdf.includes("item.dataset.imageIndex=String(mark.imageIndex)")&&
+  pdf.includes("const images=ordered.filter(mark=>mark.type==='epub-image')")&&
+  pdf.includes("const texts=ordered.filter(mark=>mark.type==='text')")&&
+  pdf.includes("button.className='jfPdfMarkItem jfEpubMarkEntry'")&&
   pdf.includes("frame.className='jfEpubMarkThumb'")&&
   pdf.includes("thumbnail.loading='lazy'")&&
-  pdf.includes("item.addEventListener('click',()=>void jfPdfJsEpubJumpMark(mark))"),
-  'EPUB grouped text and image marks render as separate jumpable members with photo thumbnails');
+  pdf.includes("texts.map(mark=>mark.text||'文字标记').join")&&
+  pdf.includes("const target=images.find(mark=>")&&
+  !pdf.includes("item.className='jfPdfMarkItem jfEpubMarkPart'")&&
+  css.includes('.jfReader .jfEpubMarkEntryBody'),
+  'EPUB image+text group is one list card with all pictures, text and per-image jump');
 assert(reader.includes("jfReader.classList.toggle('jfEpubMode',outline.format==='EPUB')")&&
   css.includes('.jfReader.jfEpubMode #jfReadExcerpt{display:none!important}')&&
   css.includes('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]')&&
