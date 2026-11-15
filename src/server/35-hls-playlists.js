@@ -22,6 +22,10 @@ function jfHlsIsPlaylist(item){return String(item?.originalExt||'').toLowerCase(
 function jfHlsRoot(item){return path.dirname(managedPath(item));}
 function jfHlsRelative(value,parent=''){
   let raw=String(value||'').trim();
+  // Offline HLS files sometimes retain cache-busting URL parameters from
+  // the downloader, while the actual local filenames contain no query string.
+  // Strip only the URI query/fragment; never fetch a remote segment.
+  raw=raw.split(/[?#]/,1)[0];
   // HLS URIs are URL-encoded even when they refer to local Unicode filenames.
   try{raw=decodeURIComponent(raw);}catch{throw Error('HLS 资源 URI 编码无效');}
   if(!raw||raw.includes('\\')||/[?#]/.test(raw)||raw.startsWith('/')||
