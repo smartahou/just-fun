@@ -444,7 +444,6 @@ function stopGhostPlayback(restore) {
     jfSetVideoSource(video,old.originalSrc,allItems.find(x=>x.key===old.key));
     video.loop=true;
     video.dataset.loaded='1';
-    video.load();
     return;
   }
   const playing=!video.paused;
@@ -454,9 +453,8 @@ function stopGhostPlayback(restore) {
   const desired=phase<=length?old.a+phase:old.b-(phase-length);
   video.pause();
   delete video.dataset.ghostMode;
-  video.src=old.originalSrc;
+  jfSetVideoSource(video,old.originalSrc,allItems.find(x=>x.key===old.key));
   video.loop=true;
-  video.load();
   video.addEventListener('loadedmetadata',function once(){
     video.removeEventListener('loadedmetadata',once);
     try{video.currentTime=Math.max(0,Math.min(desired,video.duration||desired));}catch{}
