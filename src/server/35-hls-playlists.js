@@ -103,8 +103,8 @@ function jfHlsScanOne(item){
     try{
       const stat=fs.statSync(node.file);
       if(stat.size>JF_HLS_MAX_PLAYLIST)throw Error('HLS 清单过大');
-      content=fs.readFileSync(node.file,'utf8');
-      if(!content.replace(/^\uFEFF/,'').startsWith('#EXTM3U'))throw Error('HLS 清单缺少 #EXTM3U');
+      content=fs.readFileSync(node.file,'utf8').replace(/^\uFEFF/,'');
+      if(!content.startsWith('#EXTM3U'))throw Error('HLS 清单缺少 #EXTM3U');
     }catch(error){item.hlsError=error.message;return changed;}
     for(const value of jfHlsReferences(content)){
       let relative;
@@ -116,6 +116,7 @@ function jfHlsScanOne(item){
       let full=null;
       if(asset){
         try{full=jfHlsStoredPath(item,asset.stored);}catch{}
+        if(full&&asset.state==='pending'){asset.state='ready';changed=true;}
         if(!full&&asset.state==='pending'){
           try{full=jfHlsExistingAsset(item,relative);}catch{}
           if(full)pending.push({asset,from:full});
@@ -205,7 +206,8 @@ function jfHlsServe(req,res,item,id=''){
       const stat=fs.lstatSync(file);
       if(!stat.isFile()||stat.isSymbolicLink()||stat.size>JF_HLS_MAX_PLAYLIST)
         throw Error('HLS 清单无效');
-      const body=jfHlsManifest(item,asset?asset.original:'',fs.readFileSync(file,'utf8'));
+      const body=jfHlsManifest(item,asset?asset.original:'',
+        fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
       res.writeHead(200,{'Content-Type':'application/vnd.apple.mpegurl; charset=utf-8',
         'Content-Length':Buffer.byteLength(body),'Cache-Control':'no-store'});
       res.end(req.method==='HEAD'?'':body);
