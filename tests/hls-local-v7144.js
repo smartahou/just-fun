@@ -44,10 +44,10 @@ function response(){
     writeHead(status,headers={}){this.status=status;this.headers=headers;},
     end(data){this.body=data;}};
 }
-for(const hash of [false,true]){
+(async()=>{\nfor(const hash of [false,true]){
   const f=fixture(hash);
   try{
-    f.ctx.jfHlsScan();
+    await f.ctx.jfHlsScan();
     assert.equal(f.main.hlsError,undefined,'valid playlists scanned');
     assert.equal(f.main.hlsAssets.length,4,'child playlist, segment, init and key');
     assert(vm.runInContext('jfHlsChildKeys',f.ctx).has(f.segment.key),
@@ -61,7 +61,7 @@ for(const hash of [false,true]){
       else assert.equal(asset.stored,asset.original,'original names kept with Hash off');
     }
     const parent=response();
-    f.ctx.jfHlsServe({method:'GET'},parent,f.main,'');
+    await f.ctx.jfHlsServe({method:'GET'},parent,f.main,'');
     assert.equal(parent.status,200);
     assert.match(parent.headers['Content-Type'],/mpegurl/);
     const child=f.main.hlsAssets.find(a=>a.ext==='.m3u8');
@@ -69,26 +69,26 @@ for(const hash of [false,true]){
     assert(!parent.body.includes('nested/low.m3u8'));
     assert(!parent.body.includes('nested/low.m3u8'),'source URI rewritten');
     const nested=response();
-    f.ctx.jfHlsServe({method:'GET'},nested,f.main,child.id);
+    await f.ctx.jfHlsServe({method:'GET'},nested,f.main,child.id);
     assert.equal(nested.status,200);
     for(const asset of f.main.hlsAssets.filter(a=>a.ext!=='.m3u8')){
       assert(nested.body.includes('/api/hls/'+f.main.key+'/'+asset.id+asset.ext),
         'nested references rewritten: '+asset.original);
     }
     const ts=f.main.hlsAssets.find(a=>a.ext==='.ts'),segmentResponse=response();
-    f.ctx.jfHlsServe({method:'GET'},segmentResponse,f.main,ts.id,'.ts');
+    await f.ctx.jfHlsServe({method:'GET'},segmentResponse,f.main,ts.id,'.ts');
     const wrongExtension=response();
-    f.ctx.jfHlsServe({method:'GET'},wrongExtension,f.main,ts.id,'.mp4');
+    await f.ctx.jfHlsServe({method:'GET'},wrongExtension,f.main,ts.id,'.mp4');
     assert.equal(wrongExtension.status,404,'wrong media-type suffix rejected');
     assert.equal(segmentResponse.body.toString(),'transport-stream-payload');
     assert.equal(segmentResponse.headers['Content-Type'],'video/mp2t');
     const writes=f.writes;
-    f.ctx.jfHlsScan();
+    await f.ctx.jfHlsScan();
     assert.equal(f.main.hlsAssets.length,4);
     assert.equal(f.writes,writes,'unchanged tree does not rewrite catalog');
     // A crash after physical rename but before final index save must recover.
     ts.state='pending';
-    f.ctx.jfHlsScan();
+    await f.ctx.jfHlsScan();
     assert.equal(ts.state,'ready');
     assert.throws(()=>f.ctx.jfHlsRelative('../escape.ts'),/越界|超出/);
     assert.throws(()=>f.ctx.jfHlsRelative('https://example.org/live.ts'),/本地/);
@@ -98,3 +98,5 @@ for(const hash of [false,true]){
     console.log('HLS '+(hash?'Hash':'original')+' fixture PASS');
   }finally{f.dispose();}
 }
+
+})().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
