@@ -38,3 +38,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 ## v7.144.1 · 发布依赖准备
 
 `node tests/deploy-deps-v7145.js` 检查 GitHub 候选锁文件依赖核验、HLS.js 首次安装兼容旧部署器的构建兜底、隔离 npm 目录与 Windows junction 保护。该测试不安装 npm 包，不访问用户媒体目录，也不等于 Windows 真机更新验收。
+
+## v7.145 · HLS 真实播放链路与封面
+
+`npm run test:hls` 先运行无网络的分片索引/Hash/清单 URL 测试，再运行 `tests/hls-ffmpeg-v7146.js`：创建临时的有效 H264 HLS 视频，启动仅测试使用的 loopback HTTP 服务，从匿名分片 URL 使用 FFprobe 解析视频元数据，并用 FFmpeg 产生真正的 JPEG 封面，分别检查 Hash 开/关。系统未安装 FFmpeg/FFprobe 时该后半项会标注 SKIP，不代表通过。实际 Chromium HLS.js 解码需要另行浏览器验收。
