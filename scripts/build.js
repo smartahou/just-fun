@@ -41,6 +41,10 @@ function vendorHlsNodePaths(){
       return [path.join(temporary,'node_modules')];
   }catch{}
   fs.mkdirSync(temporary,{recursive:true});
+  // A package manifest prevents npm from walking up into the Git worktree,
+  // whose node_modules might be a junction to the real checkout.
+  fs.writeFileSync(path.join(temporary,'package.json'),
+    JSON.stringify({name:'justfun-hls-build-cache',version:'0.0.0',private:true})+'\n');
   const params=['install','--no-save','--package-lock=false','--ignore-scripts',
     '--no-audit','--no-fund','--prefer-offline','hls.js@'+required];
   const isWin=process.platform==='win32';
