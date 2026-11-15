@@ -1,6 +1,9 @@
 // Local HLS VOD support. Source playlists are never rewritten on disk.
 // Child files are private playlist resources, not independent video cards.
 const jfHlsChildKeys=new Set();
+let jfHlsIndexedOriginals=new Map();
+let jfHlsIndexedPhysical=new Set();
+let jfHlsSharedAssets=new Map();
 const JF_HLS_MAX_ASSETS=30000;
 const JF_HLS_MAX_PLAYLIST=5*1024*1024;
 function jfHlsIsPlaylist(item){return String(item?.originalExt||'').toLowerCase()==='.m3u8';}
@@ -65,28 +68,18 @@ function jfHlsExistingAsset(item,relative){
   const base=jfHlsRoot(item);
   let original;
   try{original=jfHlsOriginalPath(item,relative);}catch{return null;}
-  // Existing indexed .ts or nested .m3u8 has already been anonymized by the
-  // global Hash import, so reuse its catalog identity rather than rename twice.
-  for(const other of catalog.items){
-    if(other===item||other.state!=='ready'||other.originalName!==path.basename(original))continue;
+  // Indexed media or shared HLS resources may already have anonymous files.
+  const indexed=jfHlsIndexedOriginals.get(original);
+  if(indexed){
     try{
-      const physical=managedPath(other);
-      if(path.dirname(physical)===path.dirname(original)){
-        jfHlsContained(base,physical);
-        jfHlsChildKeys.add(other.key);
-        return physical;
-      }
+      jfHlsContained(base,indexed.file);
+      jfHlsChildKeys.add(indexed.key);
+      return indexed.file;
     }catch{}
   }
-  for(const other of catalog.items){
-    if(other===item||!jfHlsIsPlaylist(other)||!Array.isArray(other.hlsAssets))continue;
-    for(const asset of other.hlsAssets){
-      try{
-        if(jfHlsOriginalPath(other,asset.original)===original){
-          return jfHlsStoredPath(other,asset.stored);
-        }
-      }catch{}
-    }
+  const shared=jfHlsSharedAssets.get(original);
+  if(shared){
+    try{return jfHlsStoredPath(shared.item,shared.asset.stored);}catch{}
   }
   try{return jfHlsContained(base,original);}catch{return null;}
 }
@@ -127,9 +120,7 @@ function jfHlsScanOne(item){
         const originalExt=path.posix.extname(relative).toLowerCase();
         let stored=path.relative(jfHlsRoot(item),full).split(path.sep).join('/');
         let state='ready';
-        const indexed=catalog.items.some(other=>{
-          try{return other!==item&&other.state==='ready'&&managedPath(other)===full;}catch{return false;}
-        });
+        const indexed=jfHlsIndexedPhysical.has(full);
         if(HASH_ENABLED&&!indexed&&!safeManagedName(path.basename(full))){
           let anonymous;
           do{anonymous=crypto.randomBytes(16).toString('hex');}
@@ -173,13 +164,34 @@ function jfHlsScanOne(item){
 }
 function jfHlsScan(){
   jfHlsChildKeys.clear();
+  jfHlsIndexedOriginals=new Map();
+  jfHlsIndexedPhysical=new Set();
+  jfHlsSharedAssets=new Map();
+  for(const item of catalog.items){
+    if(item.state!=='ready')continue;
+    try{
+      const file=managedPath(item);
+      jfHlsIndexedPhysical.add(file);
+      const original=path.join(path.dirname(file),item.originalName||item.managedName);
+      jfHlsIndexedOriginals.set(original,{file,key:item.key});
+    }catch{}
+  }
+  const addShared=item=>{
+    for(const asset of item.hlsAssets||[]){
+      try{jfHlsSharedAssets.set(jfHlsOriginalPath(item,asset.original),{item,asset});}
+      catch{}
+    }
+  };
+  for(const item of catalog.items){
+    if(item.state==='ready'&&jfHlsIsPlaylist(item))addShared(item);
+  }
   for(const item of catalog.items){
     if(item.state!=='ready'||!jfHlsIsPlaylist(item))continue;
-    try{jfHlsScanOne(item);}
+    try{jfHlsScanOne(item);addShared(item);}
     catch(error){item.hlsError=error.message;}
   }
-  // Child resources do not disappear from the catalog or lose their metadata;
-  // only their duplicate media cards are suppressed.
+  // Child resources remain in the catalog for identity/recovery; only their
+  // duplicate media cards are suppressed.
 }
 function jfHlsManifest(item,relative,content){
   const lookup=new Map((item.hlsAssets||[]).filter(a=>a.state==='ready').map(a=>[a.original,a]));
