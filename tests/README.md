@@ -50,3 +50,9 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 ## v7.147 · 超过 64 MiB 的 HLS 流式回归
 
 `node tests/hls-over64-v7147.js` 在临时目录生成 67 MiB 以上的合法 HLS 文本清单，分别使用 Hash/原名模式执行异步流式索引、真实 Node 文件读取、HTTP 清单按块输出、全部分片 URI 重写、缓存复用和 15 秒扫描幂等性验证。测试采用轻量响应模拟器计数字节而不将大体积响应再次缓存到内存；不操作用户媒体文件。旧 `hls-local-v7144.js`、`hls-large-v7146.js`、`hls-ffmpeg-v7146.js` 已适配新的异步索引；FFprobe/FFmpeg 回归中的 HTTP 请求改为异步子进程，避免被 `spawnSync` 阻塞事件循环。完整入口：`npm run test:hls`。需在 Windows 正式运行版补做浏览器和大文件实机验收。
+
+## v7.148 · HLS 文件头与容器识别
+
+`node tests/hls-sniff-v7148.js` 创建独立临时样本，测试 Hash 开启/关闭时能将真正的 HLS 清单、MP4、WebM、188 字节 MPEG-TS 和未知文件内容区分，不依赖后缀猜测；验证直接播放 MIME、虚拟 TS 分片 URL、Hash 不改动及重新扫描的稳定性。
+
+`node tests/hls-ts-http-v7148.js` 需要 FFmpeg/FFprobe，使用临时目录生成真实 MPEG-TS 但故意命名为 .m3u8，HTTP Range 响应模拟 Just Fun 的匿名分片服务，由 FFprobe 对虚拟 HLS 清单进行实际解码，分别测试 Hash 开关；浏览器的 HLS.js 实机播放仍需额外检查。
