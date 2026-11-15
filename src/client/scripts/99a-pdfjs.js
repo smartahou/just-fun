@@ -554,9 +554,8 @@ async function jfPdfJsOriginalMarkImage(mark){
   }
   throw Error('跨页图片太大，请缩小标记区域');
 }
-// EPUB source-accurate index: a grouped text+image annotation is not
-// reducible to unit[0]. Render EACH constituent part, including the actual
-// picture when its loaded chapter source is available.
+// EPUB source-accurate index: keep each source anchor for image loading and
+// navigation, while presenting all anchors from a group as one list entry.
 function jfPdfJsEpubSourceImage(mark){
   const section=jfDeskFlow.find(s=>s.n===mark.chapter)?.el;
   return section?.querySelector(
@@ -583,25 +582,22 @@ function jfPdfJsEpubListUnit(row,unit){
   row.classList.add('jfEpubMarkUnit');
   const ordered=[...unit].sort((a,b)=>
     a.chapter-b.chapter||jfPdfJsEpubPartOffset(a)-jfPdfJsEpubPartOffset(b));
-  if(unit.length>1){
-    const head=document.createElement('div');
-    head.className='jfEpubMarkUnitHeading';
-    const count=unit.filter(m=>m.type==='epub-image').length;
-    head.textContent='第 '+(unit[0].chapter+1)+' 章 · '+
-      (count?'图文组合':'组合标记')+' · '+unit.length+' 处';
-    row.append(head);
-  }
-  for(const mark of ordered){
-    const item=document.createElement('button');
-    item.type='button';item.className='jfPdfMarkItem jfEpubMarkPart';
-    item.dataset.markType=mark.type;
-    if(mark.type==='epub-image')item.dataset.imageIndex=String(mark.imageIndex);
-    const ink=['blue','mint','amber','rose','violet'].includes(mark.color)?
-      mark.color:'blue';
-    item.dataset.markColor=ink;
-    if(mark.type==='epub-image'){
+  const images=ordered.filter(mark=>mark.type==='epub-image');
+  const texts=ordered.filter(mark=>mark.type==='text');
+  // One saved group is one index entry, even when it contains multiple anchors.
+  const button=document.createElement('button');
+  button.type='button';button.className='jfPdfMarkItem jfEpubMarkEntry';
+  button.dataset.markColor=['blue','mint','amber','rose','violet'].includes(ordered[0].color)?
+    ordered[0].color:'blue';
+  const body=document.createElement('span');body.className='jfEpubMarkEntryBody';
+  if(images.length){
+    const media=document.createElement('span');media.className='jfEpubMarkEntryMedia';
+    for(const mark of images){
       const frame=document.createElement('span');
       frame.className='jfEpubMarkThumb';
+      frame.dataset.imageIndex=String(mark.imageIndex);
+      frame.dataset.chapter=String(mark.chapter);
+      frame.title='插图 '+(mark.imageIndex+1)+' · 点击定位';
       const original=jfPdfJsEpubSourceImage(mark);
       const source=original?.currentSrc||original?.getAttribute('src')||'';
       const fallback=document.createElement('span');
@@ -609,35 +605,39 @@ function jfPdfJsEpubListUnit(row,unit){
       frame.append(fallback);
       if(source){
         const thumbnail=document.createElement('img');
-        thumbnail.alt='';thumbnail.loading='lazy';thumbnail.decoding='async';
+        thumbnail.alt='插图 '+(mark.imageIndex+1);
+        thumbnail.loading='lazy';thumbnail.decoding='async';
         thumbnail.src=source;
         thumbnail.addEventListener('error',()=>thumbnail.remove(),{once:true});
         frame.append(thumbnail);
       }
-      item.append(frame);
+      media.append(frame);
     }
-    const content=document.createElement('span');
-    content.className='jfEpubMarkPartContent';
-    const name=document.createElement('span');
-    name.className='jfEpubMarkPartKind';
-    name.textContent=mark.type==='epub-image'?
-      '插图 '+(mark.imageIndex+1):'原文';
-    const detail=document.createElement('span');
-    detail.className='jfPdfMarkText';
-    detail.textContent=mark.type==='epub-image'?
-      (mark.label||'第 '+(mark.imageIndex+1)+' 幅插图'):
-      (mark.text||'文字标记').slice(0,220);
-    content.append(name,detail);
-    if(unit.length===1){
-      const meta=document.createElement('span');meta.className='jfPdfMarkPage';
-      meta.textContent='第 '+(mark.chapter+1)+' 章 · '+
-        (mark.type==='epub-image'?'图片标记':'原文标记');
-      content.append(meta);
-    }
-    item.append(content);
-    item.addEventListener('click',()=>void jfPdfJsEpubJumpMark(mark));
-    row.append(item);
+    body.append(media);
   }
+  const content=document.createElement('span');
+  content.className='jfEpubMarkEntryContent';
+  const detail=document.createElement('span');detail.className='jfPdfMarkText';
+  detail.textContent=texts.length?
+    texts.map(mark=>mark.text||'文字标记').join('\n'):
+    images.length===1?(images[0].label||'第 '+(images[0].imageIndex+1)+' 幅插图'):
+    images.length?images.length+' 幅插图':'页面标记';
+  content.append(detail);
+  const meta=document.createElement('span');meta.className='jfPdfMarkPage';
+  const first=ordered[0],last=ordered[ordered.length-1];
+  const chapter=first.chapter===last.chapter?
+    '第 '+(first.chapter+1)+' 章':
+    '第 '+(first.chapter+1)+'–'+(last.chapter+1)+' 章';
+  meta.textContent=chapter+' · '+(images.length&&texts.length?'图文标记':
+    images.length?'图片标记':texts.length?'原文标记':'页面标记');
+  content.append(meta);body.append(content);button.append(body);
+  button.addEventListener('click',event=>{
+    const thumb=event.target.closest?.('.jfEpubMarkThumb[data-image-index]');
+    const target=images.find(mark=>String(mark.imageIndex)===thumb?.dataset.imageIndex&&
+      String(mark.chapter)===thumb?.dataset.chapter)||texts[0]||images[0]||first;
+    void jfPdfJsEpubJumpMark(target);
+  });
+  row.append(button);
 }
 function jfPdfJsMarksListRender(){
   const list=document.getElementById('jfPdfMarksListItems');if(!list)return;
