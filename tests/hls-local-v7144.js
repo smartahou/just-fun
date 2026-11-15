@@ -65,17 +65,21 @@ for(const hash of [false,true]){
     assert.equal(parent.status,200);
     assert.match(parent.headers['Content-Type'],/mpegurl/);
     const child=f.main.hlsAssets.find(a=>a.ext==='.m3u8');
-    assert(parent.body.includes('/api/hls/'+f.main.key+'/'+child.id));
+    assert(parent.body.includes('/api/hls/'+f.main.key+'/'+child.id+'.m3u8'));
+    assert(!parent.body.includes('nested/low.m3u8'));
     assert(!parent.body.includes('nested/low.m3u8'),'source URI rewritten');
     const nested=response();
     f.ctx.jfHlsServe({method:'GET'},nested,f.main,child.id);
     assert.equal(nested.status,200);
     for(const asset of f.main.hlsAssets.filter(a=>a.ext!=='.m3u8')){
-      assert(nested.body.includes('/api/hls/'+f.main.key+'/'+asset.id),
+      assert(nested.body.includes('/api/hls/'+f.main.key+'/'+asset.id+asset.ext),
         'nested references rewritten: '+asset.original);
     }
     const ts=f.main.hlsAssets.find(a=>a.ext==='.ts'),segmentResponse=response();
-    f.ctx.jfHlsServe({method:'GET'},segmentResponse,f.main,ts.id);
+    f.ctx.jfHlsServe({method:'GET'},segmentResponse,f.main,ts.id,'.ts');
+    const wrongExtension=response();
+    f.ctx.jfHlsServe({method:'GET'},wrongExtension,f.main,ts.id,'.mp4');
+    assert.equal(wrongExtension.status,404,'wrong media-type suffix rejected');
     assert.equal(segmentResponse.body.toString(),'transport-stream-payload');
     assert.equal(segmentResponse.headers['Content-Type'],'video/mp2t');
     const writes=f.writes;
