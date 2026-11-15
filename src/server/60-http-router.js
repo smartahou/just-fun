@@ -1349,10 +1349,10 @@ function startServer() {
           }
 
           if(url.pathname.startsWith('/api/hls/')){
-            const match=/^\/api\/hls\/([a-f0-9]{16})\/([a-f0-9]{32})$/.exec(url.pathname);
+            const match=/^\/api\/hls\/([a-f0-9]{16})\/([a-f0-9]{32})(\.[a-z0-9]{1,10})?$/.exec(url.pathname);
             const item=match&&catalog.items.find(x=>x.key===match[1]&&x.state==='ready');
             if(!item){res.writeHead(404);res.end();return;}
-            jfHlsServe(req,res,item,match[2]);
+            jfHlsServe(req,res,item,match[2],match[3]||'');
             return;
           }
           if (
