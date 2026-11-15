@@ -521,6 +521,7 @@ function choosePortraitCrop(item, previewTime) {
       document.removeEventListener('keydown', onKeyboard, true);
       stopFrames();
       video.pause();
+      jfReleaseVideoSource(video);
       video.removeAttribute('src');
       video.load();
       backdrop.remove();
