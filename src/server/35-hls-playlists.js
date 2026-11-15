@@ -38,7 +38,11 @@ let jfHlsSharedAssets=new Map();
 // 5 MiB/30k segments rejected normal long recordings. Keep bounded safety
 // limits, but allow large local VOD playlists and their distinct resources.
 const JF_HLS_MAX_ASSETS=200000;
-const JF_HLS_MAX_PLAYLIST=64*1024*1024;
+// The HLS manifests are read and rewritten as bounded streams, so 64 MiB
+// should no longer be a hard failure. Retain a very high abnormal-file guard
+// and a strict per-line limit to avoid unbounded memory allocations.
+const JF_HLS_MAX_PLAYLIST=2*1024*1024*1024;
+const JF_HLS_MAX_LINE=1024*1024;
 function jfHlsIsPlaylist(item){return String(item?.originalExt||'').toLowerCase()==='.m3u8';}
 function jfHlsRoot(item){return path.dirname(managedPath(item));}
 function jfHlsRelative(value,parent=''){
@@ -59,18 +63,48 @@ function jfHlsRelative(value,parent=''){
 }
 // Process one line at a time. Avoid materializing two additional giant
 // arrays (split lines + URI references) when a playlist is tens of MiB.
+function* jfHlsLineReferences(line){
+  const value=String(line||'').trim();
+  if(value.startsWith('#')){
+    for(const match of value.matchAll(/\bURI="([^"]+)"/g))yield match[1];
+  }else if(value)yield value;
+}
 function* jfHlsReferences(content){
   const source=String(content);
   let start=0;
   while(start<source.length){
     const end=source.indexOf('\n',start);
-    const line=source.slice(start,end<0?source.length:end).trim();
-    if(line.startsWith('#')){
-      for(const match of line.matchAll(/\bURI="([^"]+)"/g))yield match[1];
-    }else if(line)yield line;
+    yield* jfHlsLineReferences(source.slice(start,end<0?source.length:end));
     if(end<0)break;
     start=end+1;
   }
+}
+// Read on newline boundaries without materializing a 100+ MiB string.
+// Node's stream UTF-8 decoder preserves characters across chunk boundaries.
+async function* jfHlsReadLines(file){
+  const input=fs.createReadStream(file,{encoding:'utf8',highWaterMark:128*1024});
+  let tail='';
+  try{
+    for await(const chunk of input){
+      let from=0,end;
+      while((end=chunk.indexOf('\n',from))!==-1){
+        let line=tail+chunk.slice(from,end);
+        tail='';
+        if(line.length>JF_HLS_MAX_LINE)
+          throw Error('HLS 单行文本超过 1 MiB，清单格式异常');
+        if(line.endsWith('\r'))line=line.slice(0,-1);
+        yield line;
+        from=end+1;
+      }
+      tail+=chunk.slice(from);
+      if(tail.length>JF_HLS_MAX_LINE)
+        throw Error('HLS 单行文本超过 1 MiB，清单格式异常');
+    }
+    if(tail){
+      if(tail.endsWith('\r'))tail=tail.slice(0,-1);
+      yield tail;
+    }
+  }finally{input.destroy();}
 }
 function jfHlsContained(base,file){
   const rel=path.relative(base,file);
@@ -128,7 +162,7 @@ function jfHlsExistingAsset(item,relative){
   }
   try{return jfHlsContained(base,original);}catch{return null;}
 }
-function jfHlsScanOne(item){
+async function jfHlsScanOne(item){
   const old=Array.isArray(item.hlsAssets)?item.hlsAssets:[];
   const byName=new Map(old.map(a=>[a.original,a]));
   const seen=new Set();
@@ -138,59 +172,67 @@ function jfHlsScanOne(item){
   let count=0,changed=false;
   while(queue.length){
     const node=queue.shift();
-    let content;
     try{
-      const stat=fs.statSync(node.file);
+      const stat=fs.lstatSync(node.file);
+      if(!stat.isFile()||stat.isSymbolicLink())
+        throw Error('HLS 清单不是普通文件');
       if(stat.size>JF_HLS_MAX_PLAYLIST)
-        throw Error('HLS 清单超过 64 MiB 安全上限');
-      content=fs.readFileSync(node.file,'utf8').replace(/^\uFEFF/,'');
-      if(!content.startsWith('#EXTM3U'))throw Error('HLS 清单缺少 #EXTM3U');
-    }catch(error){item.hlsError=error.message;return changed;}
-    for(const value of jfHlsReferences(content)){
-      let relative;
-      try{relative=jfHlsRelative(value,node.name);}catch(error){item.hlsError=error.message;return changed;}
-      if(seen.has(relative))continue;
-      if(++count>JF_HLS_MAX_ASSETS){
-        item.hlsError='HLS 不同资源超过 200000 个安全上限';return changed;
-      }
-      seen.add(relative);
-      let asset=byName.get(relative);
-      let full=null;
-      if(asset){
-        try{full=jfHlsStoredPath(item,asset.stored);}catch{}
-        if(full&&asset.state==='pending'){asset.state='ready';changed=true;}
-        if(!full&&asset.state==='pending'){
-          try{full=jfHlsExistingAsset(item,relative);}catch{}
-          if(full)pending.push({asset,from:full});
+        throw Error('HLS 清单超过 2 GiB 防护上限，无法安全处理');
+      let header=false;
+      for await(const line of jfHlsReadLines(node.file)){
+        if(!header){
+          if(line.replace(/^\uFEFF/,'').trim()!=='#EXTM3U')
+            throw Error('HLS 清单缺少 #EXTM3U（或文件不是文本播放清单）');
+          header=true;continue;
         }
-      }else{
-        full=jfHlsExistingAsset(item,relative);
-        if(!full){item.hlsError='HLS 缺少本地分片：'+relative;return changed;}
-        const originalExt=path.posix.extname(relative).toLowerCase();
-        let stored=path.relative(jfHlsRoot(item),full).split(path.sep).join('/');
-        let state='ready';
-        const indexed=jfHlsIndexedPhysical.has(full);
-        if(HASH_ENABLED&&!indexed&&!safeManagedName(path.basename(full))){
-          let anonymous;
-          do{anonymous=crypto.randomBytes(16).toString('hex');}
-          while(fs.existsSync(path.join(path.dirname(full),anonymous))||
-                reservedNames.has(path.join(path.dirname(full),anonymous)));
-          const reserved=path.join(path.dirname(full),anonymous);
-          reservedNames.add(reserved);
-          stored=path.relative(jfHlsRoot(item),reserved).split(path.sep).join('/');
-          state='pending';
+        for(const value of jfHlsLineReferences(line)){
+          let relative;
+          try{relative=jfHlsRelative(value,node.name);}catch(error){item.hlsError=error.message;return changed;}
+          if(seen.has(relative))continue;
+          if(++count>JF_HLS_MAX_ASSETS){
+            item.hlsError='HLS 不同资源超过 200000 个安全上限';return changed;
+          }
+          seen.add(relative);
+          let asset=byName.get(relative);
+          let full=null;
+          if(asset){
+            try{full=jfHlsStoredPath(item,asset.stored);}catch{}
+            if(full&&asset.state==='pending'){asset.state='ready';changed=true;}
+            if(!full&&asset.state==='pending'){
+              try{full=jfHlsExistingAsset(item,relative);}catch{}
+              if(full)pending.push({asset,from:full});
+            }
+          }else{
+            full=jfHlsExistingAsset(item,relative);
+            if(!full){item.hlsError='HLS 缺少本地分片：'+relative;return changed;}
+            const originalExt=path.posix.extname(relative).toLowerCase();
+            let stored=path.relative(jfHlsRoot(item),full).split(path.sep).join('/');
+            let state='ready';
+            const indexed=jfHlsIndexedPhysical.has(full);
+            if(HASH_ENABLED&&!indexed&&!safeManagedName(path.basename(full))){
+              let anonymous;
+              do{anonymous=crypto.randomBytes(16).toString('hex');}
+              while(fs.existsSync(path.join(path.dirname(full),anonymous))||
+                    reservedNames.has(path.join(path.dirname(full),anonymous)));
+              const reserved=path.join(path.dirname(full),anonymous);
+              reservedNames.add(reserved);
+              stored=path.relative(jfHlsRoot(item),reserved).split(path.sep).join('/');
+              state='pending';
+            }
+            asset={id:crypto.createHash('sha256').update(item.key+':'+relative).digest('hex').slice(0,32),
+              original:relative,stored,ext:originalExt,state};
+            byName.set(relative,asset);changed=true;
+            if(state==='pending')pending.push({asset,from:full});
+          }
+          if(path.posix.extname(relative).toLowerCase()==='.m3u8'){
+            // The nested playlist is read before its new anonymous filename is used.
+            const actual=full||jfHlsStoredPath(item,asset.stored);
+            queue.push({name:relative,file:actual});
+          }
         }
-        asset={id:crypto.createHash('sha256').update(item.key+':'+relative).digest('hex').slice(0,32),
-          original:relative,stored,ext:originalExt,state};
-        byName.set(relative,asset);changed=true;
-        if(state==='pending')pending.push({asset,from:full});
       }
-      if(path.posix.extname(relative).toLowerCase()==='.m3u8'){
-        // The nested playlist is read before its new anonymous filename is used.
-        const actual=full||jfHlsStoredPath(item,asset.stored);
-        queue.push({name:relative,file:actual});
-      }
-    }
+      if(!header)throw Error('HLS 清单为空');
+    }catch(error){item.hlsError=String(error.message||error);return changed;}
   }
   const next=[...byName.values()].filter(a=>seen.has(a.original));
   if(next.length!==old.length)changed=true;
@@ -219,7 +261,7 @@ function jfHlsScanOne(item){
   if(pending.length)saveCatalog();
   return changed;
 }
-function jfHlsScan(){
+async function jfHlsScan(){
   jfHlsChildKeys.clear();
   jfHlsIndexedOriginals=new Map();
   jfHlsIndexedPhysical=new Set();
@@ -246,7 +288,7 @@ function jfHlsScan(){
   for(const item of catalog.items){
     if(item.state!=='ready'||!jfHlsIsPlaylist(item))continue;
     const previous=String(item.hlsError||'');
-    try{jfHlsScanOne(item);addShared(item);}
+    try{await jfHlsScanOne(item);addShared(item);}
     catch(error){item.hlsError=error.message;}
     if(previous!==String(item.hlsError||''))statusChanged=true;
   }
