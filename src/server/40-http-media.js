@@ -22,6 +22,8 @@ function itemPublic(item) {
     originalExt: item.originalExt || '',
     hlsError:jfHlsIsPlaylist(item)?String(item.hlsError||''):'',
     hlsReady:jfHlsIsPlaylist(item)?jfHlsReady(item):undefined,
+    hlsDetectedFormat:jfHlsIsPlaylist(item)?String(item.hlsDetectedFormat||''):'',
+    hlsDirectMime:jfHlsIsPlaylist(item)?jfHlsDetectedMime(item):'',
     displayName: item.displayName || '',
     favorite: item.favorite === true,
     creator:
