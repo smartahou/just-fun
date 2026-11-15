@@ -1,6 +1,18 @@
 // Local HLS VOD support. Source playlists are never rewritten on disk.
 // Child files are private playlist resources, not independent video cards.
 const jfHlsChildKeys=new Set();
+let jfHlsServerPort=0;
+// The HTTP listener may move from 3865 to 3866 (or another free port).
+// FFmpeg must use the actual bound listener, never a guessed URL.
+function jfHlsLocalUrl(item){
+  if(!jfHlsServerPort)throw Error('HLS 本地播放器服务尚未准备好');
+  return 'http://127.0.0.1:'+jfHlsServerPort+'/media/'+item.key;
+}
+function jfHlsReady(item){
+  return jfHlsIsPlaylist(item)&&!item.hlsError&&
+    Array.isArray(item.hlsAssets)&&item.hlsAssets.length>0&&
+    item.hlsAssets.every(asset=>asset.state==='ready');
+}
 let jfHlsIndexedOriginals=new Map();
 let jfHlsIndexedPhysical=new Set();
 let jfHlsSharedAssets=new Map();
@@ -187,11 +199,15 @@ function jfHlsScan(){
   for(const item of catalog.items){
     if(item.state==='ready'&&jfHlsIsPlaylist(item))addShared(item);
   }
+  let statusChanged=false;
   for(const item of catalog.items){
     if(item.state!=='ready'||!jfHlsIsPlaylist(item))continue;
+    const previous=String(item.hlsError||'');
     try{jfHlsScanOne(item);addShared(item);}
     catch(error){item.hlsError=error.message;}
+    if(previous!==String(item.hlsError||''))statusChanged=true;
   }
+  if(statusChanged)saveCatalog();
   // Child resources remain in the catalog for identity/recovery; only their
   // duplicate media cards are suppressed.
 }
@@ -211,6 +227,11 @@ function jfHlsManifest(item,relative,content){
 }
 function jfHlsServe(req,res,item,id=''){
   if(!jfHlsIsPlaylist(item)||!['GET','HEAD'].includes(req.method)){res.writeHead(404);res.end();return;}
+  if(!jfHlsReady(item)){
+    res.writeHead(409,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
+    res.end('HLS 清单未就绪：'+String(item.hlsError||'资源尚未完成索引').slice(0,240));
+    return;
+  }
   try{
     const asset=id?(item.hlsAssets||[]).find(x=>x.id===id&&x.state==='ready'):null;
     if(id&&!asset){res.writeHead(404);res.end();return;}
