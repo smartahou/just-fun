@@ -422,6 +422,7 @@ async function toggleGhostPlayback() {
     // Ghost video already contains normal-direction audio in both halves.
     ab.enabled=false;
     video.pause();
+    jfReleaseVideoSource(video);
     video.dataset.ghostMode='1';
     video.src=result.url;
     video.loop=true;
@@ -440,7 +441,7 @@ function stopGhostPlayback(restore) {
   if(!restore){
     video.pause();
     delete video.dataset.ghostMode;
-    video.src=old.originalSrc;
+    jfSetVideoSource(video,old.originalSrc,allItems.find(x=>x.key===old.key));
     video.loop=true;
     video.dataset.loaded='1';
     video.load();
