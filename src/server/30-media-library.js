@@ -1154,7 +1154,7 @@ async function enrichCatalog() {
           return false;
         }
 
-        if (itemMediaKind(item) !== 'video') return false;
+        if (itemMediaKind(item) !== 'video' || jfHlsIsPlaylist(item)) return false;
 
         const cover=coverFullPath(item);
         const freshProbe=REFRESH || ((!item.duration||!item.resolution) &&
