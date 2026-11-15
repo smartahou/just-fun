@@ -517,6 +517,9 @@ function startServer() {
             }
             const items=keys.map(k=>catalog.items.find(x=>x.key===k && x.state==='ready'));
             if(items.some(x=>!x)){sendJson(res,{ok:false,error:'存在无效素材，刷新后重试'},409);return;}
+            if(items.some(x=>jfHlsIsPlaylist(x)||jfHlsChildKeys.has(x.key))){
+              sendJson(res,{ok:false,error:'HLS 清单和分片必须整体迁移，当前版本暂不支持移动 HLS 组合资源'},409);return;
+            }
             if(items.some(x=>x.readOnly && target==='root')){sendJson(res,{ok:false,error:'来源文件请移动到 data 管理目录，不能直接移动到原媒体根目录'},403);return;}
             let changes=[];
             try {
@@ -639,6 +642,9 @@ function startServer() {
             const keySet=new Set(keys);
             const found=catalog.items.filter(x=>keySet.has(x.key)&&x.state==='ready');
             if (found.length!==keySet.size) {sendJson(res,{ok:false,error:'部分媒体已不存在，请刷新'},409);return;}
+            if(found.some(x=>jfHlsIsPlaylist(x)||jfHlsChildKeys.has(x.key))){
+              sendJson(res,{ok:false,error:'为保护关联分片及 Hash 映射，请先在文件管理器中备份或整体管理 HLS 文件包；当前不支持从应用中删除 HLS'},409);return;
+            }
             const deleted=[], failed=[];
             for (const item of found) {
               try {
