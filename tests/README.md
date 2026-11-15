@@ -46,3 +46,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 ## v7.146 · 大型 HLS 清单
 
 `node tests/hls-large-v7146.js` 创建超过旧版 5 MiB 上限的临时 HLS VOD 清单（大量引用同一分片），分别检查原名、Hash 两种模式的扫描、匿名映射、HTTP 清单改写、重复扫描幂等性，以及大容量分片索引缓存；不涉及真实媒体库。全量 HLS 入口 `npm run test:hls` 同时包含原有索引与 FFmpeg 解码测试。此项不等于 Windows 实机播放验收。
+
+## v7.147 · 超过 64 MiB 的 HLS 流式回归
+
+`node tests/hls-over64-v7147.js` 在临时目录生成 67 MiB 以上的合法 HLS 文本清单，分别使用 Hash/原名模式执行异步流式索引、真实 Node 文件读取、HTTP 清单按块输出、全部分片 URI 重写、缓存复用和 15 秒扫描幂等性验证。测试采用轻量响应模拟器计数字节而不将大体积响应再次缓存到内存；不操作用户媒体文件。旧 `hls-local-v7144.js`、`hls-large-v7146.js`、`hls-ffmpeg-v7146.js` 已适配新的异步索引；FFprobe/FFmpeg 回归中的 HTTP 请求改为异步子进程，避免被 `spawnSync` 阻塞事件循环。完整入口：`npm run test:hls`。需在 Windows 正式运行版补做浏览器和大文件实机验收。
