@@ -707,8 +707,7 @@ function choosePortraitCrop(item, previewTime) {
         if (!finished) help.textContent = '点击「播放」开始动态预览。';
       }
     }, {once:true});
-    video.src = item.mediaUrl;
-    video.load();
+    jfSetVideoSource(video,item.mediaUrl,item);
   });
 }
 
