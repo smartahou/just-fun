@@ -1080,7 +1080,7 @@ async function writeCover(
     ...(indexed?[]:['-ss',String(seek)]),
     '-i',source,'-frames:v','1',
     ...(indexed?['-vsync','0']:[]),
-    '-vf',indexed?`select=eq(n\\\\,${frameIndex}),scale=720:-2`:'scale=720:-2',
+    '-vf',indexed?`select=eq(n\\,${frameIndex}),scale=720:-2`:'scale=720:-2',
     '-q:v','4',temp
   ];
   try {
