@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.147.0 / Current version: v7.147.0** · 持续迭代 / Actively evolving
+**当前版本：v7.148.0 / Current version: v7.148.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.148 · 修复误命名为 m3u8 的大型视频文件无法播放**：HLS 清单是一种以 `#EXTM3U` 开头的 UTF-8 文本，不等于视频本体。此前仅凭 .m3u8 扩展名就将上百 MB 文件视为文本清单，导致连续的“清单过大”“缺少 #EXTM3U”错误。现在先仅读取文件开头 1024 字节辨别实际内容：标准 HLS 继续走清单索引；MP4/WebM 容器直接按真实 MIME 走 HTML5 原生 Range 播放；标准 188 字节包长 MPEG-TS 自动用内存生成的 HLS 字节区间清单包装，并通过原有匿名资源接口按 Range 读取分片，无需转码、复制、修改原文件名或 Hash；FFprobe 与 FFmpeg 依实际类型分析时长及封面。AVI/FLV/MKV、非 188 字节 MPEG-TS、UTF-16 或未知格式不再盲目加大清单上限，而是显示有针对性的诊断。加回归测试 `tests/hls-sniff-v7148.js` 和真正 HTTP/FFprobe 的 `tests/hls-ts-http-v7148.js`；综合运行 `npm run test:hls`。注意：能否在浏览器端解码仍取决于实际音视频编码及 HLS.js 支持范围。原始文件和索引中记载的原文件名不被修改。
 
 **v7.147 · 超过 64 MiB 的 HLS 清单采用真正的流式扫描与播放**：不再通过不断提高整文件读入内存的限制处理大型 .m3u8。索引器改为异步分块解析 UTF-8 清单，每行最多 1 MiB，先验证 #EXTM3U 文本头，再按本地相对路径生成分片映射；服务端对大于 1 MiB 的清单采用 HTTP 流式改写和 backpressure，直接向 HLS.js/FFmpeg 输出匿名资源地址，不构造第二份巨大完整字符串。监听器每 15 秒触发扫描时，对未变化的主清单与多级子清单使用尺寸/时间戳签名跳过重复读取；发现已索引分片丢失会明确报错。Hash 文件无需重新命名或导入。防护边界改为单清单 2 GiB、单行 1 MiB、单视频最多 200,000 个不同资源，以防异常数据占尽内存/磁盘。新增用临时文件生成的 67 MiB 清单回归 `tests/hls-over64-v7147.js`；纠正旧版 HLS 实际 FFprobe/FFmpeg 测试因同步子进程阻塞同进程 HTTP 服务的问题。所有 HLS 测试入口 `npm run test:hls`。**注意：超过 64 MiB 的清单虽可被服务端流式处理，浏览器端 HLS.js 在超大清单下的内存和解码表现仍须以真实媒体验收。**
 
