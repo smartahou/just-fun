@@ -16,7 +16,7 @@ async function test(format,hash){
       bytes.write('ftyp',4,'ascii');bytes.write('isom',8,'ascii');
       fs.writeFileSync(full,bytes);
     }else if(format==='webm'){
-      fs.writeFileSync(full,Buffer.from([0x1a,0x45,0xdf,0xa3,...Array(2044).fill(0)]));
+      const bytes=Buffer.alloc(2048);Buffer.from([0x1a,0x45,0xdf,0xa3]).copy(bytes);bytes.write('webm',32,'ascii');fs.writeFileSync(full,bytes);
     }else if(format==='mpegts'){
       const bytes=Buffer.alloc(188*500);
       for(let n=0;n<500;n++)bytes[n*188]=0x47;
