@@ -1092,59 +1092,53 @@ def assert_postcard_pair(page,book_id):
     assert len(saved['groupIds'])==1 and saved['images']==['0','1'],saved
     assert any('画片一' in item for item in saved['text']),saved
 
-    # A grouped EPUB entry must expose all members, not just unit[0].
-    # The user's real screenshot showed two pictures with blue borders but
-    # a list card showing only the first text excerpt.
+    # A combined selection is one list card containing both pictures and text.
+    # Internally all three source anchors remain, for rendering and navigation.
     page.locator('#jfPdfMarksListToggle').click()
     page.wait_for_function("""()=>!document.getElementById('jfPdfMarksList').hidden&&
       !!document.querySelector('#jfPdfMarksListItems .jfEpubMarkUnit')&&
-      document.querySelectorAll('#jfPdfMarksListItems .jfEpubMarkPart').length===3&&
+      document.querySelectorAll('#jfPdfMarksListItems .jfEpubMarkEntry').length===1&&
       document.querySelectorAll(
-        '#jfPdfMarksListItems .jfEpubMarkPart[data-mark-type="epub-image"]').length===2&&
+        '#jfPdfMarksListItems .jfEpubMarkThumb[data-image-index]').length===2&&
       document.querySelectorAll(
         '#jfPdfMarksListItems .jfEpubMarkThumb img').length===2""",
                            timeout=3500)
     page.wait_for_function("""()=>[...document.querySelectorAll(
       '#jfPdfMarksListItems .jfEpubMarkThumb img')].every(i=>i.naturalWidth>0)""",
                            timeout=3500)
-    # The paper toolbar can animate its focus state; assert after the
-    # visual transition has settled, not in the same paint as the click.
     page.wait_for_timeout(300)
     shown=page.evaluate("""()=>{
       const unit=document.querySelector('#jfPdfMarksListItems .jfEpubMarkUnit');
-      const members=[...unit.querySelectorAll('.jfEpubMarkPart')];
       const list=document.getElementById('jfPdfMarksList');
       const toggle=document.getElementById('jfPdfMarksListToggle');
       const excerpt=document.getElementById('jfReadExcerpt');
-      return {members:members.map(m=>({
-        type:m.dataset.markType,index:m.dataset.imageIndex||null,
-        label:m.innerText,thumb:!!m.querySelector('.jfEpubMarkThumb img')
-      })),images:members.filter(m=>m.dataset.markType==='epub-image').length,
-      heading:unit.querySelector('.jfEpubMarkUnitHeading')?.textContent,
-      listOpen:!list.hidden,activeInk:getComputedStyle(toggle).backgroundColor,
-      inlineInk:toggle.style.getPropertyValue('background-color'),
-      inlinePriority:toggle.style.getPropertyPriority('background-color'),
-      toggleExpanded:toggle.getAttribute('aria-expanded'),
-      toggleHidden:toggle.hidden,toggleDisplay:getComputedStyle(toggle).display,
-      transition:getComputedStyle(toggle).transitionProperty,
-      duration:getComputedStyle(toggle).transitionDuration,
-      animation:getComputedStyle(toggle).animationName,
-      activeColor:getComputedStyle(toggle).color,
-      matches:toggle.matches('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]'),
-      readerClass:toggle.closest('.jfReader')?.className,
-      quoteHidden:getComputedStyle(excerpt).display==='none',
-      sourceNoMutation:jfDeskFlow[0].el.querySelectorAll('img').length};
+      return {entries:unit.querySelectorAll('.jfEpubMarkEntry').length,
+        images:[...unit.querySelectorAll('.jfEpubMarkThumb')].map(
+          m=>m.dataset.imageIndex),
+        text:unit.querySelector('.jfPdfMarkText')?.textContent,
+        meta:unit.querySelector('.jfPdfMarkPage')?.textContent,
+        listOpen:!list.hidden,activeInk:getComputedStyle(toggle).backgroundColor,
+        inlineInk:toggle.style.getPropertyValue('background-color'),
+        inlinePriority:toggle.style.getPropertyPriority('background-color'),
+        toggleExpanded:toggle.getAttribute('aria-expanded'),
+        toggleHidden:toggle.hidden,toggleDisplay:getComputedStyle(toggle).display,
+        transition:getComputedStyle(toggle).transitionProperty,
+        duration:getComputedStyle(toggle).transitionDuration,
+        animation:getComputedStyle(toggle).animationName,
+        activeColor:getComputedStyle(toggle).color,
+        matches:toggle.matches('.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]'),
+        readerClass:toggle.closest('.jfReader')?.className,
+        quoteHidden:getComputedStyle(excerpt).display==='none',
+        sourceNoMutation:jfDeskFlow[0].el.querySelectorAll('img').length};
     }""")
-    assert shown['images']==2 and shown['members'][0]['type']=='epub-image',shown
-    assert shown['members'][1]['type']=='text' and (
-        shown['members'][2]['type']=='epub-image'),shown
-    assert '图文组合' in shown['heading'] and shown['quoteHidden'],shown
-    assert shown['toggleExpanded']=='true',shown
+    assert shown['entries']==1 and shown['images']==['0','1'],shown
+    assert '画片一' in shown['text'] and '图文标记' in shown['meta'],shown
+    assert shown['quoteHidden'] and shown['toggleExpanded']=='true',shown
     assert shown['activeInk']=='rgba(105, 94, 74, 0.09)',shown
     assert shown['sourceNoMutation']==2,shown
 
-    # Each photo has its own navigation target even when grouped with text.
-    page.locator('#jfPdfMarksListItems .jfEpubMarkPart[data-image-index="1"]').click()
+    # The second thumbnail jumps to its own source image within the one card.
+    page.locator('#jfPdfMarksListItems .jfEpubMarkEntry .jfEpubMarkThumb[data-image-index="1"]').click()
     page.wait_for_function("""()=>document.getElementById('jfPdfMarksList').hidden&&
       !!document.querySelector('#jfSheetLeft img[data-jf-epub-image-index="1"],'+
         '#jfSheetRight img[data-jf-epub-image-index="1"]')""",
