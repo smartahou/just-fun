@@ -22,6 +22,43 @@ const replaceOnce = (text, needle, replacement) => {
   return text.replace(needle, () => replacement);
 };
 
+// Bootstrap one newly introduced dependency in a separate staging folder.
+// The current updater checks PDF.js only and builds BEFORE merging main, so
+// modifying the updater alone cannot repair a failed old-version update.
+// Never run npm in a worktree's node_modules: it is a junction to the
+// real checkout on Windows, and npm could prune existing dependencies.
+function vendorHlsNodePaths(){
+  const required=JSON.parse(read('package.json')).dependencies?.['hls.js'];
+  if(!required)return [];
+  try{
+    const installed=require.resolve('hls.js/package.json',{paths:[root]});
+    if(JSON.parse(fs.readFileSync(installed,'utf8')).version===required)return [];
+  }catch{}
+  const temporary=path.join(root,'.jf-build-deps');
+  const packageFile=path.join(temporary,'node_modules','hls.js','package.json');
+  try{
+    if(JSON.parse(fs.readFileSync(packageFile,'utf8')).version===required)
+      return [path.join(temporary,'node_modules')];
+  }catch{}
+  fs.mkdirSync(temporary,{recursive:true});
+  const params=['install','--no-save','--package-lock=false','--ignore-scripts',
+    '--no-audit','--no-fund','--prefer-offline','hls.js@'+required];
+  const isWin=process.platform==='win32';
+  const program=isWin?process.env.ComSpec||'cmd.exe':'npm';
+  const args=isWin?['/d','/s','/c','npm.cmd '+params.join(' ')]:params;
+  console.log('[BUILD] Preparing HLS.js '+required+' in isolated build cache…');
+  const result=child.spawnSync(program,args,{cwd:temporary,windowsHide:true,
+    timeout:180000,encoding:'utf8',maxBuffer:4*1024*1024,stdio:'pipe'});
+  if(result.error||result.status!==0)
+    throw Error('无法准备 HLS.js 依赖：'+String(result.stderr||result.stdout||
+      result.error?.message||'npm failed').slice(0,1200));
+  try{
+    if(JSON.parse(fs.readFileSync(packageFile,'utf8')).version===required)
+      return [path.join(temporary,'node_modules')];
+  }catch{}
+  throw Error('HLS.js 安装后仍无法找到锁定版本 '+required);
+}
+
 // Third-party browser libraries are real npm dependencies now: esbuild bundles
 // src/client/vendor.js into one IIFE that exposes window.JF. The legacy modules
 // still concatenate in shared scope, so their ordering guarantees are unchanged.
@@ -34,6 +71,7 @@ function bundleVendor() {
   const result = esbuild.buildSync({
     entryPoints: [entry],
     bundle: true,
+    nodePaths:vendorHlsNodePaths(),
     format: 'iife',
     target: ['chrome110'],
     minify: false,
