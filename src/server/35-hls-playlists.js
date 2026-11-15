@@ -143,6 +143,17 @@ function jfHlsStoredPath(item,stored){
   const full=path.resolve(base,...String(stored).split('/'));
   return jfHlsContained(base,full);
 }
+function jfHlsFingerprint(item,nested=Array.isArray(item.hlsNestedPlaylists)?
+  item.hlsNestedPlaylists:[]){
+  const files=[managedPath(item),...nested.map(stored=>jfHlsStoredPath(item,stored))];
+  const stamps=[];
+  for(const file of files){
+    const stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.isSymbolicLink())throw Error('HLS 清单文件异常');
+    stamps.push(stat.size+':'+Math.floor(stat.mtimeMs));
+  }
+  return stamps.join('|');
+}
 function jfHlsExistingAsset(item,relative){
   const base=jfHlsRoot(item);
   let original;
@@ -163,6 +174,14 @@ function jfHlsExistingAsset(item,relative){
   try{return jfHlsContained(base,original);}catch{return null;}
 }
 async function jfHlsScanOne(item){
+  // The library checks for changes every 15 seconds. Re-reading a 200 MiB
+  // playlist on each tick would monopolize HDD/USB drives. Only rescan when
+  // the root or any indexed nested playlist actually changed, or on errors.
+  if(!item.hlsError&&item.hlsScanFingerprint&&jfHlsReady(item)){
+    try{
+      if(jfHlsFingerprint(item)===item.hlsScanFingerprint)return false;
+    }catch{}
+  }
   const old=Array.isArray(item.hlsAssets)?item.hlsAssets:[];
   const byName=new Map(old.map(a=>[a.original,a]));
   const seen=new Set();
@@ -198,9 +217,11 @@ async function jfHlsScanOne(item){
           if(asset){
             try{full=jfHlsStoredPath(item,asset.stored);}catch{}
             if(full&&asset.state==='pending'){asset.state='ready';changed=true;}
-            if(!full&&asset.state==='pending'){
+            if(!full){
               try{full=jfHlsExistingAsset(item,relative);}catch{}
-              if(full)pending.push({asset,from:full});
+              if(!full)throw Error('HLS 已索引资源丢失：'+relative);
+              if(asset.state!=='pending'){asset.state='pending';changed=true;}
+              pending.push({asset,from:full});
             }
           }else{
             full=jfHlsExistingAsset(item,relative);
@@ -259,6 +280,20 @@ async function jfHlsScanOne(item){
     }catch(error){item.hlsError='分片匿名化失败：'+error.message;}
   }
   if(pending.length)saveCatalog();
+  // Only cache a valid, fully resolved playlist inventory. If the user edits
+  // a nested playlist, its size/mtime invalidates this signature next scan.
+  if(!item.hlsError&&next.every(asset=>asset.state==='ready')){
+    const nested=next.filter(asset=>asset.ext==='.m3u8').map(asset=>asset.stored);
+    try{
+      const signature=jfHlsFingerprint(item,nested);
+      if(item.hlsScanFingerprint!==signature||
+          JSON.stringify(item.hlsNestedPlaylists||[])!==JSON.stringify(nested)){
+        item.hlsNestedPlaylists=nested;
+        item.hlsScanFingerprint=signature;
+        saveCatalog();
+      }
+    }catch{}
+  }
   return changed;
 }
 async function jfHlsScan(){
