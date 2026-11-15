@@ -856,8 +856,7 @@ function openMulti(key) {
         esc(item.key) +
         '" data-rotation="' +
         esc(String(Number(item.rotation || 0))) +
-        '" src="' +
-        esc(item.mediaUrl) +
+        (item.originalExt==='.m3u8'?'':'" src="'+esc(item.mediaUrl)) +
         '"></video>';
 
   box.innerHTML =
@@ -915,6 +914,9 @@ function openMulti(key) {
       'video'
     );
 
+  if(miniVideo&&item.originalExt==='.m3u8'){
+    jfSetVideoSource(miniVideo,item.mediaUrl,item);
+  }
   if (miniVideo) {
     // 多开视频只在创建时继承一次当前记忆音量；
     // 后续音量调整完全独立，不参与全局同步。
