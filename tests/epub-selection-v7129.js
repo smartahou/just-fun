@@ -50,6 +50,11 @@ assert(reader.includes("jfPdfMarksListToggle').hidden=!!outline.nativePdf")&&
   reader.includes('jfPdfJsMarksListRender()'),
   'non-PDF books expose and refresh the shared mark index');
 const pdf=read('src/client/scripts/99a-pdfjs.js');
+assert(pdf.includes('function jfPdfJsMarksListSyncToggle(open)')&&
+  pdf.includes("toggle.style.setProperty('background-color','rgba(105,94,74,.09)','important')")&&
+  pdf.includes('jfPdfJsMarksListSyncToggle(true)')&&
+  pdf.includes('jfPdfJsMarksListSyncToggle(false)'),
+  'EPUB mark toggle uses actual panel-open state, not stale hover/focus CSS');
 assert(pdf.includes('function jfPdfJsEpubListUnit(row,unit)')&&
   pdf.includes("if(!isPdf){\n      jfPdfJsEpubListUnit(row,unit);")&&
   pdf.includes("for(const mark of ordered){")&&

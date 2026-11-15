@@ -38,10 +38,25 @@ function jfPdfJsMarksListApply(panel,forceDefault=false){
   Object.assign(jfPdfMarksListUi,next);
   panel.style.left=next.left+'px';panel.style.top=next.top+'px';panel.style.right='auto';panel.style.bottom='auto';panel.style.width=next.width+'px';panel.style.height=next.height+'px';
 }
+function jfPdfJsMarksListSyncToggle(open){
+  const toggle=document.getElementById('jfPdfMarksListToggle');
+  if(!toggle)return;
+  toggle.setAttribute('aria-expanded',String(open));
+  // Opening a draggable panel can leave :focus/:hover in browser-dependent
+  // states. Synchronize the single subtle EPUB ink with the actual panel
+  // state rather than borrowing the shared cyan PDF accent.
+  for(const key of ['background-color','border-color','color'])
+    toggle.style.removeProperty(key);
+  if(open&&jfDeskOutline?.format==='EPUB'){
+    toggle.style.setProperty('background-color','rgba(105,94,74,.09)','important');
+    toggle.style.setProperty('border-color','rgba(105,94,74,.16)');
+    toggle.style.setProperty('color','#48483e');
+  }
+}
 function jfPdfJsMarksListOpen(){
   const panel=document.getElementById('jfPdfMarksList');if(!panel)return;
   panel.hidden=false;
-  document.getElementById('jfPdfMarksListToggle')?.setAttribute('aria-expanded','true');
+  jfPdfJsMarksListSyncToggle(true);
   jfPdfJsMarksListApply(panel);
   jfPdfJsMarksListRender();
 }
@@ -422,7 +437,7 @@ function jfPdfJsMarksListClose(){
   const panel=document.getElementById('jfPdfMarksList');
   if(panel){panel.hidden=true;panel.classList.remove('jfDragging');}
   jfPdfMarksListUi.drag=null;jfPdfMarksListUi.resize=null;
-  document.getElementById('jfPdfMarksListToggle')?.setAttribute('aria-expanded','false');
+  jfPdfJsMarksListSyncToggle(false);
 }
 async function jfPdfJsPageMarkText(mark,element){
   const doc=jfPdfJsState.doc;
