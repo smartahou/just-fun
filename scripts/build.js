@@ -31,7 +31,7 @@ function vendorHlsNodePaths(){
   const required=JSON.parse(read('package.json')).dependencies?.['hls.js'];
   if(!required)return [];
   try{
-    const installed=require.resolve('hls.js/package.json',{paths:[root]});
+    const installed=path.join(root,'node_modules','hls.js','package.json');
     if(JSON.parse(fs.readFileSync(installed,'utf8')).version===required)return [];
   }catch{}
   const temporary=path.join(root,'.jf-build-deps');
