@@ -30,7 +30,8 @@
     "test:reader-backtracking": "node tests/reader-backtracking-v7120.js",
     "test:reader-rapid-turn": "node tests/reader-rapid-turn-v7121.js",
     "test:reader-paginator-measure": "node tests/reader-paginator-measure-v7123.js",
-    "test:reader-faces": "node tests/reader-prepared-faces-v7122.js"
+    "test:reader-faces": "node tests/reader-prepared-faces-v7122.js",
+    "test:hls": "node tests/hls-local-v7144.js"
   },
   "license": "MIT",
   "dependencies": {
