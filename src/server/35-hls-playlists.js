@@ -194,7 +194,14 @@ function jfHlsScanOne(item){
   }
   const next=[...byName.values()].filter(a=>seen.has(a.original));
   if(next.length!==old.length)changed=true;
-  item.hlsAssets=next;
+  // Keep the array identity for unchanged scans. This preserves the prebuilt
+  // by-ID lookup on large playlists rather than rebuilding it every refresh.
+  const sameOrder=!changed&&next.length===old.length&&
+    next.every((asset,index)=>asset===old[index]);
+  if(!sameOrder){
+    item.hlsAssets=next;
+    jfHlsRuntimeCache.delete(item);
+  }
   delete item.hlsError;
   // Journal all planned name changes BEFORE touching any HLS resource.
   if(changed||pending.length)saveCatalog();
