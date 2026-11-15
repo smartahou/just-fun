@@ -372,7 +372,7 @@ function startServer() {
                     .filter(
                       item =>
                         item.state ===
-                        'ready'
+                        'ready' && !jfHlsChildKeys.has(item.key)
                     )
                     .map(
                       itemPublic
@@ -1342,6 +1342,13 @@ function startServer() {
             return;
           }
 
+          if(url.pathname.startsWith('/api/hls/')){
+            const match=/^\/api\/hls\/([a-f0-9]{16})\/([a-f0-9]{32})$/.exec(url.pathname);
+            const item=match&&catalog.items.find(x=>x.key===match[1]&&x.state==='ready');
+            if(!item){res.writeHead(404);res.end();return;}
+            jfHlsServe(req,res,item,match[2]);
+            return;
+          }
           if (
             url.pathname.startsWith(
               '/media/'
@@ -1369,7 +1376,8 @@ function startServer() {
               return;
             }
 
-            streamMedia(
+            if(jfHlsIsPlaylist(item))jfHlsServe(req,res,item);
+            else streamMedia(
               req,
               res,
               item
