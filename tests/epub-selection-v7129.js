@@ -135,6 +135,13 @@ for(const contract of [
   "type==='epub-image'&&m.imageIndex===identity.imageIndex",
   "epubImageIndex=isImage?q.epubImageIndex:undefined"
 ])assert(server.includes(contract),'image data validation: '+contract);
+assert(reader.includes("caption.dataset.jfEpubCaptionSourceStart=String(")&&
+  reader.includes("captionStart+rawCaption.length-rawCaption.trimStart().length")&&
+  source.includes("el.classList.contains('jfPrintPlateWithCaption')")&&
+  source.includes("caption.hasAttribute('data-jf-epub-caption-source-start')")&&
+  source.includes("source?.slice(start,start+ink.length)===ink")&&
+  source.includes("result.push({el:caption,chapter:item.chapter,offset:start"),
+  'printed image-only paragraph merged with trimmed caption uses exact original caption source offset');
 assert(reader.includes('function jfDeskTagSourceImages(section,chapter)')&&
   reader.includes('node.dataset.jfEpubImageIndex=String(i++)')&&
   reader.includes('node.dataset.jfEpubImageOffset=String(offset)')&&
@@ -236,4 +243,4 @@ for(const color of ['amber','blue','mint','rose','violet']){
     color+' current selection tint and image frame use matching remembered ink');
 }
 assert(!source.includes('innerHTML'),'source annotation layer never rewrites book DOM');
-console.log('PASS v7.140 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');
+console.log('PASS v7.141 EPUB map: deterministic offsets, atomic ink, no progress redraw, lazy caret hit-testing');

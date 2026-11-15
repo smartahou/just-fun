@@ -42,8 +42,8 @@ def make_epub(path):
 
 
 
-def make_epub_images(path,standalone=False):
-    """Repeated pictures; optional separate-image-P + caption-P paper layout."""
+def make_epub_images(path,standalone=False,pair=False):
+    """Repeated pictures; image-only P + caption-P may be grouped in print."""
     width,height=240,146
     raw=bytearray()
     for y in range(height):
@@ -71,7 +71,17 @@ def make_epub_images(path,standalone=False):
                    '</manifest><spine><itemref idref="a"/></spine></package>')
         text='<p>'+'这是含有图片的旧书章节，图片前后的正文应保持原有分页行为。'*2+'</p>'
         middle='<p>'+'图文并茂，原文照旧，重复图片的标记必须分别保存。'*2+'</p>'
-        if standalone:
+        if pair:
+            # This is the source form of the user's photographed paperback:
+            # two image-only paragraphs with caption paragraphs in between.
+            # Preserve real sibling whitespace and edge whitespace: printed
+            # captions must still map back to their exact source positions.
+            first=('<p> \n<img src="media/photo.png" alt="第一幅测试插图"/>\n</p>\n'
+                   '<p>  画片一：晚清社会百态。（漫画明信片）  </p>\n')
+            second=('<p> \n<img src="media/photo.png" alt="第二幅测试插图"/>\n</p>\n'
+                    '<p>  画片二：洋务风潮渐起。（漫画明信片）  </p>\n')
+            middle=''
+        elif standalone:
             first='<p><img src="media/photo.png" alt="第一幅测试插图"/></p>'+(
                 '<p>画片一：晚清社会百态。（漫画明信片）</p>')
             second='<p><img src="media/photo.png" alt="第二幅测试插图"/></p>'+(
@@ -938,6 +948,150 @@ def assert_postcard_selection(page,book_id):
                            timeout=3500)
     page.evaluate('()=>JFEpubSelection.reset()')
 
+
+def assert_postcard_pair(page,book_id):
+    """Two source picture-P + caption-P blocks, one physical spread.
+
+    Before the fix, the images received a frame, but the two printed captions
+    were dropped by the equality-only source-block index because textContent
+    was trimmed and top-level XHTML whitespace was omitted by pagination.
+    """
+    page.evaluate('(id)=>jfDeskOpenReader(id,0)',book_id)
+    page.wait_for_function("""(id)=>jfDeskBook?.id===id&&!jfDeskRestoring&&
+      jfDeskFlow.length>0""",arg=book_id,timeout=12000)
+    if not page.evaluate('jfDeskPaged'):
+        page.locator('#jfReadPaged').click()
+    page.wait_for_function('()=>jfDeskPaged&&jfDeskPages.length>=1',
+                           timeout=12000)
+    setup=page.evaluate("""()=>{
+      const indices=[0,1],locations=indices.map(i=>{
+        const selector='img[data-jf-epub-image-index="'+i+'"]';
+        return jfDeskPages.findIndex(pg=>pg.some(part=>
+          part.node?.matches?.(selector)||part.node?.querySelector?.(selector)));
+      });
+      const step=jfDeskPagedGeometry().two?2:1;
+      if(locations.some(x=>x<0))return {ok:false,locations,reason:'missing figure'};
+      if(Math.floor(locations[0]/step)!==Math.floor(locations[1]/step))
+        return {ok:false,locations,step,reason:'picture pairs split across spreads'};
+      jfDeskPageIndex=Math.floor(locations[0]/step)*step;
+      jfDeskPagedRender();
+      const source=jfDeskFlow[0].el.textContent;
+      const figures=indices.map(i=>{
+        const selector='img[data-jf-epub-image-index="'+i+'"]';
+        const picture=document.querySelector('#jfSheetLeft '+selector+
+          ',#jfSheetRight '+selector);
+        const fig=picture?.closest('figure.jfPrintPlateWithCaption');
+        const caption=fig?.querySelector('figcaption');
+        if(!picture||!caption)return null;
+        const image=picture.getBoundingClientRect();
+        const text=document.createRange();
+        text.selectNodeContents(caption);
+        const c=text.getBoundingClientRect();
+        const offset=Number(caption.dataset.jfEpubCaptionSourceStart);
+        return {index:i,caption:caption.textContent,offset,
+          sourceMatch:caption.textContent===source.slice(offset,
+            offset+caption.textContent.length),
+          isTrimmed:caption.textContent===caption.textContent.trim(),
+          picture:{x:image.left+image.width/2,y:image.top+image.height/2},
+          label:{x:c.left+c.width/2,y:c.top+c.height/2},
+          page:jfDeskPageIndex};
+      });
+      return {ok:figures.every(Boolean),step,locations,figures,
+        count:jfDeskPages.length};
+    }""")
+    assert setup['ok'],setup
+    assert all(fig['sourceMatch'] and fig['isTrimmed']
+               for fig in setup['figures']),setup
+    assert setup['figures'][0]['offset'] < setup['figures'][1]['offset'],setup
+
+    # Native text selection of either merged caption must remain selectable,
+    # even though the parent <figure> is not a verbatim XHTML text span.
+    for idx in (0,1):
+        selection=page.evaluate("""(idx)=>{
+          JFEpubSelection.reset();
+          const selector='img[data-jf-epub-image-index="'+idx+'"]';
+          const img=document.querySelector('#jfSheetLeft '+selector+
+            ',#jfSheetRight '+selector);
+          const caption=img?.closest('figure')?.querySelector('figcaption');
+          if(!caption?.firstChild)return {ok:false,reason:'no caption'};
+          const range=document.createRange();
+          range.selectNodeContents(caption);
+          const sel=getSelection();sel.removeAllRanges();sel.addRange(range);
+          document.dispatchEvent(new Event('selectionchange'));
+          const snap=JFEpubSelection.reference();
+          return {ok:!!snap&&snap.ref.text===caption.textContent,
+            text:snap?.ref.text,offset:snap?.ref.anchorStart,
+            captionOffset:Number(caption.dataset.jfEpubCaptionSourceStart),
+            images:snap?.images?.map(x=>x.imageIndex)};
+        }""",idx)
+        assert selection['ok'] and (
+            selection['offset']==selection['captionOffset']),selection
+        page.wait_for_function("""()=>!document.getElementById(
+          'jfEpubSelectionMenu').hidden""")
+        page.evaluate('()=>JFEpubSelection.reset()')
+
+    # Genuine held pointer: first IMAGE => first caption => second IMAGE.
+    # The original image remains selected, intermediate ink gains underline,
+    # and both pictures share one selection/menu after pointerup.
+    first,second=setup['figures']
+    page.mouse.move(first['picture']['x'],first['picture']['y'])
+    page.mouse.down()
+    try:
+        page.mouse.move(first['label']['x'],first['label']['y'],steps=16)
+        page.wait_for_function("""()=>JFEpubSelection.reference()?.images?.some(
+          x=>x.imageIndex===0)&&
+          JFEpubSelection.reference()?.ref.text?.includes('画片一')""",
+                               timeout=3500)
+        page.mouse.move(second['picture']['x'],second['picture']['y'],steps=18)
+        page.wait_for_function("""()=>JFEpubSelection.reference()?.images?.length===2&&
+          JFEpubSelection.reference()?.ref.text?.includes('画片一')&&
+          (CSS.highlights.get('jf-epub-selection')?.size||0)>0""",
+                               timeout=3500)
+        ink=page.evaluate("""()=>{
+          const sel=JFEpubSelection.reference();
+          const spans=[...(CSS.highlights.get('jf-epub-selection')||[])];
+          return {images:sel.images.map(i=>i.imageIndex),
+            text:sel.ref.text,underline:spans.map(r=>r.toString()),
+            preview:[...document.querySelectorAll(
+              '#jfSheetLeft img[data-jf-epub-image-preview],'+
+              '#jfSheetRight img[data-jf-epub-image-preview]')]
+              .map(img=>img.dataset.jfEpubImageIndex),
+            page:jfDeskPageIndex};
+        }""")
+        assert ink['images']==[0,1] and '画片一' in ink['text'] and (
+            any('画片一' in x for x in ink['underline'])) and (
+            ink['preview']==['0','1']) and (
+            ink['page']==first['page']),ink
+    finally:
+        page.mouse.up()
+    page.wait_for_function("""()=>!document.getElementById(
+      'jfEpubSelectionMenu').hidden&&
+      JFEpubSelection.reference()?.images?.length===2""",
+                           timeout=3500)
+
+    # Persist as one source-anchored group. Both images AND the BETWEEN text
+    # must remain visibly marked, not only the two picture frames.
+    page.locator('#jfEpubSelectionMenu [data-color="mint"]').click()
+    page.wait_for_function("""()=>jfDeskWorkspace.marks.filter(m=>
+      m.bookId===jfDeskBook.id&&m.groupId).length===3""")
+    page.wait_for_function("""()=>[...(CSS.highlights.get(
+      'jf-epub-mark-mint')||[])].some(r=>r.toString().includes('画片一'))""")
+    saved=page.evaluate("""()=>{
+      const marks=jfDeskWorkspace.marks.filter(m=>
+        m.bookId===jfDeskBook.id&&m.groupId);
+      const images=[...document.querySelectorAll(
+        '#jfSheetLeft img[data-jf-epub-image-color="mint"],'+
+        '#jfSheetRight img[data-jf-epub-image-color="mint"]')];
+      const highlights=[...(CSS.highlights.get('jf-epub-mark-mint')||[])];
+      return {types:marks.map(m=>m.type).sort(),
+        groupIds:[...new Set(marks.map(m=>m.groupId))],
+        images:images.map(img=>img.dataset.jfEpubImageIndex),
+        text:highlights.map(r=>r.toString())};
+    }""")
+    assert saved['types']==['epub-image','epub-image','text'],saved
+    assert len(saved['groupIds'])==1 and saved['images']==['0','1'],saved
+    assert any('画片一' in item for item in saved['text']),saved
+
 def main():
     with tempfile.TemporaryDirectory(
         prefix='jf-architecture-test-epub-selection-v7129-'
@@ -948,6 +1102,7 @@ def main():
         make_epub(library / 'selection.epub')
         make_epub_images(library / 'illustrations.epub')
         make_epub_images(library / 'postcards.epub',standalone=True)
+        make_epub_images(library / 'postcard-pair.epub',pair=True)
         proc = log = None
         try:
             proc, port, log = launch(ROOT / 'dist/douyin.js', library,
@@ -959,6 +1114,7 @@ def main():
                 book=next(b for b in books if b['name']=='selection.epub')
                 image_book=next(b for b in books if b['name']=='illustrations.epub')
                 postcard_book=next(b for b in books if b['name']=='postcards.epub')
+                pair_book=next(b for b in books if b['name']=='postcard-pair.epub')
             with sync_playwright() as pw:
                 browser = pw.chromium.launch(
                     executable_path='/usr/bin/chromium',
@@ -1315,8 +1471,9 @@ def main():
                 assert_real_forward_mouse(page)
                 assert_epub_images(page,image_book['id'])
                 assert_postcard_selection(page,postcard_book['id'])
+                assert_postcard_pair(page,pair_book['id'])
                 assert not errors, errors
-                print('PASS v7.140 Chromium EPUB: blue, copy, book mark list, '
+                print('PASS v7.141 Chromium EPUB: blue, copy, book mark list, '
                       'saved mark on both pages, right-leaf undo, '
                       '120 native drag events, precise source offsets', flush=True)
                 browser.close()

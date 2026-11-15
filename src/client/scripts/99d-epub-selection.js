@@ -207,6 +207,25 @@ function blocks(){
         const item=page[i],el=sheet.children[i];
         if(!el||item.comic||!Number.isSafeInteger(item.chapter))continue;
         const source=sourceFor(item.chapter);
+        // The paginator joins an image-only <p> with its following caption
+        // into a standalone <figure>. That figure is NOT a verbatim EPUB
+        // text span: text nodes between siblings and trimmed caption edges
+        // can change its aggregate textContent. Index the displayed caption
+        // separately at the source position captured BEFORE pagination.
+        // This is required for real image→caption→image mixed selections.
+        if(el.classList.contains('jfPrintPlateWithCaption')){
+          const caption=el.querySelector(
+            ':scope > figcaption[data-jf-epub-caption-source-start]');
+          const start=Number(caption?.dataset.jfEpubCaptionSourceStart);
+          const ink=caption?.textContent||'';
+          if(caption&&caption.hasAttribute('data-jf-epub-caption-source-start')&&
+             Number.isSafeInteger(start)&&start>=0&&ink&&
+             source?.slice(start,start+ink.length)===ink){
+            result.push({el:caption,chapter:item.chapter,offset:start,
+              len:ink.length,text:ink});
+          }
+          continue;
+        }
         let offset=Number.isSafeInteger(item.sourceOffset)?item.sourceOffset:null;
         // Older page objects never carry explicit source coordinates. Use
         // their nominal offset ONLY when the original text matches exactly.

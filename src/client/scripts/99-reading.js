@@ -2649,7 +2649,17 @@ function jfDeskBlocksFor(sec){
       wrap.className='jfPrintPlateWithCaption';
       wrap.appendChild(document.importNode(node,true));
       const caption=document.createElement('figcaption');
-      caption.textContent=next.textContent.trim();
+      // The printed plate groups two ORIGINAL siblings. Its image paragraph
+      // has zero ink characters, while trimming the caption changes the
+      // printed figure's aggregate textContent. Keep an exact source address
+      // for caption ink; never assume sourceStarts(image) also owns caption.
+      const rawCaption=next.textContent;
+      caption.textContent=rawCaption.trim();
+      const captionStart=sourceStarts.get(next);
+      if(Number.isSafeInteger(captionStart)){
+        caption.dataset.jfEpubCaptionSourceStart=String(
+          captionStart+rawCaption.length-rawCaption.trimStart().length);
+      }
       wrap.appendChild(caption);
       blocks.push({chapter:sec.n,node:wrap,key:sec.n+':'+(i++),
         offset:acc,sourceOffset:sourceStarts.get(node),mergedCaption:true});
