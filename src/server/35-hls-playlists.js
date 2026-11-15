@@ -296,33 +296,71 @@ async function jfHlsScan(){
   // Child resources remain in the catalog for identity/recovery; only their
   // duplicate media cards are suppressed.
 }
-function jfHlsManifest(item,relative,content){
-  const lookup=jfHlsRuntime(item).byOriginal;
-  const mapUri=(raw)=>{
+function jfHlsRewriteLine(item,relative,line,lookup){
+  const mapUri=raw=>{
     const name=jfHlsRelative(raw,relative);
     const asset=lookup.get(name);
     if(!asset)throw Error('HLS 资源未完成索引：'+name);
-    // The physical file remains extensionless in Hash mode. The virtual URL
-    // carries only the media TYPE suffix: FFmpeg's HLS demuxer refuses
-    // extensionless fragment URLs by default, and some codecs need this hint.
+    // The physical Hash filename stays extensionless. The virtual URL
+    // includes the resource type because FFmpeg rejects extensionless HLS.
     const suffix=/^\.[a-z0-9]{1,10}$/i.test(asset.ext||'')?asset.ext:'.bin';
     return '/api/hls/'+item.key+'/'+asset.id+suffix;
   };
+  if(line.startsWith('#')){
+    return line.replace(/\bURI="([^"]+)"/g,(_all,url)=>'URI="'+mapUri(url)+'"');
+  }
+  return line.trim()?mapUri(line.trim()):line;
+}
+function jfHlsManifest(item,relative,content){
+  const lookup=jfHlsRuntime(item).byOriginal;
   const source=String(content),lines=[];
-  // Avoid split().map() duplicating the largest playlist into two huge arrays.
   let start=0;
   while(start<=source.length){
     const end=source.indexOf('\n',start);
     let line=source.slice(start,end<0?source.length:end);
     if(line.endsWith('\r'))line=line.slice(0,-1);
-    if(line.startsWith('#')){
-      lines.push(line.replace(/\bURI="([^"]+)"/g,(_all,url)=>
-        'URI="'+mapUri(url)+'"'));
-    }else lines.push(line.trim()?mapUri(line.trim()):line);
+    lines.push(jfHlsRewriteLine(item,relative,line,lookup));
     if(end<0)break;
     start=end+1;
   }
   return lines.join('\n');
+}
+// Browser & FFmpeg requests for a large manifest must not allocate a second
+// 100+ MiB body. Respect HTTP backpressure instead of filling the event loop.
+async function jfHlsStreamManifest(req,res,item,relative,file){
+  const lookup=jfHlsRuntime(item).byOriginal;
+  const headers={'Content-Type':'application/vnd.apple.mpegurl; charset=utf-8',
+    'Cache-Control':'no-store'};
+  if(req.method==='HEAD'){
+    res.writeHead(200,headers);res.end();return;
+  }
+  res.writeHead(200,headers);
+  let header=false;
+  try{
+    for await(const line of jfHlsReadLines(file)){
+      if(req.aborted||res.destroyed)return;
+      if(!header){
+        if(line.replace(/^\uFEFF/,'').trim()!=='#EXTM3U')
+          throw Error('HLS 清单缺少 #EXTM3U');
+        header=true;
+      }
+      const output=jfHlsRewriteLine(item,relative,
+        header&&line.charCodeAt(0)===0xfeff?line.slice(1):line,lookup)+'\n';
+      if(!res.write(output)){
+        await new Promise((resolve,reject)=>{
+          const drain=()=>{res.off('close',close);resolve();};
+          const close=()=>{res.off('drain',drain);reject(Error('HLS 客户端已断开'));};
+          res.once('drain',drain);res.once('close',close);
+        });
+      }
+    }
+    if(!header)throw Error('HLS 清单为空');
+    if(!res.destroyed)res.end();
+  }catch(error){
+    // Headers may already have been sent; never respond with a second 404.
+    if(typeof res.destroy==='function')res.destroy(error);
+    else res.end();
+  }
 }
 function jfHlsServe(req,res,item,id='',requestedExt=''){
   if(!jfHlsIsPlaylist(item)||!['GET','HEAD'].includes(req.method)){res.writeHead(404);res.end();return;}
@@ -342,7 +380,11 @@ function jfHlsServe(req,res,item,id='',requestedExt=''){
       const stat=fs.lstatSync(file);
       if(!stat.isFile()||stat.isSymbolicLink()||stat.size>JF_HLS_MAX_PLAYLIST)
         throw Error('HLS 清单无效');
-      const body=jfHlsManifest(item,asset?asset.original:'',
+      const relative=asset?asset.original:'';
+      if(stat.size>1024*1024){
+        return jfHlsStreamManifest(req,res,item,relative,file);
+      }
+      const body=jfHlsManifest(item,relative,
         fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
       res.writeHead(200,{'Content-Type':'application/vnd.apple.mpegurl; charset=utf-8',
         'Content-Length':Buffer.byteLength(body),'Cache-Control':'no-store'});
