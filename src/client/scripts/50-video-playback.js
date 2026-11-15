@@ -1,5 +1,67 @@
 
 
+// HLS is a playlist, not a directly decodable file in Chromium. Keep its
+// source engine tied to the video element and destroy it on reuse/unmount.
+const jfHlsPlayers=new WeakMap();
+function jfVideoIsHls(item,url){
+  const resolved=item||allItems.find(x=>x.mediaUrl===url);
+  return String(resolved?.originalExt||'').toLowerCase()==='.m3u8';
+}
+function jfReleaseVideoSource(video){
+  const record=jfHlsPlayers.get(video);
+  if(record){
+    jfHlsPlayers.delete(video);
+    try{record.hls.destroy();}catch{}
+  }
+}
+function jfVideoSourceMatches(video,url,item){
+  if(jfVideoIsHls(item,url)){
+    const record=jfHlsPlayers.get(video);
+    return !!record&&record.url===url;
+  }
+  return !jfHlsPlayers.has(video)&&video.getAttribute('src')===url;
+}
+function jfSetVideoSource(video,url,item){
+  if(!video||!url)return;
+  if(jfVideoSourceMatches(video,url,item))return;
+  jfReleaseVideoSource(video);
+  if(jfVideoIsHls(item,url)){
+    const Hls=window.JF?.Hls;
+    if(Hls?.isSupported()){
+      video.removeAttribute('src');
+      video.load();
+      const hls=new Hls({enableWorker:false});
+      const record={hls,url};jfHlsPlayers.set(video,record);
+      hls.on(Hls.Events.MEDIA_ATTACHED,()=>{
+        if(jfHlsPlayers.get(video)===record)hls.loadSource(url);
+      });
+      hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+        if(jfHlsPlayers.get(video)!==record||!video.isConnected)return;
+        const feed=document.getElementById('feedOverlay');
+        if(video.autoplay||
+           (video.classList.contains('feedVideo')&&
+            feed?.classList.contains('open')&&video.dataset.itemKey===currentFeedKey))
+          video.play().catch(()=>{});
+      });
+      hls.on(Hls.Events.ERROR,(_event,data)=>{
+        if(!data?.fatal||jfHlsPlayers.get(video)!==record)return;
+        console.warn('[Just Fun HLS]',data.details||data.type||'播放失败');
+        if(data.type===Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();return;}
+        if(data.type===Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();return;}
+        jfReleaseVideoSource(video);
+      });
+      hls.attachMedia(video);
+      return;
+    }
+    if(!video.canPlayType('application/vnd.apple.mpegurl')){
+      console.warn('[Just Fun HLS] 当前浏览器不支持 HLS');
+      return;
+    }
+  }
+  video.src=url;
+  video.load();
+}
+
 let nativeFullscreenVideo = null;
 let nativeFullscreenKey = '';
 let nativeFullscreenOrigin = null;
@@ -87,13 +149,14 @@ function restoreNativeFullscreenHost() {
   if (!sameMedia) {
     const source = video.dataset.src || '';
     if (origin.loaded === '1' && source) {
-      video.src = source;
+      jfSetVideoSource(video,source,allItems.find(item=>item.key===origin.itemKey));
       video.dataset.loaded = '1';
       try { video.load(); } catch {}
       if (currentFeedKey === origin.sectionKey && Number.isFinite(origin.currentTime)) {
         try { video.currentTime = origin.currentTime; } catch {}
       }
     } else {
+      jfReleaseVideoSource(video);
       video.removeAttribute('src');
       video.dataset.loaded = '0';
       try { video.load(); } catch {}
@@ -367,8 +430,7 @@ async function stepNativeFullscreen(
       )
     );
 
-  video.src =
-    next.mediaUrl;
+  jfSetVideoSource(video,next.mediaUrl,next);
 
   video.dataset.fullscreenKey =
     next.key;
