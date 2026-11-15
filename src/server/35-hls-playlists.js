@@ -8,16 +8,37 @@ function jfHlsLocalUrl(item){
   if(!jfHlsServerPort)throw Error('HLS 本地播放器服务尚未准备好');
   return 'http://127.0.0.1:'+jfHlsServerPort+'/media/'+item.key;
 }
+// A very long VOD can have hundreds of thousands of entries. HTTP requests
+// must NOT re-scan the entire asset array for every segment/ready check.
+const jfHlsRuntimeCache=new WeakMap();
+function jfHlsRuntime(item){
+  const assets=Array.isArray(item?.hlsAssets)?item.hlsAssets:[];
+  const cached=jfHlsRuntimeCache.get(item);
+  if(cached&&cached.assets===assets)return cached;
+  const byId=new Map(),byOriginal=new Map();
+  let allReady=assets.length>0;
+  for(const asset of assets){
+    if(!asset||asset.state!=='ready'){
+      allReady=false;
+      continue;
+    }
+    byId.set(asset.id,asset);
+    byOriginal.set(asset.original,asset);
+  }
+  const runtime={assets,byId,byOriginal,allReady};
+  jfHlsRuntimeCache.set(item,runtime);
+  return runtime;
+}
 function jfHlsReady(item){
-  return jfHlsIsPlaylist(item)&&!item.hlsError&&
-    Array.isArray(item.hlsAssets)&&item.hlsAssets.length>0&&
-    item.hlsAssets.every(asset=>asset.state==='ready');
+  return jfHlsIsPlaylist(item)&&!item.hlsError&&jfHlsRuntime(item).allReady;
 }
 let jfHlsIndexedOriginals=new Map();
 let jfHlsIndexedPhysical=new Set();
 let jfHlsSharedAssets=new Map();
-const JF_HLS_MAX_ASSETS=30000;
-const JF_HLS_MAX_PLAYLIST=5*1024*1024;
+// 5 MiB/30k segments rejected normal long recordings. Keep bounded safety
+// limits, but allow large local VOD playlists and their distinct resources.
+const JF_HLS_MAX_ASSETS=200000;
+const JF_HLS_MAX_PLAYLIST=64*1024*1024;
 function jfHlsIsPlaylist(item){return String(item?.originalExt||'').toLowerCase()==='.m3u8';}
 function jfHlsRoot(item){return path.dirname(managedPath(item));}
 function jfHlsRelative(value,parent=''){
@@ -36,14 +57,20 @@ function jfHlsRelative(value,parent=''){
     throw Error('HLS 资源超出播放清单目录');
   return rel;
 }
-function jfHlsReferences(content){
-  const refs=[];
-  for(const line of String(content).split(/\r?\n/)){
+// Process one line at a time. Avoid materializing two additional giant
+// arrays (split lines + URI references) when a playlist is tens of MiB.
+function* jfHlsReferences(content){
+  const source=String(content);
+  let start=0;
+  while(start<source.length){
+    const end=source.indexOf('\n',start);
+    const line=source.slice(start,end<0?source.length:end).trim();
     if(line.startsWith('#')){
-      for(const match of line.matchAll(/\bURI="([^"]+)"/g))refs.push(match[1]);
-    }else if(line.trim())refs.push(line.trim());
+      for(const match of line.matchAll(/\bURI="([^"]+)"/g))yield match[1];
+    }else if(line)yield line;
+    if(end<0)break;
+    start=end+1;
   }
-  return refs;
 }
 function jfHlsContained(base,file){
   const rel=path.relative(base,file);
@@ -107,13 +134,15 @@ function jfHlsScanOne(item){
   const seen=new Set();
   const queue=[{name:'',file:managedPath(item)}];
   const pending=[];
+  const reservedNames=new Set();
   let count=0,changed=false;
   while(queue.length){
     const node=queue.shift();
     let content;
     try{
       const stat=fs.statSync(node.file);
-      if(stat.size>JF_HLS_MAX_PLAYLIST)throw Error('HLS 清单过大');
+      if(stat.size>JF_HLS_MAX_PLAYLIST)
+        throw Error('HLS 清单超过 64 MiB 安全上限');
       content=fs.readFileSync(node.file,'utf8').replace(/^\uFEFF/,'');
       if(!content.startsWith('#EXTM3U'))throw Error('HLS 清单缺少 #EXTM3U');
     }catch(error){item.hlsError=error.message;return changed;}
@@ -121,7 +150,9 @@ function jfHlsScanOne(item){
       let relative;
       try{relative=jfHlsRelative(value,node.name);}catch(error){item.hlsError=error.message;return changed;}
       if(seen.has(relative))continue;
-      if(++count>JF_HLS_MAX_ASSETS){item.hlsError='HLS 资源数量超限';return changed;}
+      if(++count>JF_HLS_MAX_ASSETS){
+        item.hlsError='HLS 不同资源超过 200000 个安全上限';return changed;
+      }
       seen.add(relative);
       let asset=byName.get(relative);
       let full=null;
@@ -143,9 +174,10 @@ function jfHlsScanOne(item){
           let anonymous;
           do{anonymous=crypto.randomBytes(16).toString('hex');}
           while(fs.existsSync(path.join(path.dirname(full),anonymous))||
-                pending.some(p=>p.to===path.join(path.dirname(full),anonymous)));
-          stored=path.relative(jfHlsRoot(item),path.join(path.dirname(full),anonymous))
-            .split(path.sep).join('/');
+                reservedNames.has(path.join(path.dirname(full),anonymous)));
+          const reserved=path.join(path.dirname(full),anonymous);
+          reservedNames.add(reserved);
+          stored=path.relative(jfHlsRoot(item),reserved).split(path.sep).join('/');
           state='pending';
         }
         asset={id:crypto.createHash('sha256').update(item.key+':'+relative).digest('hex').slice(0,32),
@@ -216,7 +248,7 @@ function jfHlsScan(){
   // duplicate media cards are suppressed.
 }
 function jfHlsManifest(item,relative,content){
-  const lookup=new Map((item.hlsAssets||[]).filter(a=>a.state==='ready').map(a=>[a.original,a]));
+  const lookup=jfHlsRuntime(item).byOriginal;
   const mapUri=(raw)=>{
     const name=jfHlsRelative(raw,relative);
     const asset=lookup.get(name);
@@ -241,7 +273,7 @@ function jfHlsServe(req,res,item,id='',requestedExt=''){
     return;
   }
   try{
-    const asset=id?(item.hlsAssets||[]).find(x=>x.id===id&&x.state==='ready'):null;
+    const asset=id?jfHlsRuntime(item).byId.get(id):null;
     if(id&&(!asset||(requestedExt&&asset.ext!==requestedExt))){
       res.writeHead(404);res.end();return;
     }
