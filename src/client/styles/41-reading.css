@@ -4384,9 +4384,10 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 /* v7.142 · EPUB's annotation index shows EACH source member in a combined
    text-and-image mark. Paper-mode toolbar stays quiet and booklike. */
 .jfReader.jfEpubMode #jfReadExcerpt{display:none!important}
-.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"]{
+.jfReader.jfEpubMode #jfPdfMarksListToggle[aria-expanded="true"],
+.jfReader.jfEpubMode:has(#jfPdfMarksList:not([hidden])) #jfPdfMarksListToggle{
   color:#48483e;
-  background:rgba(105,94,74,.09);
+  background-color:rgba(105,94,74,.09)!important;
   border:1px solid rgba(105,94,74,.16);
   box-shadow:none;
   border-radius:8px;

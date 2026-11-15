@@ -1119,6 +1119,8 @@ def assert_postcard_pair(page,book_id):
       })),images:members.filter(m=>m.dataset.markType==='epub-image').length,
       heading:unit.querySelector('.jfEpubMarkUnitHeading')?.textContent,
       listOpen:!list.hidden,activeInk:getComputedStyle(toggle).backgroundColor,
+      toggleExpanded:toggle.getAttribute('aria-expanded'),
+      readerClass:toggle.closest('.jfReader')?.className,
       quoteHidden:getComputedStyle(excerpt).display==='none',
       sourceNoMutation:jfDeskFlow[0].el.querySelectorAll('img').length};
     }""")
@@ -1126,6 +1128,7 @@ def assert_postcard_pair(page,book_id):
     assert shown['members'][1]['type']=='text' and (
         shown['members'][2]['type']=='epub-image'),shown
     assert '图文组合' in shown['heading'] and shown['quoteHidden'],shown
+    assert shown['toggleExpanded']=='true',shown
     assert shown['activeInk']=='rgba(105, 94, 74, 0.09)',shown
     assert shown['sourceNoMutation']==2,shown
 
