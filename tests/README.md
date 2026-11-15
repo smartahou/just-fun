@@ -34,3 +34,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 ## v7.144 · 本地 HLS/Hash
 
 `node tests/hls-local-v7144.js` 使用自动生成并销毁的临时 HLS 主清单、子清单、视频分片、初始化片段和本地密钥，分别验证 Hash 开关：匿名物理命名、清单 URI 重写、同目录及子目录相对路径、已索引 .ts 去重、资源返回内容及异常中断后的 pending 恢复。需另行运行 Chromium 实际播放及完整离线构建，不应将源代码静态检查等同于真实解码验收。
+
+## v7.144.1 · 发布依赖准备
+
+`node tests/deploy-deps-v7145.js` 检查 GitHub 候选锁文件依赖核验、HLS.js 首次安装兼容旧部署器的构建兜底、隔离 npm 目录与 Windows junction 保护。该测试不安装 npm 包，不访问用户媒体目录，也不等于 Windows 真机更新验收。
