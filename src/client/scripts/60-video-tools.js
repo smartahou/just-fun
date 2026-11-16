@@ -1220,19 +1220,8 @@ function unloadFeedVideo(video) {
     return;
   }
 
-  try {
-    video.pause();
-  } catch {}
-
   disconnectFeedVideoObserver(video);
-  video.preload = 'none';
-  video.dataset.loaded = '0';
-  jfReleaseVideoSource(video);
-  video.removeAttribute('src');
-
-  try {
-    video.load();
-  } catch {}
+  jfDisposeVideoSource(video);
 }
 
 function jfCleanupFeedSection(section) {
@@ -1496,11 +1485,8 @@ function openFeed(key) {
   // ResizeObservers, or fullscreen-era IO callbacks outside the new feed.
   if (feedObserver) { feedObserver.disconnect(); feedObserver=null; }
   scroller.querySelectorAll('video.feedVideo').forEach(video => {
-    try { video.pause(); } catch {}
     disconnectFeedVideoObserver(video);
-    video.removeAttribute('src');
-    video.preload='none';
-    try { video.load(); } catch {}
+    jfDisposeVideoSource(video);
   });
 
   const useLightweightFeed = source.length > JF_FEED_DOM_THRESHOLD;
@@ -1739,23 +1725,8 @@ function closeFeed() {
     )
     .forEach(
       video => {
-        try {
-          video.pause();
-        } catch {}
-
-        disconnectFeedVideoObserver(
-          video
-        );
-
-        video.removeAttribute(
-          'src'
-        );
-
-        video.preload = 'none';
-
-        try {
-          video.load();
-        } catch {}
+        disconnectFeedVideoObserver(video);
+        jfDisposeVideoSource(video);
       }
     );
 
