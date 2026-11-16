@@ -517,13 +517,26 @@ function startServer() {
             }
             const items=keys.map(k=>catalog.items.find(x=>x.key===k && x.state==='ready'));
             if(items.some(x=>!x)){sendJson(res,{ok:false,error:'存在无效素材，刷新后重试'},409);return;}
-            if(items.some(x=>jfHlsIsPlaylist(x)||jfHlsChildKeys.has(x.key))){
-              sendJson(res,{ok:false,error:'HLS 清单和分片必须整体迁移，当前版本暂不支持移动 HLS 组合资源'},409);return;
+            // A single binary video misnamed .m3u8 has no companion files:
+            // move it normally. A genuine HLS playlist moves together with
+            // its indexed assets in a crash-recoverable group transaction.
+            if(items.some(x=>jfHlsChildKeys.has(x.key)) &&
+               !items.some(jfHlsHasCompanions)){
+              sendJson(res,{ok:false,error:'这是 HLS 的关联分片，请移动对应视频条目'},409);return;
             }
             if(items.some(x=>x.readOnly && target==='root')){sendJson(res,{ok:false,error:'来源文件请移动到 data 管理目录，不能直接移动到原媒体根目录'},403);return;}
+            const targetRelative=target==='root'?'':target;
+            if(items.some(jfHlsHasCompanions)){
+              try{
+                const moved=jfMoveHlsGroup(items,targetRelative);
+                sendJson(res,{ok:true,moved});
+              }catch(error){
+                sendJson(res,{ok:false,error:'移动失败：'+error.message},409);
+              }
+              return;
+            }
             let changes=[];
             try {
-              const targetRelative=target==='root'?'':target;
               const destDir=path.join(targetDir,safeMediaRelativeDir(targetRelative));
                const occupied=file=>{try{fs.lstatSync(file);return true;}catch(error){if(error.code==='ENOENT')return false;throw error;}};
 
