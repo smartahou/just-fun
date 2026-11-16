@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.148.0 / Current version: v7.148.0** · 持续迭代 / Actively evolving
+**当前版本：v7.149.0 / Current version: v7.149.0** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.149 · 修复关闭视频后 HLS 声音仍在后台播放**：此前 Feed 退出及重新打开时仅暂停 video、清除 src 并删除 DOM，没有销毁关联的 HLS.js MediaSource/网络加载器，导致关闭后音频仍可能持续播放。增加统一 `jfDisposeVideoSource`：先暂停、停止 HLS 加载、销毁 HLS 实例、清除 src/srcObject，最后 load() 释放解码资源。Feed 关闭、重新打开、翻页卸载、小窗关闭、悬停预览与视频裁剪均使用统一清理。全屏视频切换记录 Feed 会话，在异步换源返回时确认未关闭，并清空关闭后可能触发的旧全屏恢复状态，避免延迟回调唤醒音频。新增 `node tests/hls-teardown-v7149.js`，使用模拟 HLS 实例执行真实 Feed 关闭流程，验证 destroy/stopLoad、移除媒体源、回调不复活及二次销毁幂等性。该测试不需要用户媒体；浏览器实际播放仍需本机确认。
 
 **v7.148 · 修复误命名为 m3u8 的大型视频文件无法播放**：HLS 清单是一种以 `#EXTM3U` 开头的 UTF-8 文本，不等于视频本体。此前仅凭 .m3u8 扩展名就将上百 MB 文件视为文本清单，导致连续的“清单过大”“缺少 #EXTM3U”错误。现在先仅读取文件开头 1024 字节辨别实际内容：标准 HLS 继续走清单索引；MP4/WebM 容器直接按真实 MIME 走 HTML5 原生 Range 播放；标准 188 字节包长 MPEG-TS 自动用内存生成的 HLS 字节区间清单包装，并通过原有匿名资源接口按 Range 读取分片，无需转码、复制、修改原文件名或 Hash；FFprobe 与 FFmpeg 依实际类型分析时长及封面。AVI/FLV/MKV、非 188 字节 MPEG-TS、UTF-16 或未知格式不再盲目加大清单上限，而是显示有针对性的诊断。加回归测试 `tests/hls-sniff-v7148.js` 和真正 HTTP/FFprobe 的 `tests/hls-ts-http-v7148.js`；综合运行 `npm run test:hls`。注意：能否在浏览器端解码仍取决于实际音视频编码及 HLS.js 支持范围。原始文件和索引中记载的原文件名不被修改。
 
