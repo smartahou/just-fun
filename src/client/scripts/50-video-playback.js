@@ -441,6 +441,7 @@ async function stepNativeFullscreen(
   }
 
   nativeFullscreenSwitching = true;
+  const feedSession=jfFeedSessionGeneration;
   try {
   nativeFullscreenVideo =
     video;
@@ -458,6 +459,11 @@ async function stepNativeFullscreen(
   updateFeedABUi();
 
   await paintNativeFullscreenBlack(video,next.cover || '');
+  // Closing the Feed invalidates any in-flight fullscreen source switch.
+  // Never attach/play an HLS engine on an already-disposed player.
+  if(feedSession!==jfFeedSessionGeneration||!video.isConnected||
+      !document.getElementById('feedOverlay')?.classList.contains('open'))
+    return false;
 
   video.pause();
 
