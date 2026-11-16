@@ -1064,11 +1064,7 @@ function openMulti(key) {
             'video'
           );
 
-        if (video) {
-          video.pause();
-          jfReleaseVideoSource(video);
-        }
-
+        if(video)jfDisposeVideoSource(video);
         box.remove();
 
         updateMiniVisibilityToggle();
