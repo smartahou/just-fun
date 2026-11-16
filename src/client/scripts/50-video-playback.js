@@ -9,11 +9,28 @@ function jfVideoIsHls(item,url){
     !resolved?.hlsDirectMime;
 }
 function jfReleaseVideoSource(video){
+  if(!video)return;
   const record=jfHlsPlayers.get(video);
   if(record){
+    // Invalidate the callbacks FIRST, then stop HLS loading / MediaSource.
+    // Otherwise a pending manifest callback may restart a removed player.
     jfHlsPlayers.delete(video);
+    try{record.hls.stopLoad();}catch{}
     try{record.hls.destroy();}catch{}
   }
+}
+// Final teardown for a player that is being closed/unmounted. Simply removing
+// a <video> node or its src does not stop HLS.js: it still owns the MSE stream.
+function jfDisposeVideoSource(video){
+  if(!video)return;
+  try{video.pause();}catch{}
+  jfReleaseVideoSource(video);
+  try{video.removeAttribute('src');}catch{}
+  try{video.srcObject=null;}catch{}
+  try{video.preload='none';}catch{}
+  if(video.dataset)video.dataset.loaded='0';
+  // load() releases the browser's decoder and detaches any blob: MediaSource.
+  try{video.load();}catch{}
 }
 function jfVideoSourceMatches(video,url,item){
   if(jfVideoIsHls(item,url)){
