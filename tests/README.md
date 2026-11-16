@@ -56,3 +56,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 `node tests/hls-sniff-v7148.js` 创建独立临时样本，测试 Hash 开启/关闭时能将真正的 HLS 清单、MP4、WebM、188 字节 MPEG-TS 和未知文件内容区分，不依赖后缀猜测；验证直接播放 MIME、虚拟 TS 分片 URL、Hash 不改动及重新扫描的稳定性。
 
 `node tests/hls-ts-http-v7148.js` 需要 FFmpeg/FFprobe，使用临时目录生成真实 MPEG-TS 但故意命名为 .m3u8，HTTP Range 响应模拟 Just Fun 的匿名分片服务，由 FFprobe 对虚拟 HLS 清单进行实际解码，分别测试 Hash 开关；浏览器的 HLS.js 实机播放仍需额外检查。
+
+## v7.149 · HLS 关闭后仍发声
+
+`npm run test:hls-teardown`：不使用真实视频和媒体目录，通过模拟 HLS.js / video 与 DOM，运行 `closeFeed()` 的实际代码，验证同时打开多个 HLS 视频后关闭 Feed 会停止加载、销毁 HLS 实例、清空媒体源、释放解码器，并阻止延迟到达的 HLS 清单事件在关闭后重新播放；也覆盖小窗关闭、Feed 重建、原生视频清理与二次销毁的幂等性。该回归测试已加入 `npm run test:hls`。
