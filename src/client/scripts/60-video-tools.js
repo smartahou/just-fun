@@ -1697,6 +1697,8 @@ function closeFeed() {
 
   nativeFullscreenKey =
     '';
+  // A late fullscreenchange event must never restore the disposed media.
+  nativeFullscreenOrigin=null;
 
   const overlay =
     document.querySelector(
