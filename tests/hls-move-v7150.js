@@ -16,7 +16,9 @@ function fixture(hash=true){
     {master:'movie.m3u8',segment:'part.ts',nested:'part2.ts',key:'secret.key'};
   const full=dir=>path.join(root,...dir.split('/'));
   for(const dir of ['data',src,dst,folder])fs.mkdirSync(full(dir),{recursive:true});
-  fs.writeFileSync(path.join(full(src),names.master),'#EXTM3U\n#EXTINF:4,\npart.ts\n');
+  fs.writeFileSync(path.join(full(src),names.master),
+    '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="secret.key"\n'+
+    '#EXTINF:4,\npart.ts\n#EXTINF:4,\nsegments/part2.ts\n#EXT-X-ENDLIST\n');
   fs.writeFileSync(path.join(full(src),names.segment),'part-1');
   fs.writeFileSync(path.join(full(folder),names.nested),'part-2');
   fs.writeFileSync(path.join(full(src),names.key),'secret');
@@ -108,6 +110,25 @@ function verifyMoved(f){
       assert.equal(f.ctx.jfMoveHlsGroup([f.master],f.dst),1,
         'one user video should not count three hidden HLS assets');
       verifyMoved(f);
+      // Integration with the REAL HLS indexer after a moved Hash package:
+      // original URI paths must still resolve, and TS children stay hidden.
+      const hlsSource=fs.readFileSync(
+        path.join(root,'src/server/35-hls-playlists.js'),'utf8');
+      const scanCtx={fs,path,crypto,Buffer,catalog:f.catalog,
+        targetDir:f.root,HASH_ENABLED:hash,
+        MIME_BY_EXT:{'.ts':'video/mp2t'},
+        safeMediaRelativeDir:f.ctx.safeMediaRelativeDir,
+        safeManagedName:f.ctx.safeManagedName,
+        managedPath:f.ctx.managedPath,
+        saveCatalog:()=>{},streamMedia:()=>{}};
+      vm.createContext(scanCtx);
+      vm.runInContext(hlsSource,scanCtx,{filename:'35-hls-playlists.js'});
+      await scanCtx.jfHlsScan();
+      assert.equal(f.master.hlsError,undefined,'moved HLS still indexes');
+      assert.equal(f.master.hlsAssets.length,3,'no HLS resources lost after rescan');
+      assert(scanCtx.jfHlsReady(f.master),'moved playlist still playable');
+      assert(vm.runInContext('jfHlsChildKeys',scanCtx).has(f.child.key),
+        'indexed .ts child must remain hidden after repeated scans');
     }finally{f.dispose();}
     // Any disk error must restore every moved file and its original metadata.
     const failed=fixture(hash);
