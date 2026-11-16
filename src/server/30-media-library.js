@@ -1307,6 +1307,7 @@ async function scanAll(
         );
       }
 
+      jfRecoverPendingHlsMove();
       recoverPendingImports();
       ingestNewFiles();
       ingestDataTree();
