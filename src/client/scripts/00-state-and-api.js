@@ -520,10 +520,7 @@ function choosePortraitCrop(item, previewTime) {
       window.removeEventListener('resize', updateBox);
       document.removeEventListener('keydown', onKeyboard, true);
       stopFrames();
-      video.pause();
-      jfReleaseVideoSource(video);
-      video.removeAttribute('src');
-      video.load();
+      jfDisposeVideoSource(video);
       backdrop.remove();
       resolve(result);
     }
