@@ -1,7 +1,14 @@
 // Transactional HLS group moves. An ordinary video renamed *.m3u8 has no
 // dependent assets and is deliberately treated as a single media file.
 function jfHlsHasCompanions(item){
-  return jfHlsIsPlaylist(item)&&!jfHlsDirectVideo(item)&&!jfHlsBinaryTs(item);
+  if(!jfHlsIsPlaylist(item)||jfHlsDirectVideo(item)||jfHlsBinaryTs(item))
+    return false;
+  // A malformed/mislabeled standalone file has no indexed dependents. Only
+  // an actual text playlist, or an older catalog with saved HLS assets, needs
+  // a bundle transaction.
+  if(item.hlsDetectedFormat&&item.hlsDetectedFormat!=='playlist'&&
+     !item.hlsAssets?.length)return false;
+  return true;
 }
 function jfMoveExists(file){
   try{fs.lstatSync(file);return true;}
