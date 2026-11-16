@@ -35,6 +35,7 @@ function jfHlsReady(item){
 }
 let jfHlsIndexedOriginals=new Map();
 let jfHlsIndexedPhysical=new Set();
+let jfHlsIndexedPhysicalKeys=new Map();
 let jfHlsSharedAssets=new Map();
 // 5 MiB/30k segments rejected normal long recordings. Keep bounded safety
 // limits, but allow large local VOD playlists and their distinct resources.
@@ -373,20 +374,29 @@ async function jfHlsScan(){
   jfHlsChildKeys.clear();
   jfHlsIndexedOriginals=new Map();
   jfHlsIndexedPhysical=new Set();
+  jfHlsIndexedPhysicalKeys=new Map();
   jfHlsSharedAssets=new Map();
   for(const item of catalog.items){
     if(item.state!=='ready')continue;
     try{
       const file=managedPath(item);
       jfHlsIndexedPhysical.add(file);
+      jfHlsIndexedPhysicalKeys.set(file,item.key);
       const original=path.join(path.dirname(file),item.originalName||item.managedName);
       jfHlsIndexedOriginals.set(original,{file,key:item.key});
     }catch{}
   }
   const addShared=item=>{
     for(const asset of item.hlsAssets||[]){
-      try{jfHlsSharedAssets.set(jfHlsOriginalPath(item,asset.original),{item,asset});}
-      catch{}
+      try{
+        const file=jfHlsStoredPath(item,asset.stored);
+        const childKey=jfHlsIndexedPhysicalKeys.get(file);
+        // Rebuild hidden HLS child identity on EVERY scan, including when the
+        // asset was indexed months ago. Otherwise a 15s refresh reveals TS
+        // fragments as movable independent videos and breaks group safety.
+        if(childKey&&childKey!==item.key)jfHlsChildKeys.add(childKey);
+        jfHlsSharedAssets.set(jfHlsOriginalPath(item,asset.original),{item,asset});
+      }catch{}
     }
   };
   for(const item of catalog.items){
