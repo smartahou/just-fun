@@ -1042,8 +1042,7 @@ function jfStopHoverPreview(){
   clearTimeout(jfHoverTimer);jfHoverTimer=null;jfHoverToken++;
   if(jfHoverItem)jfHoverItem.classList.remove('previewLoading');
   if(jfHoverVideo){
-    jfReleaseVideoSource(jfHoverVideo);
-    try{jfHoverVideo.pause();jfHoverVideo.removeAttribute('src');jfHoverVideo.load();}catch{}
+    jfDisposeVideoSource(jfHoverVideo);
     jfHoverVideo.remove();
   }
   jfHoverItem=null;jfHoverVideo=null;
