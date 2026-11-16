@@ -224,6 +224,8 @@ function jfMoveHlsGroup(items,targetRelative){
   }
   const moving=[...filePlans.values()];
   if(!moving.length)return 0;
+  // UI reports selected media entries, not the number of hidden HLS fragments.
+  const visibleMoved=items.filter(item=>itemPlans.has(item)).length;
   // A destination may not coincide with another file's old path.
   for(const entry of moving){
     if(movingFiles.has(entry.to))throw Error('目标路径与待移动媒体冲突');
@@ -285,5 +287,5 @@ function jfMoveHlsGroup(items,targetRelative){
       // Durable committed phase persists on disk. Startup will clear it.
     }
   }
-  return moving.length;
+  return visibleMoved;
 }
