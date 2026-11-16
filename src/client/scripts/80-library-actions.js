@@ -158,7 +158,14 @@ function openUnifiedMove(keys) {
   select.innerHTML=targets.map(x=>'<option value="'+esc(x.relativeDir)+'"'+(x.disabled?' disabled':'')+'>'+esc(x.name)+'</option>').join('');
   if(targets.some(x=>x.relativeDir===activeFolder&&!x.disabled))select.value=activeFolder;
   else select.value='data';
-  document.querySelector('#unifiedMoveSummary').textContent='移动 '+valid.length+' 个文件到指定目录。遵循当前媒体库统一命名规则，显示名称不变；不覆盖目标已有文件。';
+  const containsHls=valid.some(k=>{
+    const item=allItems.find(x=>x.key===k);
+    return item?.originalExt==='.m3u8'&&item.hlsDetectedFormat==='playlist';
+  });
+  document.querySelector('#unifiedMoveSummary').textContent=
+    '移动 '+valid.length+' 个文件到指定目录。'+
+    (containsHls?'HLS 视频会连同关联分片整体移动。':'')+
+    '显示名称不变，不会覆盖目标文件。';
   document.querySelector('#unifiedMoveBack').hidden=false;
   select.focus();
 }
