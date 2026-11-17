@@ -1,6 +1,6 @@
 
 const AUDIO_SPEED_STORAGE_KEY = 'douyin-audio-playback-speed';
-const AUDIO_SPEED_OPTIONS = [0.5,0.75,1,1.25,1.5,1.75,2];
+const AUDIO_SPEED_OPTIONS = [0.25,0.5,0.75,1,1.25,1.5,1.75,2];
 let audioPlaybackRate = 1;
 try {
   const savedRate = Number(localStorage.getItem(AUDIO_SPEED_STORAGE_KEY));
