@@ -22,6 +22,25 @@ function startServer() {
               `http://127.0.0.1:${server.address()?.port || PORT}`
             );
 
+          // v7.152.1 — one central cross-site guard for every API write.
+          // Browsers send Origin on all POST/DELETE; when present it must be
+          // this server (loopback or an allowed LAN interface) with the same
+          // Host, and Sec-Fetch-Site must never be cross-site. Requests from
+          // native tools (curl/tests) carry neither header and stay usable.
+          // Content-Type is not restricted here so multipart uploads keep
+          // working; JSON-only endpoints already enforce it themselves.
+          if(req.method!=='GET' && req.method!=='HEAD' && url.pathname.startsWith('/api/')){
+            try{
+              jfAsrCheckOrigin(req);
+              const site=String(req.headers['sec-fetch-site']||'');
+              if(site && site!=='same-origin' && site!=='none')throw Error('来源不受信任');
+            }catch(error){
+              res.writeHead(403,{'Content-Type':'application/json; charset=utf-8'});
+              res.end(JSON.stringify({ok:false,error:'拒绝跨站写请求'}));
+              return;
+            }
+          }
+
           if (url.pathname === '/favicon.ico') {
              res.writeHead(200, {'Content-Type':'image/x-icon', 'Content-Length':APP_FAVICON_ICO.length, 'Cache-Control':'private, max-age=300'});
              if (req.method === 'HEAD') res.end();

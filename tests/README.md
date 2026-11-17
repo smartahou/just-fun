@@ -72,3 +72,7 @@ v6.24 运行 `python tests/run-all.py` 可自动构建、并行执行全部现�
 ## v7.152 · 视频倍速下拉选择
 
 `npm run test:media-speed` 现检查视频时间轴使用原生 select、全档位选项、下拉 change 事件正确修改真实播放倍速（含 0.25×、0.5×）、拒绝不合法倍速，以及倍速变化时同步选中项；同时确保删除旧循环切换代码并保持音频倍速菜单与保存功能。
+
+## v7.152.1 · 写请求跨站守卫与单实例锁
+
+`python tests/write-origin-and-instance-lock-v7152.py`（已并入 `run-all.py` CASES）：在隔离媒体库上验证——跨站表单式 POST（text/plain、带恶意 Origin/Sec-Fetch-Site）打 `/api/media-delete-batch` 返回 403 且媒体文件仍在；伪造同 Host 但 `Sec-Fetch-Site: cross-site` 同样被拒；同源正常写入放行；同一媒体库启动第二个实例会被立即拒绝；Windows 硬杀后遗留的陈旧锁与损坏锁均被下一次启动安全接管，锁记录的 PID 与运行实例一致。`security.py` 的文件对比不统计 `instance.lock`（应用内部状态，不属于用户数据）。

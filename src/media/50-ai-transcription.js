@@ -109,7 +109,7 @@ async function jfAsrSaveTranscript(key,rows,revision,confirm){
 function jfAsrCheckOrigin(req){
   const origin=req.headers.origin;if(!origin)return;
   let parsed;try{parsed=new URL(origin);}catch{throw Error('请求来源无效');}
-  const trusted=parsed.hostname==='127.0.0.1'||
+  const trusted=parsed.hostname==='127.0.0.1'||parsed.hostname==='localhost'||
     (JF_LAN_ENABLED&&JF_LAN_INTERFACES.some(iface=>iface.address===parsed.hostname));
   if(parsed.protocol!=='http:'||!trusted||parsed.host!==req.headers.host)
     throw Error('禁止跨站请求');

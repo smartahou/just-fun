@@ -28,6 +28,77 @@ const DATA_FILE = path.join(
   'data.json'
 );
 
+// v7.152.1 — single-writer guard: two processes must never mutate the same
+// data.json. The lock lives in the library cache dir and records pid + host.
+// Same-host liveness is checked with process.kill(pid,0); a foreign-host lock
+// (folder shared over SMB) is treated as live for 12h to stay conservative.
+const INSTANCE_LOCK_FILE = path.join(CACHE_DIR, 'instance.lock');
+const INSTANCE_LOCK_FOREIGN_STALE_MS = 12 * 60 * 60 * 1000;
+let instanceLockOwned = false;
+function jfInstanceLockState() {
+  let raw;
+  try { raw = fs.readFileSync(INSTANCE_LOCK_FILE, 'utf8'); }
+  catch (error) { return { exists:false }; }
+  let info = null;
+  try { info = JSON.parse(raw); } catch {}
+  if (!info || !Number.isInteger(info.pid) || info.pid <= 0) {
+    // A just-created lock may still be empty while its owner is writing it.
+    let fresh = false;
+    try { fresh = Date.now() - fs.statSync(INSTANCE_LOCK_FILE).mtimeMs < 2000; } catch {}
+    return { exists:true, info:null, fresh };
+  }
+  return { exists:true, info };
+}
+function jfInstanceLockIsLive(info) {
+  if (info.host && info.host !== os.hostname()) {
+    return Number.isFinite(info.startedAt) && Date.now() - info.startedAt < INSTANCE_LOCK_FOREIGN_STALE_MS;
+  }
+  try { process.kill(info.pid, 0); return true; }
+  catch (error) { return error.code === 'EPERM'; }
+}
+function jfAcquireInstanceLock() {
+  fs.mkdirSync(CACHE_DIR, { recursive:true });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let created = false;
+    try {
+      const fd = fs.openSync(INSTANCE_LOCK_FILE, 'wx', 0o600);
+      try { fs.writeSync(fd, JSON.stringify({ pid:process.pid, host:os.hostname(), startedAt:Date.now() })); }
+      finally { fs.closeSync(fd); }
+      created = true;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
+    if (created) { instanceLockOwned = true; return; }
+    const state = jfInstanceLockState();
+    if (!state.exists) continue;
+    if (state.info && jfInstanceLockIsLive(state.info)) {
+      throw new Error('该媒体库正被另一个 Just Fun 实例使用（PID ' + state.info.pid + '），已拒绝第二个实例以免同时写入缓存');
+    }
+    if (!state.info && state.fresh) {
+      throw new Error('另一个 Just Fun 实例正在启动（正在获取媒体库写入锁），请稍后再试');
+    }
+    // Stale lock: move it aside atomically so two competing starters cannot
+    // both "reuse" the same dead lock; the rename winner retries creation.
+    const stale = INSTANCE_LOCK_FILE + '.stale-' + process.pid + '-' + Date.now();
+    try { fs.renameSync(INSTANCE_LOCK_FILE, stale); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try { fs.unlinkSync(stale); } catch {}
+  }
+  throw new Error('无法获取媒体库写入锁，请稍后重试；若确认没有其他实例在运行，可删除 ' + INSTANCE_LOCK_FILE);
+}
+function jfReleaseInstanceLock() {
+  if (!instanceLockOwned) return;
+  instanceLockOwned = false;
+  try {
+    const state = jfInstanceLockState();
+    if (state.info && state.info.pid === process.pid && state.info.host === os.hostname())
+      fs.unlinkSync(INSTANCE_LOCK_FILE);
+  } catch {}
+}
+process.on('exit', jfReleaseInstanceLock);
+process.on('SIGINT', jfReleaseInstanceLock);
+process.on('SIGTERM', jfReleaseInstanceLock);
+
 // v7.24.2: retire only exact application-generated historical notice files.
 // Users may have edited or replaced this path; never remove unknown content or symlinks.
 const LEGACY_GENERATED_NOTICE_DIGESTS = new Set([

@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.152.0 / Current version: v7.152.0** · 持续迭代 / Actively evolving
+**当前版本：v7.152.1 / Current version: v7.152.1** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.152.1 · API 写请求统一跨站防护与单实例写锁**：所有 `/api/` 写请求（POST/DELETE）进入统一守卫：浏览器携带的 Origin 必须是本机回环（127.0.0.1/localhost）或当前启用的局域网地址，且与 Host 完全一致；`Sec-Fetch-Site` 为 cross-site 时直接 403。修复此前仅阅读接口有校验、`media-delete-batch`、移动、改名、转码、剪辑等写接口可被恶意网页以无预检表单 POST 触达的问题；无 Origin/Sec-Fetch 的本机工具（curl、测试）不受影响，multipart 上传不受影响。同一媒体库新增单写者锁（`.douyin-nav-cache/instance.lock`，记录 PID+主机名）：第二个实例在写入任何缓存前被拒绝；正常退出释放，硬杀后由存活检查+原子接管回收，损坏锁按陈旧处理。同时把 hls.js 依赖准备的真实行为写回 `scripts/build.js` 注释。新增 `tests/write-origin-and-instance-lock-v7152.py`（跨站删除被拒且文件仍在、同源写入放行、二实例拒绝、硬杀接管、损坏锁接管）；`tests/security.py` 与 `tests/isolated.py` 通过。浏览器实机跨站复测与 iPad 局域网写操作仍待验收。
 
 **v7.152 · 视频倍速改为下拉选择**：视频时间轴原有的逐次点击循环切换倍速，改为简洁的原生下拉选择，可直接选 0.25×、0.5×、0.75×、1×、1.25×、1.5×、2×；选中即生效，不打断当前播放，倍速发生变化时同步更新选中项。原生下拉菜单支持触屏与键盘操作，并采用与 Just Fun 时间轴一致的暗色小尺寸样式；音频既有的下拉倍速及跨重启记忆不变。更新 `npm run test:media-speed` 回归验证选项和真实 change 事件处理；浏览器实机仍需验收。
 

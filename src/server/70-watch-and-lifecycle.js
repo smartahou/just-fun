@@ -295,6 +295,15 @@ async function main() {
   // Hash+password startup notice. Authentication and three-failure behavior
   // remain unchanged in the security module.
 
+  // v7.152.1 — refuse a second instance on the same library before any cache
+  // or index write can race with a live first instance.
+  try { jfAcquireInstanceLock(); }
+  catch (error) {
+    console.error('启动失败：' + (error && error.message || '无法获取媒体库写入锁'));
+    process.exitCode = 1;
+    return;
+  }
+
   // Authenticate the user BEFORE reading even an encrypted index; no startup leak.
   persistLibrarySettings();
   const unlockedPassword=PWD_ENABLED ? await unlockLibrary() : null;
@@ -419,6 +428,7 @@ async function main() {
 }
 
 function shutdown() {
+  jfReleaseInstanceLock();
   if (driveAwakeTimer) {clearInterval(driveAwakeTimer);driveAwakeTimer=null;}
   stopActiveMediaChildren();
   for (const job of framePreviewJobs.values()) {try{job.child?.kill('SIGTERM');}catch{}}

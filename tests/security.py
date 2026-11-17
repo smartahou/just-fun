@@ -3,7 +3,10 @@
 import json,os,pathlib,subprocess,sys,tempfile,time
 from isolated import ROOT, make_fixture, launch, stop, api_wait,sha
 
-def contents(path):return sorted(str(p.relative_to(path)) for p in path.rglob('*') if p.is_file())
+def contents(path):return sorted(str(p.relative_to(path)) for p in path.rglob('*') if p.is_file() and p.name!='instance.lock')
+# v7.152.1: instance.lock is app-internal single-writer state, not user data;
+# a failed login must not be judged by it (it is released on normal exit and
+# taken over after a hard kill).
 
 def fail_login(script,lib,home):
     assert 'jf-architecture-test-'  in str(lib)

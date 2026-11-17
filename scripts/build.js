@@ -1,6 +1,10 @@
 'use strict';
-// Just Fun offline bundler: Node built-ins only. No npm install or network.
+// Just Fun offline bundler: the bundling step itself is Node built-ins only.
 // Source files are joined in the explicit order recorded in build.manifest.json.
+// ONE documented exception does use npm: if hls.js is absent from node_modules
+// and from the .jf-build-deps cache, vendorHlsNodePaths() installs the exact
+// locked version into .jf-build-deps (network required once, never touches the
+// worktree node_modules). See AGENTS.md "本机环境事实".
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
