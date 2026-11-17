@@ -338,12 +338,24 @@ function renderCreatorTags() {
     });
   });
 
-  document.querySelector('#creatorToggle').textContent =
+  const creatorToggleEl =
+    document.querySelector('#creatorToggle');
+
+  creatorToggleEl.title =
     '创作者' +
     (creators.length
-      ? ' · ' + creators.length + '人'
-      : '') +
-    (creatorOpen ? ' ▴' : ' ▾');
+      ? ' · ' + creators.length + ' 人'
+      : '');
+
+  creatorToggleEl.setAttribute(
+    'aria-label',
+    creatorToggleEl.title
+  );
+
+  creatorToggleEl.classList.toggle(
+    'open',
+    creatorOpen
+  );
 }
 
 // 素材区：目录显示原名；实际目录/文件仍然是 hash。

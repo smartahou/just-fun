@@ -1105,7 +1105,8 @@ function syncUnifiedControls() {
   fav.querySelector('.studioFavoriteLabel').textContent=unifiedFavoriteOnly?'仅看收藏':'收藏';
   document.body.classList.toggle('unifiedSelecting',mediaSelectMode);
   btn.setAttribute('aria-pressed',String(mediaSelectMode));
-  btn.textContent=mediaSelectMode?'完成选择':'选择';
+  btn.setAttribute('aria-label',mediaSelectMode?'完成选择':'选择媒体');
+  btn.title=mediaSelectMode?'完成选择':'选择媒体';
   const bar=document.querySelector('#unifiedBatchBar');bar.hidden=!mediaSelectMode;
   const count=mediaSelectedKeys.size;
   document.querySelector('#unifiedCount').textContent='已选 '+count+' 项';

@@ -163,9 +163,8 @@ function openUnifiedMove(keys) {
     return item?.originalExt==='.m3u8'&&item.hlsDetectedFormat==='playlist';
   });
   document.querySelector('#unifiedMoveSummary').textContent=
-    '移动 '+valid.length+' 个文件到指定目录。'+
-    (containsHls?'HLS 视频会连同关联分片整体移动。':'')+
-    '显示名称不变，不会覆盖目标文件。';
+    '移动 '+valid.length+' 个文件'+
+    (containsHls?' · 含 HLS 分片':'');
   document.querySelector('#unifiedMoveBack').hidden=false;
   select.focus();
 }
@@ -182,7 +181,7 @@ let unifiedAlbumRenameDir='';
 function openUnifiedAlbum(){
   unifiedAlbumRenameDir='';
   document.querySelector('#unifiedAlbumHeading').textContent='新建相簿 / 文件夹';
-  document.querySelector('#unifiedAlbumHelp').textContent='媒体目录名称与当前管理模式一致。';
+  document.querySelector('#unifiedAlbumHelp').textContent='';
   document.querySelector('#unifiedAlbumParentLabel').hidden=false;
   document.querySelector('#unifiedAlbumParent').required=true;
   document.querySelector('#unifiedAlbumSubmit').textContent='新建';
@@ -199,7 +198,7 @@ function openUnifiedAlbumRename(dir){
   hideUnifiedContext();
   unifiedAlbumRenameDir=dir;
   document.querySelector('#unifiedAlbumHeading').textContent='重命名文件夹';
-  document.querySelector('#unifiedAlbumHelp').textContent='修改目录名称。';
+  document.querySelector('#unifiedAlbumHelp').textContent='';
   document.querySelector('#unifiedAlbumParentLabel').hidden=true;
   document.querySelector('#unifiedAlbumParent').required=false;
   document.querySelector('#unifiedAlbumSubmit').textContent='保存';

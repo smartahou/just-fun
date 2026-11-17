@@ -1208,6 +1208,10 @@ function jfReleaseBootSplash(){
 setTimeout(()=>{if(!jfBootSplashReleased)jfReleaseBootSplash();},7000);
 load();
 
+// Initial chrome: render the icon-first sort pair immediately instead of
+// waiting for the first sort click.
+updateSortButtons();
+
 setInterval(
   load,
   DATA_POLL_INTERVAL

@@ -121,14 +121,24 @@ body > .studioHeader{
 /* icon-first chrome: square icon buttons, no words */
 .studioActions #studioNameToggle,
 .studioActions #unifiedSelectTop,
-.studioActions #videoViewToggle{
+.studioActions #videoViewToggle,
+.studioActions #creatorToggle{
   width:36px!important;min-width:36px!important;min-height:36px;
-  padding:0!important;display:grid;place-items:center;
+  padding:0!important;display:grid;place-items:center;position:relative;
 }
 .studioActions #studioNameToggle svg,
 .studioActions #unifiedSelectTop svg,
-.studioActions #videoViewToggle svg{
+.studioActions #videoViewToggle svg,
+.studioActions #creatorToggle svg{
   width:16px;height:16px;display:block;
+}
+#creatorToggle .creatorChevron{
+  position:absolute;right:2px;bottom:3px;font-size:7px;line-height:1;
+  color:inherit;opacity:.75;transition:transform .16s;
+}
+#creatorToggle.open .creatorChevron{transform:rotate(180deg)}
+#creatorToggle.open{
+  background:var(--jf-amber-soft)!important;border-color:var(--jf-amber-line)!important;color:#f4cf94!important;
 }
 .studioSort .sortBtn{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:36px}
 .studioSort .sortBtn svg{width:14px;height:14px;display:block}
@@ -204,6 +214,14 @@ body>.mediaTabs#studioMediaRail > #clipShelfTop::before{
 }
 #assetFolders .unifiedFolderNew{border:1px dashed #2a3c51;color:var(--jf-text-faint)}
 #assetFolders .unifiedFolderNew:hover{border-color:var(--jf-amber-line);color:#f2cd92}
+#assetFolders .jfFoldIconBtn{
+  width:34px!important;min-width:34px;height:32px;padding:0!important;
+  display:grid;place-items:center;border-radius:10px;
+}
+#assetFolders .jfFoldIconBtn svg{width:16px;height:16px;display:block}
+#assetFolders .jfFoldIconBtn.on{
+  color:#f2cd92;background:var(--jf-amber-soft);border:1px solid var(--jf-amber-line);
+}
 #folderContext{
   color:var(--jf-text-faint);font-size:11.5px;letter-spacing:.02em;
   padding:12px var(--jf-gutter) 0!important;background:transparent;margin:0!important;

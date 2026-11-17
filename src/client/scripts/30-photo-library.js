@@ -7,14 +7,16 @@ function jfFolderHasMedia(dir,kind){
 function renderVideoFolders() {
   const nav=document.querySelector('#assetFolders');
   const parts=activeFolder==='root'?[]:activeFolder.split('/');
-  let html='<button type="button" data-open-folder="all"'+(activeFolder==='all'?' class="on"':'')+'>全部视频</button>';
-  if(activeFolder==='root')html+='<button type="button" class="on">原媒体目录</button>';
+  const allIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+  const rootIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+  let html='<button type="button" class="jfFoldIconBtn'+(activeFolder==='all'?' on':'')+'" data-open-folder="all" title="全部视频" aria-label="全部视频">'+allIcon+'</button>';
+  if(activeFolder==='root')html+='<button type="button" class="on jfFoldIconBtn" title="原媒体目录" aria-label="原媒体目录">'+rootIcon+'</button>';
   else if(activeFolder!=='all')for(let i=0;i<parts.length;i++){
     const dir=parts.slice(0,i+1).join('/');
     if(dir==='data'||allFolders.some(f=>f.relativeDir===dir)||dir==='data/1001'||dir==='data/1002')
       html+='<button type="button" data-open-folder="'+esc(dir)+'"'+(dir===activeFolder?' class="on"':'')+'>'+esc(folderDisplayName(dir))+'</button>';
   }
-  if(activeFolder!=='source'&&!activeFolder.startsWith('source/'))html+='<button type="button" id="unifiedNewAlbum" class="unifiedFolderNew">＋ 新建目录</button>';
+  if(activeFolder!=='source'&&!activeFolder.startsWith('source/'))html+='<button type="button" id="unifiedNewAlbum" class="unifiedFolderNew" title="新建目录" aria-label="新建目录">＋</button>';
   nav.innerHTML=html;
   const candidates=activeFolder==='all'?[{relativeDir:'root'},{relativeDir:'data'},...allFolders.filter(f=>f.parentDir==='all'||f.relativeDir==='source')]:
     activeFolder==='data'?[{relativeDir:'data/1001'},{relativeDir:'data/1002'},...allFolders.filter(f=>f.parentDir==='data')]:
@@ -42,7 +44,8 @@ function renderAssets() {
   const nav = document.querySelector('#assetFolders');
   let currentLabel = folderDisplayName(activeFolder);
   const folderButtons = [];
-  folderButtons.push('<button type="button" data-open-folder="all"'+(activeFolder==='all'?' class="on"':'')+'>全部素材</button>');
+  const allIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+  folderButtons.push('<button type="button" class="jfFoldIconBtn'+(activeFolder==='all'?' on':'')+'" data-open-folder="all" title="全部素材" aria-label="全部素材">'+allIcon+'</button>');
   if (activeFolder !== 'all') {
     const parts = activeFolder==='root' ? [] : activeFolder.split('/');
     for(let i=0;i<parts.length;i++){
@@ -54,7 +57,7 @@ function renderAssets() {
     if(activeFolder==='root') folderButtons.push('<button type="button" class="on">原媒体目录</button>');
   }
   folderButtons.push('<button type="button" id="fileSort" title="按文件名中的数字自然排序">名称 '+(fileSortAscending?'↑':'↓')+'</button>');
-  if(activeFolder!=='source'&&!activeFolder.startsWith('source/'))folderButtons.push('<button type="button" id="unifiedNewAlbum" class="unifiedFolderNew" title="新建目录">＋ 新建目录</button>');
+  if(activeFolder!=='source'&&!activeFolder.startsWith('source/'))folderButtons.push('<button type="button" id="unifiedNewAlbum" class="unifiedFolderNew" title="新建目录" aria-label="新建目录">＋</button>');
   nav.innerHTML = folderButtons.join('');
   const children = activeFolder==='all'
     ? folderNames.filter(x=>x.parentDir==='all'||x.relativeDir==='source')
