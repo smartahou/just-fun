@@ -351,7 +351,14 @@ function jfTimelineUpdate(video){
   ui.querySelector('.jfTimelinePlay').setAttribute('aria-label',video.paused?'播放':'暂停');
   ui.querySelector('.jfTimelineVolume').value=video.muted?'0':String(video.volume);
   ui.querySelector('.jfTimelineVolumeToggle').setAttribute('aria-label',video.muted?'恢复声音':'静音');
-  const rate=ui.querySelector('.jfTimelineRate');if(rate){rate.textContent=(Number(video.playbackRate)||1)+'×';rate.title='倍速 '+rate.textContent+' · 点击切换';}
+  const rate=ui.querySelector('.jfTimelineRate');
+  if(rate){
+    const current=Number(video.playbackRate)||1;
+    // The native select keeps its options mounted; never replace textContent.
+    const selected=JF_VIDEO_SPEED_OPTIONS.includes(current)?current:1;
+    if(rate.value!==String(selected))rate.value=String(selected);
+    rate.title='播放倍速：'+current+'×';
+  }
   const key=video.closest('.feedItem')?.dataset.key;
   ui.querySelector('.jfTimelineMarkRange')?.setAttribute('aria-pressed',String(Boolean(key&&jfAnnotationPendingRanges.has(key))));
 }
@@ -408,10 +415,6 @@ function jfTimelineControls(event){
     if(video.paused)video.play().catch(()=>{});else video.pause();
   }else if(target.closest('.jfTimelineVolumeToggle')){
     video.muted=!video.muted;
-  }else if(target.closest('.jfTimelineRate')){
-    const rates=[1,1.25,1.5,2,.25,.5,.75];
-    const i=rates.findIndex(x=>Math.abs(video.playbackRate-x)<.01);
-    video.playbackRate=rates[(i+1)%rates.length];
   }else if(target.closest('.jfTimelineFullscreen')){
     video.controls=true;
     const promise=video.requestFullscreen?.();
@@ -424,7 +427,20 @@ function initJfTimeline(){
   feed.addEventListener('click',event=>{
     if(!event.target.closest('.jfTimeline'))return;
     if(event.target.closest('.jfAnnotationRail button'))return;
-    event.stopPropagation();jfTimelineControls(event);
+    event.stopPropagation();
+    if(event.target.closest('.jfTimelineRate'))return; // native dropdown
+    jfTimelineControls(event);
+  });
+  feed.addEventListener('change',event=>{
+    const select=event.target.closest?.('select.jfTimelineRate');
+    if(!select)return;
+    event.stopPropagation();
+    const value=Number(select.value);
+    if(!JF_VIDEO_SPEED_OPTIONS.includes(value))return;
+    const video=select.closest('.videoStage')?.querySelector('video.feedVideo');
+    if(!video)return;
+    video.playbackRate=value;
+    jfTimelineUpdate(video);
   });
   feed.addEventListener('pointerdown',event=>{if(event.target.closest('.jfTimeline'))event.stopPropagation();});
   let videoClickTimer=null;
