@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.153.1 / Current version: v7.153.1** · 持续迭代 / Actively evolving
+**当前版本：v7.153.2 / Current version: v7.153.2** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.153.2 · 导航坞两行式回归与顶栏图标化收尾**：所有者实机截图反馈后修正——导航坞恢复"图标 + 9.5px 标签"两行式（纯图标探索被否决：书房/笔记/标注库三图标难以区分）；标注库入口的怪块修复（移除按钮自身 border-top/圆角，分隔线改伪元素悬线）；激活态底色加深一档。顶栏保留 icon-first：名称/选择/视图切换改为 36px 方形图标按钮，评分/修改时间排序改图标 + 激活箭头，title/aria-label 齐备。构建 PASS（sourceSha256 b94db886…）；浏览器冒烟 15/15；写守卫与倍速回归 PASS。
 
 **v7.153.1 · 视觉重铸修正**：修复 v7.153.0 实机反馈——（1）导航图标坞恢复"图标 + 9.5px 小标签"两行式（历史规则把 `.studioTabIcon` 设为 `position:absolute` 导致图标与文字叠印，已改为静态流并补 `studioTabLabel`）；标注库入口同样带标签且与分区间有分隔线。（2）"名称/视图切换"按下态、"修改时间/评分"排序激活态、"创作者"按钮全部统一为琥珀语言，清掉残留的蓝色高亮与 ⌁ 图标替换。（3）修正滑轨底部行高与面板 padding，标注库不再贴边裁切。浏览器冒烟 15/15。
 

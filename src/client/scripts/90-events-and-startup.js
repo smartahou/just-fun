@@ -106,17 +106,28 @@ function updateSortButtons() {
     sortMode === 'mtime'
   );
 
-  ratingButton.textContent =
-    '评分 ' +
-    (sortMode === 'rating'
-      ? arrow
-      : '');
+  // Icon-first chrome (v7.153.2): the sort pair keeps only glyphs plus the
+  // direction arrow on the active one. Text lives in title/aria-label.
+  const starGlyph =
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 3 6.4 7 .9-5.1 4.9 1.2 7L12 18l-6.1 3.2 1.2-7L2 9.3l7-.9z"/></svg>';
+  const clockGlyph =
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/></svg>';
+  const arrowMark =
+    '<span class="jfSortArrow" aria-hidden="true">' +
+    arrow +
+    '</span>';
 
-  mtimeButton.textContent =
-    '修改时间 ' +
-    (sortMode === 'mtime'
-      ? arrow
-      : '');
+  ratingButton.innerHTML =
+    starGlyph +
+    (sortMode === 'rating' ? arrowMark : '');
+  ratingButton.title = '按评分排序';
+  ratingButton.setAttribute('aria-label', '按评分排序');
+
+  mtimeButton.innerHTML =
+    clockGlyph +
+    (sortMode === 'mtime' ? arrowMark : '');
+  mtimeButton.title = '按修改时间排序';
+  mtimeButton.setAttribute('aria-label', '按修改时间排序');
 }
 
 function selectSortMode(mode) {
