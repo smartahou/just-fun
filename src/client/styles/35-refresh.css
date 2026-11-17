@@ -213,6 +213,7 @@ body>.mediaTabs#studioMediaRail > #clipShelfTop::before{
   border:1px solid var(--jf-amber-line);font-weight:600;
 }
 #assetFolders .unifiedFolderNew{border:1px dashed #2a3c51;color:var(--jf-text-faint)}
+#assetFolders .unifiedFolderNew svg{width:14px;height:14px;display:block;margin:0 auto}
 #assetFolders .unifiedFolderNew:hover{border-color:var(--jf-amber-line);color:#f2cd92}
 #assetFolders .jfFoldIconBtn{
   width:34px!important;min-width:34px;height:32px;padding:0!important;
