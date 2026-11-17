@@ -1,0 +1,439 @@
+/* Just Fun · v7.153 refresh v2 — one coherent studio language for the shell
+   and the media pages. Layered AFTER the historical override sheets and BEFORE
+   the bookshelf/reading sheets, so the paper reader keeps its own identity.
+   Identity: graphite ground, warm-white type, one amber signature accent,
+   glass chrome, tabular numerals, calm motion, 24px column alignment.
+   Structure kept: single sticky header (brand | search | actions), folder
+   chip row, media pages; navigation = glass FAB + bottom-left pop rail. */
+
+:root{
+  --jf-bg:#0a0f16;
+  --jf-surface:#101823;
+  --jf-surface-2:#15202d;
+  --jf-surface-3:#1a2635;
+  --jf-line:#1f2d3d;
+  --jf-line-strong:#2c3f55;
+  --jf-text:#eef3fa;
+  --jf-text-dim:#9cafc4;
+  --jf-text-faint:#64788e;
+  --jf-amber:#e8b45f;
+  --jf-amber-soft:rgba(232,180,95,.13);
+  --jf-amber-line:rgba(232,180,95,.38);
+  --jf-danger:#ef9daa;
+  --jf-danger-soft:rgba(239,157,170,.12);
+  --jf-r-xs:8px;--jf-r-sm:10px;--jf-r:14px;--jf-r-lg:18px;
+  --jf-ring:0 0 0 3px rgba(232,180,95,.22);
+  --jf-ease:cubic-bezier(.22,.61,.36,1);
+  --jf-shadow-card:0 1px 0 rgba(255,255,255,.045) inset,0 18px 40px -22px rgba(0,0,0,.75);
+  --jf-shadow-pop:0 1px 0 rgba(255,255,255,.06) inset,0 24px 70px -18px rgba(0,0,0,.85);
+  --jf-gutter:24px;
+}
+
+/* ---------- ground ---------- */
+
+body{background:
+  radial-gradient(1100px 460px at 50% -180px,rgba(84,126,179,.10),transparent 62%),
+  var(--jf-bg);
+  color:var(--jf-text);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.badge,.ratingValue,.studioStatus .status,.audioFileMeta,.jfBooksCount,.photoSummary{
+  font-variant-numeric:tabular-nums;
+}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--jf-amber-line);
+  outline-offset:2px;
+}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#22344877;border-radius:8px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#2e476077;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- one glass top line: brand | search | actions ---------- */
+
+body > .studioHeader{
+  display:flex!important;align-items:center;gap:20px;
+  padding:0 var(--jf-gutter)!important;
+  min-height:72px!important;
+  background:rgba(9,14,21,.80)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+  border-bottom:1px solid #ffffff0d!important;
+}
+.studioTop{min-height:0!important;padding:0!important;gap:0}
+.studioBrandLogo{width:34px!important;height:34px!important}
+.studioWorkspace{flex:1;min-width:0;display:block;padding:0!important;margin:0!important}
+.studioControls{display:flex;align-items:center;gap:14px;flex-wrap:nowrap!important}
+.studioSearchWrap{
+  height:40px!important;max-width:540px!important;flex:1 1 320px;
+  border-radius:12px!important;
+  background:rgba(13,21,32,.72)!important;
+  border:1px solid #ffffff14!important;
+  color:var(--jf-text-dim);
+  transition:border-color .18s var(--jf-ease),box-shadow .18s var(--jf-ease),background .18s;
+}
+.studioSearchWrap:hover{border-color:#ffffff26!important}
+.studioSearchWrap:focus-within{
+  border-color:var(--jf-amber-line)!important;
+  box-shadow:var(--jf-ring);background:rgba(11,18,28,.85)!important;
+}
+.studioSearchWrap #search,.studioSearchWrap #jfBooksSearch{font-size:13px;font-weight:480;letter-spacing:.01em}
+.studioActions{margin-left:auto;gap:6px;flex-wrap:nowrap!important}
+.studioActions button,.studioTopRight button{
+  border:1px solid #ffffff12;background:transparent;color:#aebfd3;
+  border-radius:10px;min-height:36px;padding:8px 13px;
+  font-size:12px;font-weight:550;letter-spacing:.01em;
+  transition:background .16s var(--jf-ease),border-color .16s var(--jf-ease),color .16s,transform .16s var(--jf-ease);
+}
+.studioActions button:hover:not(:disabled),.studioTopRight button:hover{
+  background:#ffffff0d;border-color:#ffffff26;color:#fff;transform:translateY(-1px);
+}
+.studioActions .sortBtn.active,.studioActions .unifiedHeaderButton[aria-pressed="true"]{
+  background:var(--jf-amber-soft);border-color:var(--jf-amber-line);color:#f4cf94;
+}
+.studioActions #unifiedFavoriteFilter[aria-pressed="true"]{
+  background:var(--jf-amber-soft);border-color:var(--jf-amber-line);color:var(--jf-amber);
+}
+.studioSort{
+  display:flex;gap:0;border:1px solid #ffffff12;border-radius:10px;
+  overflow:hidden;background:rgba(13,21,32,.5);
+}
+.studioSort .sortBtn{
+  border:0!important;border-radius:0!important;min-height:34px;
+  padding:8px 12px;background:transparent;
+}
+.studioSort .sortBtn.active{background:var(--jf-amber-soft);color:#f4cf94}
+.studioSort .sortBtn + .sortBtn{border-left:1px solid #ffffff0d!important}
+#creatorToggle{color:#aebfd3}
+
+/* ---------- navigation: glass FAB + bottom-left pop rail ---------- */
+
+#studioRailToggle{
+  width:48px!important;height:48px!important;padding:12px!important;
+  border:1px solid #ffffff1f!important;border-radius:15px!important;
+  background:rgba(15,23,34,.82)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:0 14px 34px -12px rgba(0,0,0,.85),0 1px 0 rgba(255,255,255,.07) inset!important;
+  color:#cfe0f2!important;
+  transition:background .18s,border-color .18s,color .18s,transform .18s var(--jf-ease)!important;
+}
+#studioRailToggle:hover{transform:translateY(-1px);border-color:#ffffff33!important;color:#fff!important}
+#studioRailToggle[aria-expanded="true"]{border-color:var(--jf-amber-line)!important;color:var(--jf-amber)!important}
+
+body>.mediaTabs#studioMediaRail.railOpen,body>.mediaTabs#studioMediaRail{
+  background:rgba(13,20,29,.94)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
+  border:1px solid #2a3c51!important;border-radius:16px!important;
+  box-shadow:var(--jf-shadow-pop)!important;
+  padding:7px!important;gap:4px!important;
+  width:64px!important;
+}
+body>.mediaTabs#studioMediaRail > button,body>.mediaTabs#studioMediaRail > #clipShelfTop{
+  display:grid!important;place-items:center!important;
+  width:48px!important;min-width:48px!important;height:46px!important;min-height:46px!important;
+  padding:0!important;border:1px solid transparent!important;border-radius:12px!important;
+  background:transparent!important;color:#93a7bd!important;
+  font-size:0!important;line-height:1!important;
+  transition:background .14s,color .14s,border-color .14s;
+}
+body>.mediaTabs#studioMediaRail > button .studioTabIcon,
+body>.mediaTabs#studioMediaRail > #clipShelfTop .studioTopActionIcon{
+  width:22px!important;height:22px!important;color:inherit!important;opacity:1;
+  display:grid;place-items:center;
+}
+body>.mediaTabs#studioMediaRail > button:not(.on):hover,
+body>.mediaTabs#studioMediaRail > #clipShelfTop:hover{
+  background:#ffffff0d!important;color:#eef4fb!important;
+}
+body>.mediaTabs#studioMediaRail > button.on{
+  background:var(--jf-amber-soft)!important;color:var(--jf-amber)!important;
+  border-color:var(--jf-amber-line)!important;
+  box-shadow:0 6px 18px -10px rgba(232,180,95,.5);
+}
+body>.mediaTabs#studioMediaRail > #clipShelfTop{
+  margin-top:5px!important;border-radius:12px!important;
+  border-top:1px solid #ffffff0d!important;
+}
+
+/* ---------- folder chips ---------- */
+
+#assetFolders{padding:12px var(--jf-gutter) 10px!important;border-bottom:1px solid #ffffff06;gap:6px;margin:0!important}
+#assetFolders button,#assetFolders .unifiedFolderNew{
+  border:1px solid transparent;border-radius:999px;
+  color:var(--jf-text-dim);font-size:12px;font-weight:550;
+  padding:7px 14px;min-height:32px;background:transparent;
+  transition:color .16s,background .16s,border-color .16s;
+}
+#assetFolders button:hover{color:var(--jf-text);background:#ffffff08}
+#assetFolders button.on{
+  color:#f2cd92;background:var(--jf-amber-soft);
+  border:1px solid var(--jf-amber-line);font-weight:600;
+}
+#assetFolders .unifiedFolderNew{border:1px dashed #2a3c51;color:var(--jf-text-faint)}
+#assetFolders .unifiedFolderNew:hover{border-color:var(--jf-amber-line);color:#f2cd92}
+#folderContext{
+  color:var(--jf-text-faint);font-size:11.5px;letter-spacing:.02em;
+  padding:12px var(--jf-gutter) 0!important;background:transparent;margin:0!important;
+}
+#folderTiles.assetFolderTiles{padding:0 var(--jf-gutter)!important}
+#folderTiles .folderEntry{
+  background:var(--jf-surface);border:1px solid var(--jf-line);border-radius:var(--jf-r);
+  transition:background .16s,border-color .16s,transform .16s;
+}
+#folderTiles .folderEntry:hover{border-color:var(--jf-line-strong);background:var(--jf-surface-2);transform:translateY(-1px)}
+
+/* ---------- video cards ---------- */
+
+#grid{gap:18px;padding:20px var(--jf-gutter) 90px!important;margin:0!important}
+#grid .jfCoverTile{
+  background:linear-gradient(180deg,var(--jf-surface) 0%,#0c131c 100%);
+  border:1px solid var(--jf-line);
+  border-radius:var(--jf-r-lg);
+  overflow:hidden;
+  box-shadow:var(--jf-shadow-card);
+  transition:transform .22s var(--jf-ease),border-color .22s var(--jf-ease),box-shadow .22s var(--jf-ease);
+}
+@media(hover:hover){
+  #grid .jfCoverTile:hover{
+    transform:translateY(-3px);
+    border-color:#33506c;
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 24px 48px -20px rgba(0,0,0,.85);
+  }
+  #grid .jfCoverTile:hover .cover{transform:scale(1.045)}
+}
+#grid .jfCoverTile .cover{transition:transform .5s var(--jf-ease)}
+#grid .jfCoverTile .coverWrap{background:#070b11}
+#grid .jfCoverTile .coverWrap::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:linear-gradient(180deg,rgba(6,10,16,.16) 0%,transparent 22%);
+}
+#grid .jfCoverTile .badges{z-index:4}
+#grid .jfCoverTile .badge{
+  background:rgba(8,13,20,.72);
+  border:1px solid rgba(255,255,255,.14);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  color:#e6eef8;border-radius:7px;
+  font-size:10.5px;font-weight:600;letter-spacing:.035em;
+  padding:4px 8px;
+}
+#grid .jfCoverTile .empty{
+  display:flex;align-items:center;justify-content:center;
+  height:100%;color:var(--jf-text-faint);
+  font-size:10.5px;letter-spacing:.3em;text-indent:.3em;font-weight:550;
+  background:
+    repeating-linear-gradient(135deg,rgba(255,255,255,.022) 0 1px,transparent 1px 14px),
+    radial-gradient(120% 90% at 50% 0%,rgba(127,176,232,.06),transparent 55%),
+    #070b11;
+}
+#grid .jfCoverInfo.jfCoverInfo{
+  padding:44px 13px 13px !important;
+  background:linear-gradient(180deg,transparent 0%,rgba(5,9,14,.55) 42%,rgba(5,9,14,.92) 100%) !important;
+}
+#grid .jfCoverTile .creatorRow{gap:6px;margin-bottom:5px}
+#grid .jfCoverTile .creatorText{
+  font-size:10.5px;font-weight:600;letter-spacing:.055em;
+  color:#a9bcd2;text-transform:uppercase;
+}
+#grid .jfCoverTile .titleText{
+  font-size:13px;font-weight:640;line-height:1.42;color:#f2f6fb;
+  letter-spacing:.004em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;min-height:0;
+}
+#grid .jfCoverTile .actions{margin-top:8px;padding-top:0;border:0;align-items:center}
+#grid .jfCoverTile .stars{gap:3px}
+#grid .jfCoverTile .ratingValue{
+  font-size:10px;font-weight:600;color:#c9d6e5;
+  background:rgba(10,15,22,.6);border:1px solid rgba(255,255,255,.10);
+  border-radius:6px;padding:1px 6px;margin-left:4px;
+}
+#grid .jfCoverTile .unifiedMore,#grid .jfCoverTile .iconBtn{
+  border:0;background:transparent;color:#8ea3ba;border-radius:8px;
+  transition:background .14s,color .14s;
+}
+#grid .jfCoverTile .unifiedMore:hover,#grid .jfCoverTile .iconBtn:hover{background:#ffffff14;color:#fff}
+#grid .jfCoverTile .mediaTileCheck{
+  border-radius:999px;border:1px solid #ffffff2e;background:rgba(8,13,20,.65);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+#grid .jfCoverTile.unifiedSelected{
+  border-color:var(--jf-amber-line);
+  box-shadow:0 0 0 1px var(--jf-amber-line),var(--jf-shadow-card);
+}
+
+/* text-only video rows share the same tokens */
+#grid.videoTextGrid .mediaTile{
+  background:var(--jf-surface);border:1px solid var(--jf-line);border-radius:var(--jf-r);
+  transition:background .16s,border-color .16s;
+}
+#grid.videoTextGrid .mediaTile:hover{background:var(--jf-surface-2);border-color:var(--jf-line-strong)}
+
+/* ---------- audio tiles ---------- */
+
+#grid .audioFileTile{
+  background:linear-gradient(180deg,var(--jf-surface),#0d141d);
+  border:1px solid var(--jf-line);border-radius:var(--jf-r);
+  padding:14px 14px 13px;min-height:112px;
+  transition:border-color .18s var(--jf-ease),transform .18s var(--jf-ease),background .18s;
+}
+@media(hover:hover){#grid .audioFileTile:hover{transform:translateY(-2px);border-color:var(--jf-line-strong)}}
+#grid .audioFileTile.isActive{
+  border-color:var(--jf-amber-line);background:#121b26;
+  box-shadow:inset 3px 0 0 var(--jf-amber),0 14px 30px -18px #000a;
+}
+#grid .audioFileTile .audioFileName{font-size:13px;font-weight:620;color:#eef3fa;letter-spacing:.005em}
+#grid .audioFileTile .audioFileMeta{font-size:11px;color:var(--jf-text-faint);margin-top:4px;letter-spacing:.02em}
+#grid .audioFileTile .ratingValue{color:#b9c8d8;font-size:10px}
+#grid .audioFileTile .audioFileActions button{border-radius:8px}
+
+/* ---------- photo wall ---------- */
+
+#grid.pictureWall{gap:12px;padding:16px var(--jf-gutter) 90px!important}
+#grid.pictureWall .pictureTile{
+  border-radius:12px;overflow:hidden;background:var(--jf-surface);
+  border:1px solid #ffffff0d;
+  transition:transform .2s var(--jf-ease),border-color .2s,box-shadow .2s;
+}
+@media(hover:hover){
+  #grid.pictureWall .pictureTile:hover{
+    transform:translateY(-2px);border-color:var(--jf-line-strong);
+    box-shadow:0 18px 34px -18px #000c;
+  }
+}
+#grid.pictureWall .pictureTile.selected{
+  border-color:var(--jf-amber-line);
+  box-shadow:0 0 0 1px var(--jf-amber-line);
+}
+#grid.pictureWall .photoTileName{
+  background:rgba(8,13,20,.72);border:1px solid rgba(255,255,255,.10);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-radius:7px;font-size:10.5px;font-weight:550;color:#dce7f3;
+  padding:3px 8px;left:8px;bottom:8px;
+}
+#grid.pictureWall .unifiedMore{
+  background:rgba(8,13,20,.66);border:1px solid rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-radius:999px;color:#dce7f3;
+}
+
+/* ---------- empty states ---------- */
+
+#grid .empty,.pictureWall .empty,.audioFileGrid .empty{
+  grid-column:1/-1;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;
+  border:1px dashed #22344a;border-radius:var(--jf-r-lg);
+  background:linear-gradient(180deg,#0d141d,#0a0f16);
+  color:var(--jf-text-faint);font-size:12.5px;letter-spacing:.03em;
+  padding:56px 24px;text-align:center;
+}
+
+/* ---------- photo toolbar / selection ---------- */
+
+#photoToolbar.photoToolbar{
+  background:transparent!important;
+  border-bottom:1px solid #ffffff08;
+  padding:14px var(--jf-gutter) 8px!important;margin:0!important;
+}
+#photoToolbar .photoToolbarHead strong{font-size:15px;letter-spacing:-.01em}
+#photoToolbar .photoSummary{font-size:11.5px;color:var(--jf-text-faint)}
+#photoToolbar button{
+  border:1px solid #ffffff12;background:transparent;border-radius:10px;
+  color:#aebfd3;font-size:12px;font-weight:550;
+}
+#photoToolbar button:hover{border-color:#ffffff26;color:#fff}
+#photoSelectionBar.photoSelectionBar{
+  background:rgba(232,180,95,.08);border:1px solid var(--jf-amber-line);border-radius:12px;
+  color:#f0d3a2;
+}
+#photoSelectionBar .photoDestructive{
+  border-color:rgba(239,157,170,.4) !important;color:var(--jf-danger) !important;background:transparent !important;
+}
+
+/* ---------- batch dock ---------- */
+
+.unifiedBatchBar{
+  background:rgba(13,20,29,.88);
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+  border:1px solid #2a3c51;border-radius:var(--jf-r-lg);
+  box-shadow:var(--jf-shadow-pop);
+  padding:10px 12px;
+}
+.unifiedBatchBar button{
+  border:1px solid var(--jf-line);background:var(--jf-surface-2);border-radius:10px;
+  color:#c9d6e6;font-size:12px;font-weight:550;min-height:36px;
+  transition:background .15s,border-color .15s;
+}
+.unifiedBatchBar button:hover:not(:disabled){background:var(--jf-surface-3);border-color:var(--jf-line-strong)}
+.unifiedBatchBar button.danger{border-color:rgba(239,157,170,.35);color:var(--jf-danger);background:var(--jf-danger-soft)}
+.unifiedBatchBar strong{color:#f2f6fb;font-size:12.5px;letter-spacing:.02em}
+
+/* ---------- context menu ---------- */
+
+.unifiedContext{
+  background:rgba(14,21,31,.94);
+  -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);
+  border:1px solid #2a3c51;border-radius:var(--jf-r);
+  box-shadow:var(--jf-shadow-pop);
+  padding:7px;
+}
+.unifiedContext .contextHeading{
+  font-size:10px;font-weight:650;letter-spacing:.14em;color:var(--jf-text-faint);
+  text-transform:uppercase;
+}
+.unifiedContext .studioMenuRow{font-size:13px;color:#dbe5f0;border-radius:9px}
+.unifiedContext .studioMenuRow:hover,.unifiedContext .studioMenuRow:focus-visible{
+  background:#ffffff10;border-color:transparent;
+}
+.unifiedContext .studioMenuRow.danger{color:var(--jf-danger)}
+
+/* ---------- modals: rename / move / new folder ---------- */
+
+.unifiedRenameBack{background:rgba(5,8,13,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.unifiedRenamePanel{
+  background:linear-gradient(180deg,#121c28,#0e151f);
+  border:1px solid #2a3c51;border-radius:var(--jf-r-lg);
+  box-shadow:var(--jf-shadow-pop);
+  padding:22px;
+}
+.unifiedRenamePanel h3{font-size:16px;font-weight:680;letter-spacing:-.01em;color:#f2f6fb}
+.unifiedRenamePanel p{font-size:12px;color:var(--jf-text-faint)}
+.unifiedRenamePanel input,.unifiedRenamePanel select{
+  background:#0b1320;border:1px solid var(--jf-line);border-radius:10px;
+  color:var(--jf-text);min-height:38px;padding:0 12px;font-size:13px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.unifiedRenamePanel input:focus,.unifiedRenamePanel select:focus{
+  border-color:var(--jf-amber-line);box-shadow:var(--jf-ring);outline:none;
+}
+.unifiedRenamePanel button{
+  background:#16222f;border:1px solid var(--jf-line);border-radius:10px;
+  color:#c9d6e6;min-height:38px;padding:0 16px;font-size:12.5px;font-weight:560;
+  transition:background .15s,border-color .15s;
+}
+.unifiedRenamePanel button:hover{background:var(--jf-surface-3);border-color:var(--jf-line-strong)}
+.unifiedRenamePanel button[type="submit"],.unifiedRenamePanel .primary{
+  background:var(--jf-amber);border-color:var(--jf-amber);color:#151006;font-weight:650;
+}
+.unifiedRenamePanel button[type="submit"]:hover,.unifiedRenamePanel .primary:hover{
+  background:#f2c377;border-color:#f2c377;
+}
+
+/* ---------- mobile ---------- */
+
+@media(max-width:760px){
+  body > .studioHeader{padding:0 14px!important;min-height:60px!important}
+  .studioControls{gap:8px;flex-wrap:wrap!important}
+  .studioSearchWrap{flex:1 1 100%!important;max-width:none!important;height:38px!important}
+  .studioActions{width:100%;justify-content:flex-end;flex-wrap:wrap!important;gap:5px}
+  .studioActions button,.studioTopRight button{min-height:34px;padding:7px 10px;font-size:11.5px}
+  .studioSort .sortBtn{min-height:32px;padding:7px 9px}
+  #assetFolders{padding:10px 12px 8px!important}
+  #folderContext{padding:10px 12px 0!important}
+  #folderTiles.assetFolderTiles{padding:0 12px!important}
+  #grid{padding:14px 12px 90px!important;gap:12px}
+  #grid .jfCoverInfo.jfCoverInfo{padding:34px 11px 11px !important}
+  #studioRailToggle{width:45px!important;height:45px!important;padding:11px!important;border-radius:14px!important}
+  body>.mediaTabs#studioMediaRail.railOpen,body>.mediaTabs#studioMediaRail{width:188px!important}
+  .unifiedBatchBar{left:10px;right:10px;border-radius:16px}
+  .unifiedRenamePanel{padding:18px}
+}
