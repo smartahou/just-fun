@@ -91,11 +91,6 @@ function updateSortButtons() {
       '#sortMtimeBtn'
     );
 
-  const arrow =
-    sortDirection === 'desc'
-      ? '↓'
-      : '↑';
-
   ratingButton.classList.toggle(
     'active',
     sortMode === 'rating'
@@ -106,26 +101,18 @@ function updateSortButtons() {
     sortMode === 'mtime'
   );
 
-  // Icon-first chrome (v7.153.2): the sort pair keeps only glyphs plus the
-  // direction arrow on the active one. Text lives in title/aria-label.
+  // Icon-first chrome (v7.153.5): solid glyphs only, no text and no
+  // direction arrows; the active state is carried by the amber highlight.
   const starGlyph =
-    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 3 6.4 7 .9-5.1 4.9 1.2 7L12 18l-6.1 3.2 1.2-7L2 9.3l7-.9z"/></svg>';
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.3l-5.8 3.1 1.1-6.4L2.6 9.4l6.5-.9z"/></svg>';
   const clockGlyph =
-    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/></svg>';
-  const arrowMark =
-    '<span class="jfSortArrow" aria-hidden="true">' +
-    arrow +
-    '</span>';
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/></svg>';
 
-  ratingButton.innerHTML =
-    starGlyph +
-    (sortMode === 'rating' ? arrowMark : '');
+  ratingButton.innerHTML = starGlyph;
   ratingButton.title = '按评分排序';
   ratingButton.setAttribute('aria-label', '按评分排序');
 
-  mtimeButton.innerHTML =
-    clockGlyph +
-    (sortMode === 'mtime' ? arrowMark : '');
+  mtimeButton.innerHTML = clockGlyph;
   mtimeButton.title = '按修改时间排序';
   mtimeButton.setAttribute('aria-label', '按修改时间排序');
 }
