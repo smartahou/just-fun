@@ -409,7 +409,7 @@ function jfTimelineControls(event){
   }else if(target.closest('.jfTimelineVolumeToggle')){
     video.muted=!video.muted;
   }else if(target.closest('.jfTimelineRate')){
-    const rates=[1,1.25,1.5,2,.75];
+    const rates=[1,1.25,1.5,2,.25,.5,.75];
     const i=rates.findIndex(x=>Math.abs(video.playbackRate-x)<.01);
     video.playbackRate=rates[(i+1)%rates.length];
   }else if(target.closest('.jfTimelineFullscreen')){
