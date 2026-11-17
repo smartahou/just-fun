@@ -24,7 +24,7 @@ function renderVideoFolders() {
   document.querySelector('#folderContext').textContent=
     (activeFolder==='all'?'全部视频':folderDisplayName(activeFolder))+' · '+
     allItems.filter(x=>x.kind==='video'&&(activeFolder==='all'||(x.relativeDir||'root')===activeFolder)).length+
-    ' 个视频 · 可以将视频移动到素材目录';
+    ' 个视频';
 }
 
 function audioRatingHTML(item){
@@ -72,8 +72,7 @@ function renderAssets() {
   const folders = children.filter(folder => jfFolderHasMedia(folder.relativeDir,libraryMode))
     .sort((a,b)=>filenameCollator.compare(folderDisplayName(a.relativeDir),folderDisplayName(b.relativeDir)));
   document.querySelector('#folderContext').textContent =
-    (activeFolder==='all'?'全部目录':currentLabel)+' · '+items.length+' 个'+(libraryMode==='image'?'图片':'音频')+
-    ' · 文件名按数字自然排序（2、9、10）'+(libraryMode==='audio'?' · 双击文件播放':'');
+    (activeFolder==='all'?'全部目录':currentLabel)+' · '+items.length+' 个'+(libraryMode==='image'?'图片':'音频');
   const parent = document.querySelector('#grid');
   parent.className = libraryMode==='image' ? 'pictureWall' : 'audioFileGrid';
   const folderHtml = folders.map(f=>unifiedFolderTileHTML(f.relativeDir)).join('');
