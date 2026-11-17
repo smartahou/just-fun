@@ -1428,7 +1428,9 @@ function jfFeedInteriorMarkup(item) {
   '</span>' +
   '<button type="button" class="jfTimelineVolumeToggle" aria-label="静音或恢复" title="静音">'+'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9zM17 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>'+ '</button>' +
   '<input class="jfTimelineVolume" type="range" min="0" max="1" step="0.05" value="1" aria-label="视频音量">' +
-  '<button type="button" class="jfTimelineRate" title="切换播放倍速" aria-label="视频播放倍速">1×</button>' +
+  '<select class="jfTimelineRate" title="选择播放倍速" aria-label="视频播放倍速">' +
+    JF_VIDEO_SPEED_OPTIONS.map(rate=>'<option value="'+rate+'"'+(rate===1?' selected':'')+'>'+rate+'×</option>').join('') +
+  '</select>' +
   '<button type="button" class="jfTimelineFullscreen" aria-label="原生全屏" title="原生全屏">'+'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg>'+ '</button>' +
 '</div>' +
                 '</div>';
