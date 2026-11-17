@@ -586,7 +586,16 @@ body.jfBooting{overflow:hidden!important}
 .jfVideoSeek{height:4px!important;flex:0 0 auto!important;position:relative;top:0}
 .jfVideoSeek::-webkit-slider-thumb{width:12px;height:12px}
 .feedItem .videoStage .jfTimeline{align-items:center!important}
-.jfTimelineRate{font-size:12px!important;font-weight:600!important;width:39px!important;white-space:nowrap;font-variant-numeric:tabular-nums}
+.jfTimeline select.jfTimelineRate{
+  flex:0 0 65px;min-width:0;width:65px;height:31px;box-sizing:border-box;
+  padding:0 3px 0 7px;color:#e6f1ff;background:#182b3c;
+  border:1px solid #b9d0ed42;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;
+  color-scheme:dark;
+}
+.jfTimeline select.jfTimelineRate:hover{border-color:#b9d0ed88;background:#243b51}
+.jfTimeline select.jfTimelineRate:focus-visible{outline:2px solid #a7caff;outline-offset:2px}
+.jfTimeline select.jfTimelineRate option{color:#e6f1ff;background:#182b3c}
 .feedOverlay.chromeIdle .jfTimeline,.feedOverlay.chromeHidden .jfTimeline{opacity:0!important;pointer-events:none!important;transform:translateY(10px)!important}
 .feedOverlay.chromeIdle .jfTimeline:focus-within,.feedOverlay.chromeHidden .jfTimeline:focus-within{opacity:1!important;pointer-events:auto!important;transform:none!important}
 .jfMarkPopoverActions button{font-size:11px}
