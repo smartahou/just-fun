@@ -1,36 +1,70 @@
 #!/usr/bin/env node
 'use strict';
-// Regression for audio/video speed choices; no playback files or user data.
+// Regression for audio/video dropdown speed choices, no user media/files.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
-const audio=fs.readFileSync(path.join(root,'src/client/scripts/20-audio-controls.js'),'utf8');
-const video=fs.readFileSync(path.join(root,'src/client/scripts/95-annotations.js'),'utf8');
-const optionsMatch=audio.match(/const AUDIO_SPEED_OPTIONS\s*=\s*(\[[^\]]+\]);/);
-const ratesMatch=video.match(/const rates\s*=\s*(\[[^\]]+\]);[\s\S]*?video\.playbackRate\s*=\s*rates\[\(i\+1\)%rates\.length\]/);
-assert(optionsMatch&&ratesMatch,'speed controls must keep valid rate arrays');
-const audioOptions=vm.runInNewContext(optionsMatch[1]);
-const videoOptions=vm.runInNewContext(ratesMatch[1]);
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const audio=read('src/client/scripts/20-audio-controls.js');
+const player=read('src/client/scripts/50-video-playback.js');
+const timeline=read('src/client/scripts/95-annotations.js');
+const markup=read('src/client/scripts/60-video-tools.js');
+const styles=read('src/client/styles/30-overrides.css');
+const audioMatch=audio.match(/const AUDIO_SPEED_OPTIONS\s*=\s*(\[[^\]]+\]);/);
+const videoMatch=player.match(/const JF_VIDEO_SPEED_OPTIONS\s*=\s*(\[[^\]]+\]);/);
+assert(audioMatch&&videoMatch,'audio and video speed lists exist');
+const audioOptions=vm.runInNewContext(audioMatch[1]);
+const videoOptions=vm.runInNewContext(videoMatch[1]);
 for(const [name,options] of [['audio',audioOptions],['video',videoOptions]]){
   assert(options.includes(0.25),name+' includes 0.25x');
   assert(options.includes(0.5),name+' includes 0.5x');
-  assert(options.includes(1),name+' includes 1x');
-  assert.equal(new Set(options).size,options.length,'no duplicate rates');
+  assert(options.includes(1),name+' includes normal 1x');
+  assert.equal(new Set(options).size,options.length,'no duplicate speeds');
   assert(options.every(x=>Number.isFinite(x)&&x>=0.25&&x<=2));
 }
 assert(audioOptions.includes(1.75),'preserve audio 1.75x');
-assert(videoOptions.includes(1.25)&&videoOptions.includes(1.5),'preserve video 1.25x/1.5x');
-assert(audio.includes('AUDIO_SPEED_OPTIONS.map(rate=>'),'audio choices generated from options');
-assert(audio.includes('AUDIO_SPEED_OPTIONS.includes(savedRate)'),'saved slow speed restored');
-assert(audio.includes("function audioSpeedLabel(rate) { return String(rate)+'×'; }"),'rate label');
-let rate=1;const visited=[];
-for(let n=0;n<videoOptions.length;n++){
-  const i=videoOptions.findIndex(x=>Math.abs(rate-x)<.01);
-  rate=videoOptions[(i+1)%videoOptions.length];
-  visited.push(rate);
+assert(videoOptions.includes(1.25)&&videoOptions.includes(1.5),'preserve video speeds');
+assert(audio.includes('AUDIO_SPEED_OPTIONS.map(rate=>'),'audio popup unchanged');
+assert(audio.includes('AUDIO_SPEED_OPTIONS.includes(savedRate)'),'saved audio speed restored');
+assert(markup.includes('class="jfTimelineRate" title="选择播放倍速"'),
+  'video timeline uses accessible select');
+assert(markup.includes('JF_VIDEO_SPEED_OPTIONS.map(rate=>'),
+  'dropdown options share a single speed list');
+assert(!markup.includes('<button type="button" class="jfTimelineRate"'),
+  'old cyclic speed button removed');
+assert(timeline.includes("if(rate.value!==String(selected))rate.value=String(selected)"),
+  'timeline syncs selected option instead of replacing options');
+assert(!timeline.includes('rates[(i+1)%rates.length]'),
+  'old click-to-cycle handler removed');
+assert(styles.includes('select.jfTimelineRate'),'native select styled for timeline');
+const start=timeline.indexOf("  feed.addEventListener('change',event=>{");
+const end=timeline.indexOf("  feed.addEventListener('pointerdown'",start);
+assert(start>=0&&end>start,'delegated native select change handler');
+let handler,updates=0,stopped=0;
+const feed={addEventListener(type,callback){
+  assert.equal(type,'change');handler=callback;
+}};
+const video={playbackRate:1};
+const stage={querySelector(selector){
+  assert.equal(selector,'video.feedVideo');return video;
+}};
+const select={value:'0.25',closest(selector){
+  if(selector==='select.jfTimelineRate')return this;
+  if(selector==='.videoStage')return stage;
+  return null;
+}};
+const update=source=>{assert.equal(source,video);updates++;};
+new Function('feed','JF_VIDEO_SPEED_OPTIONS','jfTimelineUpdate',
+  timeline.slice(start,end))(feed,videoOptions,update);
+for(const rate of [0.25,0.5,1,1.5,2]){
+  select.value=String(rate);
+  handler({target:select,stopPropagation(){stopped++;}});
+  assert.equal(video.playbackRate,rate,'selection changes actual playback rate');
 }
-assert(visited.includes(0.25)&&visited.includes(0.5),'video cycle visits both slow speeds');
-assert.equal(rate,1,'video cycle returns to normal');
-assert(video.includes("rate.textContent=(Number(video.playbackRate)||1)+'×'"),
-  'video timeline shows actual playbackRate');
-console.log('PASS audio/video speed choices and video cycle including 0.25x and 0.5x');
+const previous=video.playbackRate;
+select.value='9';
+handler({target:select,stopPropagation(){}});
+assert.equal(video.playbackRate,previous,'unlisted rate rejected');
+assert.equal(updates,5,'player UI updated once per valid choice');
+assert.equal(stopped,5,'dropdown does not bubble into feed controls');
+console.log('PASS video native dropdown selection, 0.25x/0.5x and audio speeds');
