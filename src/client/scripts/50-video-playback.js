@@ -3,6 +3,8 @@
 // HLS is a playlist, not a directly decodable file in Chromium. Keep its
 // source engine tied to the video element and destroy it on reuse/unmount.
 const jfHlsPlayers=new WeakMap();
+// Shared choices for the video timeline dropdown and its change handler.
+const JF_VIDEO_SPEED_OPTIONS=[0.25,0.5,0.75,1,1.25,1.5,2];
 function jfVideoIsHls(item,url){
   const resolved=item||allItems.find(x=>x.mediaUrl===url);
   return String(resolved?.originalExt||'').toLowerCase()==='.m3u8' &&
