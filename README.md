@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.153.2 / Current version: v7.153.2** · 持续迭代 / Actively evolving
+**当前版本：v7.153.3 / Current version: v7.153.3** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.153.3 · 导航坞定稿纯图标**：所有者实机确认否决文字标签方案——导航坞恢复纯图标（48×46 居中、22px 图标、64px 面板），语义由 title/aria-label 承担；保留 v7.153.2 的标注库悬线分隔、加深的琥珀激活态与顶栏 icon-first。构建 PASS（sourceSha256 43ea7b4c…）；实机截图核对通过。
 
 **v7.153.2 · 导航坞两行式回归与顶栏图标化收尾**：所有者实机截图反馈后修正——导航坞恢复"图标 + 9.5px 标签"两行式（纯图标探索被否决：书房/笔记/标注库三图标难以区分）；标注库入口的怪块修复（移除按钮自身 border-top/圆角，分隔线改伪元素悬线）；激活态底色加深一档。顶栏保留 icon-first：名称/选择/视图切换改为 36px 方形图标按钮，评分/修改时间排序改图标 + 激活箭头，title/aria-label 齐备。构建 PASS（sourceSha256 b94db886…）；浏览器冒烟 15/15；写守卫与倍速回归 PASS。
 
