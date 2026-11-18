@@ -40,7 +40,11 @@
    page photographs onto the back of a thin leaf. Deliberately inert:
    aria-hidden, no pointer events, never selectable. */
 .jfGhost{
-  position:absolute;inset:0;z-index:0;
+  /* z-index 1: above the opaque photographed stock (.jfSheet::after, z 0)
+     but below the real text (.jfSheetBody, z 2). An earlier z-index:0 put
+     the ghost under the photo, so bleed-through was invisible on
+     jf-aged-paper spreads — the whole effect silently missing. */
+  position:absolute;inset:0;z-index:1;
   box-sizing:border-box;overflow:hidden;
   padding:var(--jf-pad-y,40px) var(--jf-pad-x,52px);
   font-family:'Source Han Serif SC','Noto Serif SC','Songti SC',STSong,SimSun,serif;
@@ -50,8 +54,8 @@
   overflow-wrap:break-word;
   color:var(--jf-ink);
   white-space:pre-wrap;
-  opacity:.05;
-  filter:blur(.5px);
+  opacity:.085;
+  filter:blur(.55px);
   transform:scaleX(-1);
   transform-origin:50% 50%;
   pointer-events:none;user-select:none;
@@ -59,11 +63,11 @@
   mask-image:linear-gradient(90deg,transparent,rgba(0,0,0,.85) 9%,#000 50%,rgba(0,0,0,.85) 91%,transparent);
 }
 .jfGhost[hidden]{display:none}
-/* The aged-paper photograph is opaque; keep it under the ghost so the bleed
-   still shows through the real stock. */
-.jfReader.paged.jf-aged-paper .jfPageView .jfSheet[data-paper-index]::after{
-  z-index:-1;
-}
+/* No extra stacking rule is needed for the photographed stock: v7.154's
+   stale ::after{z-index:-1} selector targeted an attribute that v7.48 had
+   already renamed to data-paper-group, so it never matched and the
+   bleed-through stayed hidden behind the opaque WebP. The ghost's own
+   z-index:1 above already sits over the photo and under the text. */
 
 /* --- 3 · plates print into the stock ----------------------------------- */
 /* Scanned plates read as white cards on an aged leaf. A whisper of sepia and
@@ -87,11 +91,11 @@
   content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
   background-image:
     url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23g)' opacity='0.55'/></svg>"),
-    url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.62' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='260' height='260' filter='url(%23f)' opacity='0.4'/></svg>");
-  background-size:180px 180px,260px 260px;
+    url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.42' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='300' height='300' filter='url(%23f)' opacity='0.5'/></svg>");
+  background-size:180px 180px,300px 300px;
   background-position:var(--jf-tex-x,0px) var(--jf-tex-y,0px),var(--jf-tex-y,0px) var(--jf-tex-x,0px);
   background-repeat:repeat,repeat;
-  opacity:.075;
+  opacity:.13;
   mix-blend-mode:multiply;
 }
 

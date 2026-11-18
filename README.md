@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.154 / Current version: v7.154** · 持续迭代 / Actively evolving
+**当前版本：v7.155 / Current version: v7.155** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.155 · 修复纸书透背与纹理在旧纸照片模式下完全不可见**：所有者实机截图反馈"没看出来变化"。根因是层叠顺序而不是效果强度——旧纸照片 WebP 挂在 `.jfSheet::after`（`isolation:isolate` 内的 `z-index:0`），v7.154 的 `.jfGhost` 同样是 `z-index:0` 且排在 DOM 更早，被不透明照片整层压住；v7.154 里想压照片的 `.jfSheet[data-paper-index]::after{z-index:-1}` 又匹配不到任何元素（v7.48 已把属性改名为 `data-paper-group`）。修复：`.jfGhost` 提到 `z-index:1`（照片 0 之上、正文 2 之下），不透明度 .05→.085、模糊 .5→.55px，让透背在照片纸上成为肉眼可辨的"墨透纸背"；删除死选择器并留注释；印刷噪点层从 .075 提到 .13、纤维贴图瓦片 260→300px、`baseFrequency` 0.012 0.42，使纤维在 100% 缩放下真正可读。新增 `tests/paper-aging-visibility-v7155.js`（ghost 层级介于照片与正文之间、死选择器不得回归、噪点阈值、样式链顺序），`aged-paper-default-v768.js` 与 `test:reading-controls` 回归 PASS；构建 PASS（`sourceSha256=98cf08e9…`），重启 3865 后返回字节数与构建一致，实机双页展开截图核对透背可见。
 
 **v7.154 · 纸书质感触觉增强**：新增 `src/client/styles/42-paper-aging.css` 并重写纸书表面——512px SVG 低频纸浆斑（multiply）、按叶种子的 foxing 与四角磨损、四边泛黄 vignette、页顶灯光与页脚积尘；印刷噪点层提到 `z-index:2` 以 multiply 盖过文字，由各向异性纤维（横向长纤维）与细颗粒双层叠加，位置按叶偏移防止跨页镜像；叶片轮廓补顶亮、底沉、暖色书脊折痕。`99-reading.js` 在 ageLeaf 旁为每页注入 `.jfGhost`：取对页 `innerText`，`scaleX(-1)`、`opacity .05`、`blur .5px` 的透背镜像（单页模式自动隐藏、aria-hidden、不进分页测量）。paged 模式插图改为 `filter: sepia(.14) contrast(.94)` + `mix-blend-mode: multiply` 印进纸里（生僻字与已 key 出 alpha 的图版只取色调避免二次压暗，漫画叶保持原样）。构建 PASS（`sourceSha256=f1431b4f…`）；重启 3865 实机截图核对 Markdown 书纸书模式。双页 ghost 与插图逐页观感、iPad 仍待实机验收。
 
