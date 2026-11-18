@@ -3140,6 +3140,22 @@ p:has(img.jfInlineGlyph):not(:has(img:not(.jfInlineGlyph),picture,svg,canvas,vid
 .jfReader.paged .jfSheetBody p[class*="poem"]:first-child:not(.jfPrintContinuation){
   text-indent:0!important;
 }
+/* v7.158 · Tang-poetry page texture corrections.
+   Verse must never be justified: even with text-align:left, inherited
+   text-justify:inter-ideograph can still redistribute word-spacing around
+   inline note marks, which stretched 澹然空水带斜晖-style lines. The hidden
+   measurement probe and the visible leaf share .jfSheetBody, so geometry
+   stays identical between pagination and print. */
+.jfReader.paged #jfPageView .jfSheetBody p[class*="poem"]{
+  text-indent:0!important;
+  text-align:left!important;
+  text-justify:none!important;
+  word-spacing:normal!important;
+}
+.jfReader.paged #jfPageView .jfSheetBody .jfPrintCommentaryNote{
+  text-justify:none!important;
+  word-spacing:normal!important;
+}
 /* v7.84: Calibre gaiji in commentary tables should read as a printed
    character, slightly below full em height; no special photo handling.
    Shared .jfSheetBody styles keep print measurement and display identical. */

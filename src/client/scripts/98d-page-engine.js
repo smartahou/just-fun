@@ -47,6 +47,41 @@
     }
     return {node:walk.list[0].node,off:0};
   }
+  // v7.158 · Chinese page splitting needs the same 禁则 a typesetter applies:
+  // a page must not open with a closing mark (「》则以为…」), end with a
+  // dangling opener, or be cut through a 《…》“…” pair. Only the split offset
+  // moves; every source character still lands on exactly one page, so the
+  // reconstruction/two-line checks below stay authoritative.
+  const KS_CLOSER=/[，。！？；：、）》】』」〕〉”’!?;:,.]/;
+  const KS_OPENER=/[《【『「（〔〈“‘]/;
+  const KS_PAIRS={'》':'《','】':'【','』':'『','」':'「','）':'（','〕':'〔','〉':'〈','”':'“','’':'‘'};
+  function ksPairStart(text,cut){
+    const stack=[];
+    for(let i=0;i<cut;i++){
+      const ch=text.charAt(i);
+      if(KS_PAIRS[ch]){if(stack.length)stack.pop();}
+      else if(KS_OPENER.test(ch))stack.push(i);
+    }
+    return stack.length?stack[stack.length-1]:-1;
+  }
+  function snapKinsokuOffset(text,offset){
+    let cut=offset;
+    for(let guard=0;guard<24&&cut>0;guard++){
+      if(KS_CLOSER.test(text.charAt(cut))){cut--;continue;}
+      if(KS_OPENER.test(text.charAt(cut-1))){cut--;continue;}
+      const pair=ksPairStart(text,cut);
+      if(pair>=0){cut=pair;continue;}
+      break;
+    }
+    return cut;
+  }
+  function splitCandidates(text,best){
+    const snapped=snapKinsokuOffset(text,best),seen=new Set(),out=[];
+    for(let n=snapped;n>0&&n>=snapped-8;n--){
+      if(snapKinsokuOffset(text,n)===n&&!seen.has(n)){seen.add(n);out.push(n)}
+    }
+    return out;
+  }
   // Clone the [from,to) slice of a block, preserving its element wrapper and any
   // inline markup inside it. This is what makes the split "structural".
   function sliceBlock(el,from,to){
@@ -134,12 +169,15 @@
     }
     // Never trust a split that does not reconstruct the source exactly: a lost
     // or duplicated character is worse than pushing the whole block to the next
-    // page. Step back a character at a time before giving up.
+    // page. Candidates are kinsoku-legal boundaries only; the first one that
+    // keeps the two-line widow/orphan invariant wins.
     var sourceLength=el.textContent.length;
     var sourceImages=el.querySelectorAll?el.querySelectorAll('img').length:0;
-    for(var attempt=0;attempt<4&&best>0;attempt++,best--){
-      var headEl=sliceBlock(el,0,best);
-      var tailEl=sliceBlock(el,best,walk.total);
+    var cuts=splitCandidates(el.textContent,best);
+    for(var attempt=0;attempt<cuts.length;attempt++){
+      var cut=cuts[attempt];
+      var headEl=sliceBlock(el,0,cut);
+      var tailEl=sliceBlock(el,cut,walk.total);
       if(!headEl||!tailEl)continue;
       if(headEl.textContent.length+tailEl.textContent.length!==sourceLength)continue;
       // The DOM Range must preserve every inline glyph exactly once, even
@@ -148,8 +186,8 @@
       if(imageCount!==sourceImages)continue;
       var headLines=measure(headEl,host)/lh;
       var tailLines=measure(tailEl,host)/lh;
-      if(window.JF_DEBUG_SPLIT)console.info('[split] best',best,'headLines',headLines.toFixed(1),'tailLines',tailLines.toFixed(1));
-      if(headLines<MIN_LINES||tailLines<MIN_LINES)return null;
+      if(window.JF_DEBUG_SPLIT)console.info('[split] cut',cut,'headLines',headLines.toFixed(1),'tailLines',tailLines.toFixed(1));
+      if(headLines<MIN_LINES||tailLines<MIN_LINES)continue;
       return {head:headEl,tail:tailEl,used:measure(headEl,host)};
     }
     return null;

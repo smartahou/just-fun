@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.157 / Current version: v7.157** · 持续迭代 / Actively evolving
+**当前版本：v7.158 / Current version: v7.158** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.158 · 分页禁则：唐诗 EPUB 不再出现「页首孤立收尾标点」**：所有者指出唐诗三百首 EPUB 排版不满。实机复现出核心缺陷——分页引擎按纯字符 offset 二分切分，会切穿《…》/“…”对，导致新页第一行以孤立的「》」开头（《大历诗略》案例）。`98d-page-engine.js` 的 trySplit 增加禁则：`snapKinsokuOffset` 把切点回退到合法边界（页首禁收尾标点：，。！？；：、）》】』」〕〉”’；页尾禁悬空开标点；`ksPairStart` 用括号栈检测切点是否落在成对标点内部，落在其中就把整对移到下一页），`splitCandidates` 只在该合法点及之前 8 个合法点中挑选，原有「逐字重建校验 + 两行寡行规则」仍然是最终闸门；每个源字符仍恰好落在一页一次，锚点/offset 语义不变。同时诗歌与辑评块显式 `text-justify:none / word-spacing:normal`，杜绝 inter-ideograph 在注释标记附近拉散诗行。新增 `tests/paged-kinsoku-v7158.js`（构造切点落在《》内部与紧邻》两种夹具，断言成对不拆、页首无收尾标点、字符守恒），并入 `test:reading-controls`；分页引擎六项既有回归（composition/forward-boundary/semantic/incremental/measure/faces）全部 PASS；构建 PASS（`sourceSha256=51a94c76…`），重启 3865 后实机抽查《唐诗三百首新注》连续 10 章可见跨页，页首标点违规为零。
 
 **v7.157 · 透背密度按书脊加权 + 漫画/图版书压力测试**：墨透纸背应当是靠书脊受压处最浓、向书口渐淡，此前的对称遮罩让透印像通篇水印。`.jfGhost` 的密度遮罩改为左右页各自朝向书脊的非对称渐变（左叶书口 0%→书脊 100%，右叶镜像），书口最外 1–2% 完全清空避开裁切。同时完成两类高风险页面实机核对：柯南漫画叶（`jf-comic-leaf` 保持 normal 混合、不叠 sepia/multiply，老化覆盖层与噪点在其上不发脏）与《故宫藏影》整页扫描书（图片页按漫画通道处理，不误伤）；普通文字页插图仍为 sepia+multiply 印进纸里。回归断言覆盖左右遮罩的镜像方向；构建 PASS（`sourceSha256=8beb507e…`），重启 3865 实机双页截图核对。
 
