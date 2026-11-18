@@ -36,7 +36,19 @@ assert(/z-index:2/.test(grain[0]),'grain paints above the text');
 assert(/mix-blend-mode:multiply/.test(grain[0]),'grain multiplies into the stock');
 const grainOpacity=Number('0.'+(grain[0].match(/opacity:\.(\d+)/)?.[1]||'0'));
 assert(grainOpacity>=0.1,'grain strong enough to read on the photo, got '+grainOpacity);
-// 6. Style chain keeps the aging sheet after the reading sheet.
+// 6. Unified aging overlay (v7.156): the photographed stock hides the sheet
+// background, so an inert per-leaf layer must re-carry the aging above it.
+assert(aging.includes('.jfAging{'),'unified aging overlay styled');
+const agingBlock=aging.match(/\.jfAging\{[\s\S]*?\}/)[0];
+assert(Number(agingBlock.match(/inset:0;z-index:(\d+)/)?.[1])===1,
+  'aging overlay sits between photo 0 and text 2');
+assert(aging.includes('.jfReader.paged:not(.jf-aged-paper) .jfAging{display:none}'),
+  'plain paper mode never doubles the stock layers');
+const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),'utf8');
+assert(reader.includes("aging.className='jfAging'"),'99-reading injects the overlay per leaf');
+assert(reader.includes("aging.setAttribute('aria-hidden','true')"),'overlay stays inert');
+assert(/agingLeaf\(leftSheet\);\s*agingLeaf\(rightSheet\);/.test(reader),'both leaves aged every render');
+// 7. Style chain keeps the aging sheet after the reading sheet.
 const manifest=fs.readFileSync(path.join(root,'build.manifest.json'),'utf8');
 const iReading=manifest.indexOf('src/client/styles/41-reading.css');
 const iAging=manifest.indexOf('src/client/styles/42-paper-aging.css');

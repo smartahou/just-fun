@@ -3437,6 +3437,23 @@ function jfDeskPagedRender(direction){
   };
   ghostLeaf(leftSheet,twoPages?right:null);
   ghostLeaf(rightSheet,twoPages?left:null);
+  // v7.156 · unified aging overlay for the photographed stock: pulp, foxing,
+  // trimmed-edge oxidation and the overhead lamp live on the sheet
+  // BACKGROUND, which the opaque photo covers completely. This inert layer
+  // re-carries the physical-book aging ABOVE the photo and BELOW the text,
+  // so the eight photo groups read as one aged volume.
+  const agingLeaf=sheet=>{
+    if(!sheet)return;
+    let aging=sheet.querySelector(':scope > .jfAging');
+    if(!aging){
+      aging=document.createElement('div');
+      aging.className='jfAging';
+      aging.setAttribute('aria-hidden','true');
+      sheet.insertBefore(aging,sheet.querySelector(':scope > .jfSheetBody')||null);
+    }
+  };
+  agingLeaf(leftSheet);
+  agingLeaf(rightSheet);
   const leftStack=left.parentElement&&left.parentElement.querySelector('.jfSheetStack');
   const rightStack=right.parentElement&&right.parentElement.querySelector('.jfSheetStack');
   if(leftStack)leftStack.style.setProperty('--jf-stack-w',readWidth);

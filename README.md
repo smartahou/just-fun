@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.155 / Current version: v7.155** · 持续迭代 / Actively evolving
+**当前版本：v7.156 / Current version: v7.156** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.156 · 统一成品老化层：照片纸也吃上页顶光与边缘泛黄**：v7.147–v7.155 的老化层（纸浆、foxing、四角磨损、页顶灯光、边缘氧化）全部画在 `.jfSheet` 背景和正文伪元素上，而旧纸照片 WebP 把背景整层盖住——照片模式下只有噪点和透背可见，8 组照片纸各怀各的色调，不像同一本书。现在 `99-reading.js` 在 ghost 注入旁为每张叶插入惰性 `.jfAging` 覆盖层（`aria-hidden`、不参与交互与分页测量，位于照片 z 0 之上、正文 z 2 之下），统一携带页顶灯光、按叶种子的两处 foxing、四角磨损、四边泛黄与页脚积尘；纯 CSS 纸模式自动隐藏该层避免叠加两遍。同时继续加压：透背 .085→**.09**、印刷噪点 .13→**.15**。新增回归断言（覆盖层层级/惰性/单模式不重复、99-reading 注入、双叶每次渲染）并入 `tests/paper-aging-visibility-v7155.js`；构建 PASS（`sourceSha256=e6ac3142…`），重启 3865 实机双页截图核对。
 
 **v7.155 · 修复纸书透背与纹理在旧纸照片模式下完全不可见**：所有者实机截图反馈"没看出来变化"。根因是层叠顺序而不是效果强度——旧纸照片 WebP 挂在 `.jfSheet::after`（`isolation:isolate` 内的 `z-index:0`），v7.154 的 `.jfGhost` 同样是 `z-index:0` 且排在 DOM 更早，被不透明照片整层压住；v7.154 里想压照片的 `.jfSheet[data-paper-index]::after{z-index:-1}` 又匹配不到任何元素（v7.48 已把属性改名为 `data-paper-group`）。修复：`.jfGhost` 提到 `z-index:1`（照片 0 之上、正文 2 之下），不透明度 .05→.085、模糊 .5→.55px，让透背在照片纸上成为肉眼可辨的"墨透纸背"；删除死选择器并留注释；印刷噪点层从 .075 提到 .13、纤维贴图瓦片 260→300px、`baseFrequency` 0.012 0.42，使纤维在 100% 缩放下真正可读。新增 `tests/paper-aging-visibility-v7155.js`（ghost 层级介于照片与正文之间、死选择器不得回归、噪点阈值、样式链顺序），`aged-paper-default-v768.js` 与 `test:reading-controls` 回归 PASS；构建 PASS（`sourceSha256=98cf08e9…`），重启 3865 后返回字节数与构建一致，实机双页展开截图核对透背可见。
 

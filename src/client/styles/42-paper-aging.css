@@ -54,7 +54,7 @@
   overflow-wrap:break-word;
   color:var(--jf-ink);
   white-space:pre-wrap;
-  opacity:.085;
+  opacity:.09;
   filter:blur(.55px);
   transform:scaleX(-1);
   transform-origin:50% 50%;
@@ -95,7 +95,7 @@
   background-size:180px 180px,300px 300px;
   background-position:var(--jf-tex-x,0px) var(--jf-tex-y,0px),var(--jf-tex-y,0px) var(--jf-tex-x,0px);
   background-repeat:repeat,repeat;
-  opacity:.13;
+  opacity:.15;
   mix-blend-mode:multiply;
 }
 
@@ -114,3 +114,34 @@
   inset 0 0 0 1px rgba(120,90,50,.07),
   inset 12px 0 22px -24px var(--jf-fold),
   0 1px 2px rgba(0,0,0,.24),0 12px 30px -16px rgba(0,0,0,.5)}
+
+/* --- 6 · unified aging over the photographed stock (v7.156) ------------ */
+/* Sections 1–4 paint on the sheet BACKGROUND and its body pseudo-layer; on
+   jf-aged-paper spreads the opaque WebP covers the background entirely, so
+   the trimmed-edge oxidation, corner wear, foxing and the overhead lamp
+   never reached the eye and the eight photo groups read as eight different
+   books. 99-reading.js injects this inert per-leaf overlay between the
+   photo (z 0) and the text (z 2), so every spread shares one physical
+   volume's aging. Seeded per leaf via --jf-age-* like the stock layers. */
+.jfAging{
+  position:absolute;inset:0;z-index:1;pointer-events:none;
+  background-image:
+    /* overhead lamp: same light, now ON the photographed stock */
+    radial-gradient(80% 60% at 50% -7%, rgba(255,251,240,.26), rgba(255,251,240,0) 66%),
+    /* two seeded foxing blooms, weaker than the stock layer */
+    radial-gradient(50% 38% at var(--jf-age-x1,14%) var(--jf-age-y1,16%), rgba(151,112,56,.075), rgba(151,112,56,0) 70%),
+    radial-gradient(42% 36% at var(--jf-age-x2,80%) var(--jf-age-y2,76%), rgba(143,103,51,.055), rgba(143,103,51,0) 70%),
+    /* worn, browned corners */
+    radial-gradient(30% 22% at 2% 3%, rgba(126,91,43,.16), rgba(126,91,43,0) 92%),
+    radial-gradient(32% 24% at 98% 97%, rgba(120,86,41,.16), rgba(120,86,41,0) 92%),
+    /* edge oxidation: the trim darkens where thumbs and air reach it */
+    linear-gradient(90deg, rgba(122,89,44,.13), rgba(122,89,44,0) 6.5%, rgba(122,89,44,0) 93.5%, rgba(122,89,44,.13)),
+    linear-gradient(180deg, rgba(122,89,44,.10), rgba(122,89,44,0) 5.5%, rgba(122,89,44,0) 94%, rgba(130,96,48,.14)),
+    /* settled dust at the foot of the leaf */
+    linear-gradient(180deg, rgba(96,74,40,0) 60%, rgba(96,74,40,.08) 100%);
+  background-repeat:no-repeat;
+}
+.jfAging[hidden]{display:none}
+/* Plain (non-photo) paper paints this stack on the sheet background itself;
+   doubling it would darken that mode twice. */
+.jfReader.paged:not(.jf-aged-paper) .jfAging{display:none}
