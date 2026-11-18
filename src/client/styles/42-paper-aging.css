@@ -59,10 +59,23 @@
   transform:scaleX(-1);
   transform-origin:50% 50%;
   pointer-events:none;user-select:none;
-  -webkit-mask-image:linear-gradient(90deg,transparent,rgba(0,0,0,.85) 9%,#000 50%,rgba(0,0,0,.85) 91%,transparent);
-  mask-image:linear-gradient(90deg,transparent,rgba(0,0,0,.85) 9%,#000 50%,rgba(0,0,0,.85) 91%,transparent);
+  /* v7.157 · ink soaks through hardest where the page is pressed into the
+     binding and fades toward the fore-edge, so the density mask is
+     ASYMMETRIC per side (see the two rules below). A symmetric mask made
+     the set-off read like a watermark printed edge-to-edge. */
 }
 .jfGhost[hidden]{display:none}
+/* Facing-page ink lands densest beside the shared gutter: for the left leaf
+   that is its right edge, for the right leaf its left edge. Keep the fore
+   edge faintly visible and the outermost 1–2% clear of the trim. */
+.jfReader.paged .jfSheet[data-side='left']>.jfGhost{
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.38) 13%,rgba(0,0,0,.62) 52%,rgba(0,0,0,.92) 86%,#000 100%);
+  mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.38) 13%,rgba(0,0,0,.62) 52%,rgba(0,0,0,.92) 86%,#000 100%);
+}
+.jfReader.paged .jfSheet[data-side='right']>.jfGhost{
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.92) 14%,rgba(0,0,0,.62) 48%,rgba(0,0,0,.38) 87%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.92) 14%,rgba(0,0,0,.62) 48%,rgba(0,0,0,.38) 87%,transparent 100%);
+}
 /* No extra stacking rule is needed for the photographed stock: v7.154's
    stale ::after{z-index:-1} selector targeted an attribute that v7.48 had
    already renamed to data-paper-group, so it never matched and the

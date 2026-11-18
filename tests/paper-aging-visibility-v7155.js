@@ -48,7 +48,16 @@ const reader=fs.readFileSync(path.join(root,'src/client/scripts/99-reading.js'),
 assert(reader.includes("aging.className='jfAging'"),'99-reading injects the overlay per leaf');
 assert(reader.includes("aging.setAttribute('aria-hidden','true')"),'overlay stays inert');
 assert(/agingLeaf\(leftSheet\);\s*agingLeaf\(rightSheet\);/.test(reader),'both leaves aged every render');
-// 7. Style chain keeps the aging sheet after the reading sheet.
+// 7. v7.157: the ghost's density mask is asymmetric per side — ink lands
+// densest at the shared gutter and fades toward the fore-edge.
+const leftMask=aging.match(/\.jfSheet\[data-side='left'\]>\.jfGhost\{[\s\S]*?\}/);
+const rightMask=aging.match(/\.jfSheet\[data-side='right'\]>\.jfGhost\{[\s\S]*?\}/);
+assert(leftMask&&rightMask,'per-side ghost masks exist');
+assert(/linear-gradient\(90deg,transparent 0%/.test(leftMask[0])&&/#000 100%/.test(leftMask[0]),
+  'left leaf: clear at the fore-edge, dense at the gutter');
+assert(/linear-gradient\(90deg,#000 0%/.test(rightMask[0])&&/transparent 100%/.test(rightMask[0]),
+  'right leaf: dense at the gutter, clear at the fore-edge');
+// 8. Style chain keeps the aging sheet after the reading sheet.
 const manifest=fs.readFileSync(path.join(root,'build.manifest.json'),'utf8');
 const iReading=manifest.indexOf('src/client/styles/41-reading.css');
 const iAging=manifest.indexOf('src/client/styles/42-paper-aging.css');

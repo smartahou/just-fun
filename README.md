@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.156 / Current version: v7.156** · 持续迭代 / Actively evolving
+**当前版本：v7.157 / Current version: v7.157** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.157 · 透背密度按书脊加权 + 漫画/图版书压力测试**：墨透纸背应当是靠书脊受压处最浓、向书口渐淡，此前的对称遮罩让透印像通篇水印。`.jfGhost` 的密度遮罩改为左右页各自朝向书脊的非对称渐变（左叶书口 0%→书脊 100%，右叶镜像），书口最外 1–2% 完全清空避开裁切。同时完成两类高风险页面实机核对：柯南漫画叶（`jf-comic-leaf` 保持 normal 混合、不叠 sepia/multiply，老化覆盖层与噪点在其上不发脏）与《故宫藏影》整页扫描书（图片页按漫画通道处理，不误伤）；普通文字页插图仍为 sepia+multiply 印进纸里。回归断言覆盖左右遮罩的镜像方向；构建 PASS（`sourceSha256=8beb507e…`），重启 3865 实机双页截图核对。
 
 **v7.156 · 统一成品老化层：照片纸也吃上页顶光与边缘泛黄**：v7.147–v7.155 的老化层（纸浆、foxing、四角磨损、页顶灯光、边缘氧化）全部画在 `.jfSheet` 背景和正文伪元素上，而旧纸照片 WebP 把背景整层盖住——照片模式下只有噪点和透背可见，8 组照片纸各怀各的色调，不像同一本书。现在 `99-reading.js` 在 ghost 注入旁为每张叶插入惰性 `.jfAging` 覆盖层（`aria-hidden`、不参与交互与分页测量，位于照片 z 0 之上、正文 z 2 之下），统一携带页顶灯光、按叶种子的两处 foxing、四角磨损、四边泛黄与页脚积尘；纯 CSS 纸模式自动隐藏该层避免叠加两遍。同时继续加压：透背 .085→**.09**、印刷噪点 .13→**.15**。新增回归断言（覆盖层层级/惰性/单模式不重复、99-reading 注入、双叶每次渲染）并入 `tests/paper-aging-visibility-v7155.js`；构建 PASS（`sourceSha256=e6ac3142…`），重启 3865 实机双页截图核对。
 
