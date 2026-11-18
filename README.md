@@ -4,9 +4,11 @@
 >
 > Immersion first, tools second. A local-first media, reading and note-taking workspace.
 
-**当前版本：v7.153.7 / Current version: v7.153.7** · 持续迭代 / Actively evolving
+**当前版本：v7.154 / Current version: v7.154** · 持续迭代 / Actively evolving
 
 **源码许可证：[MIT](LICENSE)。** 可依照许可条款学习、修改和分发本项目有权授权的源码。仓库的 Public / Private 可见性由 GitHub 设置单独控制；源码开源不代表开放任何用户的私人媒体、笔记、缓存和密钥。
+
+**v7.154 · 纸书质感触觉增强**：新增 `src/client/styles/42-paper-aging.css` 并重写纸书表面——512px SVG 低频纸浆斑（multiply）、按叶种子的 foxing 与四角磨损、四边泛黄 vignette、页顶灯光与页脚积尘；印刷噪点层提到 `z-index:2` 以 multiply 盖过文字，由各向异性纤维（横向长纤维）与细颗粒双层叠加，位置按叶偏移防止跨页镜像；叶片轮廓补顶亮、底沉、暖色书脊折痕。`99-reading.js` 在 ageLeaf 旁为每页注入 `.jfGhost`：取对页 `innerText`，`scaleX(-1)`、`opacity .05`、`blur .5px` 的透背镜像（单页模式自动隐藏、aria-hidden、不进分页测量）。paged 模式插图改为 `filter: sepia(.14) contrast(.94)` + `mix-blend-mode: multiply` 印进纸里（生僻字与已 key 出 alpha 的图版只取色调避免二次压暗，漫画叶保持原样）。构建 PASS（`sourceSha256=f1431b4f…`）；重启 3865 实机截图核对 Markdown 书纸书模式。双页 ghost 与插图逐页观感、iPad 仍待实机验收。
 
 **v7.153.3 · 导航坞定稿纯图标**：所有者实机确认否决文字标签方案——导航坞恢复纯图标（48×46 居中、22px 图标、64px 面板），语义由 title/aria-label 承担；保留 v7.153.2 的标注库悬线分隔、加深的琥珀激活态与顶栏 icon-first。构建 PASS（sourceSha256 43ea7b4c…）；实机截图核对通过。
 

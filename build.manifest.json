@@ -40,7 +40,8 @@
     "src/client/styles/30-overrides.css",
     "src/client/styles/35-refresh.css",
     "src/client/styles/40-bookshelf.css",
-    "src/client/styles/41-reading.css"
+    "src/client/styles/41-reading.css",
+    "src/client/styles/42-paper-aging.css"
   ],
   "scripts": [
     "src/client/scripts/00-state-and-api.js",

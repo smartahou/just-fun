@@ -3398,6 +3398,45 @@ function jfDeskPagedRender(direction){
     rightSheet.dataset.page=rightPageNumber!=null?String(rightPageNumber):'';
     rightSheet.dataset.folioExact=exactNumber?'true':'false';
   }
+  // v7.154 · per-leaf paper aging: every folio gets its own foxing spots and
+  // grain offset, derived deterministically from the book id + folio so the
+  // same page always looks the same and no two pages look alike.
+  const ageLeaf=(sheet,folio)=>{
+    if(!sheet)return;
+    const key=(jfDeskBook?.id||'jf')+'#'+String(folio??'');
+    let h=2166136261;
+    for(let i=0;i<key.length;i++){h^=key.charCodeAt(i);h=Math.imul(h,16777619);}
+    const rand=()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return(h>>>0)/4294967296;};
+    sheet.style.setProperty('--jf-age-x1',(4+rand()*38).toFixed(1)+'%');
+    sheet.style.setProperty('--jf-age-y1',(3+rand()*36).toFixed(1)+'%');
+    sheet.style.setProperty('--jf-age-x2',(52+rand()*42).toFixed(1)+'%');
+    sheet.style.setProperty('--jf-age-y2',(50+rand()*42).toFixed(1)+'%');
+    sheet.style.setProperty('--jf-tex-x',Math.round(rand()*160)+'px');
+    sheet.style.setProperty('--jf-tex-y',Math.round(rand()*160)+'px');
+  };
+  ageLeaf(leftSheet,leftPageNumber);
+  ageLeaf(rightSheet,rightPageNumber);
+  // v7.154 · ghost bleed: each leaf carries a reversed, blurred whisper of the
+  // facing page, as if the ink had soaked through the paper. Text only, inert.
+  const ghostLeaf=(sheet,source)=>{
+    if(!sheet)return;
+    let ghost=sheet.querySelector(':scope > .jfGhost');
+    const text=source?source.innerText:'';
+    if(!text.trim()){
+      if(ghost)ghost.hidden=true;
+      return;
+    }
+    if(!ghost){
+      ghost=document.createElement('div');
+      ghost.className='jfGhost';
+      ghost.setAttribute('aria-hidden','true');
+      sheet.insertBefore(ghost,sheet.firstChild);
+    }
+    ghost.hidden=false;
+    if(ghost.textContent!==text)ghost.textContent=text;
+  };
+  ghostLeaf(leftSheet,twoPages?right:null);
+  ghostLeaf(rightSheet,twoPages?left:null);
   const leftStack=left.parentElement&&left.parentElement.querySelector('.jfSheetStack');
   const rightStack=right.parentElement&&right.parentElement.querySelector('.jfSheetStack');
   if(leftStack)leftStack.style.setProperty('--jf-stack-w',readWidth);
